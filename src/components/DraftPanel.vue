@@ -132,23 +132,6 @@
             />
             <span class="pokemon-name">{{ draftAction.pokemon.name }}</span>
           </div>
-          <div class="wizard-actions">
-            <button
-              v-if="draftAction.pokemon"
-              class="btn btn-success"
-              @click="confirmWizardStep"
-            >
-              Next
-            </button>
-            <button
-              v-else-if="draftAction.type === 'edit'"
-              class="btn btn-danger"
-              @click="confirmWizardStep"
-            >
-              Delete
-            </button>
-            <button class="btn btn-secondary" @click="$emit('cancel')">Cancel</button>
-          </div>
         </div>
 
         <!-- Step: Ability -->
@@ -210,6 +193,54 @@
           </div>
         </div>
       </div>
+
+      <!-- Persistent wizard actions -->
+      <div class="wizard-actions-fixed">
+        <button
+          class="btn btn-icon btn-icon-cancel"
+          @click="$emit('cancel')"
+          aria-label="Cancel"
+        >
+          ✕
+        </button>
+
+        <div class="wizard-nav-buttons">
+          <button
+            class="btn btn-icon"
+            @click="goToPreviousStep"
+            :disabled="!canGoPrevious"
+            aria-label="Previous step"
+          >
+            ←
+          </button>
+          <button
+            class="btn btn-icon"
+            @click="goToNextStep"
+            :disabled="!canGoNext"
+            aria-label="Next step"
+          >
+            →
+          </button>
+        </div>
+
+        <button
+          v-if="wizardStep === 'pokemon' && !draftAction.pokemon && draftAction.type === 'edit'"
+          class="btn btn-icon btn-icon-danger"
+          @click="$emit('confirm')"
+          aria-label="Delete"
+        >
+          🗑
+        </button>
+        <button
+          v-else
+          class="btn btn-icon btn-icon-success"
+          @click="$emit('confirm')"
+          :disabled="!canConfirm"
+          aria-label="Save"
+        >
+          ✓
+        </button>
+      </div>
     </template>
   </div>
 </template>
@@ -266,10 +297,10 @@ watch(() => props.draftAction, (action) => {
   localReplaceTarget.value = action.replaceTarget || null
 }, { immediate: true })
 
-// Auto-focus Pokemon name field on open and handle resize
+// Auto-focus Pokemon name field on open only if empty, and handle resize
 onMounted(() => {
   nextTick(() => {
-    if (!props.hideSearch && pokemonInputRef.value) {
+    if (!props.hideSearch && pokemonInputRef.value && !props.draftAction.pokemon) {
       pokemonInputRef.value.focus()
     }
   })
@@ -377,6 +408,30 @@ const availableMoveTypes = computed(() => {
 })
 
 // Wizard navigation functions
+const canGoPrevious = computed(() => wizardStep.value !== 'pokemon')
+
+const canGoNext = computed(() => {
+  if (wizardStep.value === 'pokemon') return !!props.draftAction.pokemon
+  if (wizardStep.value === 'move4') return false
+  return true
+})
+
+function goToNextStep() {
+  const steps = ['pokemon', 'ability', 'berry', 'move1', 'move2', 'move3', 'move4']
+  const currentIndex = steps.indexOf(wizardStep.value)
+  if (currentIndex < steps.length - 1) {
+    wizardStep.value = steps[currentIndex + 1]
+  }
+}
+
+function goToPreviousStep() {
+  const steps = ['pokemon', 'ability', 'berry', 'move1', 'move2', 'move3', 'move4']
+  const currentIndex = steps.indexOf(wizardStep.value)
+  if (currentIndex > 0) {
+    wizardStep.value = steps[currentIndex - 1]
+  }
+}
+
 function confirmWizardStep() {
   if (wizardStep.value === 'pokemon') {
     if (!props.draftAction.pokemon) {
@@ -598,6 +653,16 @@ function updateReplaceTarget(value) {
   cursor: not-allowed;
 }
 
+.btn-primary {
+  background: var(--color-primary, #007bff);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+}
+
 .btn-success {
   background: var(--color-success);
   color: white;
@@ -636,10 +701,82 @@ function updateReplaceTarget(value) {
 }
 
 /* Wizard mode styles */
+.wizard-mode {
+  display: flex;
+  flex-direction: column;
+}
+
 .wizard-container {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 300px;
+}
+
+.wizard-actions-fixed {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.wizard-nav-buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.btn-icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  background: var(--color-surface-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform var(--transition-base), background var(--transition-base);
+}
+
+.btn-icon:hover:not(:disabled) {
+  background: var(--color-card);
+}
+
+.btn-icon:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn-icon-cancel:hover:not(:disabled) {
+  background: var(--color-surface-light);
+  border-color: var(--color-text-muted);
+}
+
+.btn-icon-success {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: white;
+}
+
+.btn-icon-success:hover:not(:disabled) {
+  background: var(--color-success);
+  box-shadow: var(--shadow-glow-success);
+}
+
+.btn-icon-danger {
+  background: var(--color-danger, #dc3545);
+  border-color: var(--color-danger, #dc3545);
+  color: white;
+}
+
+.btn-icon-danger:hover:not(:disabled) {
+  background: var(--color-danger, #dc3545);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
 }
 
 .wizard-step {
