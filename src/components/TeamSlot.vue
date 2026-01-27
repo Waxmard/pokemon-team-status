@@ -1,7 +1,7 @@
 <template>
   <div
     class="team-slot"
-    :class="{ empty: !pokemon, clickable: true }"
+    :class="{ empty: !pokemon, clickable: true, 'box-slot': isBoxSlot }"
     :style="cardBackgroundStyle"
     @click="pokemon ? $emit('edit', pokemon.id) : $emit('add')"
   >
@@ -61,6 +61,10 @@ const props = defineProps({
   pokemon: {
     type: Object,
     default: null
+  },
+  isBoxSlot: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -292,5 +296,21 @@ function adjustColor(hex, amount) {
   font-weight: 600;
   text-transform: capitalize;
   box-shadow: var(--shadow-sm);
+}
+
+/* Box slot styling */
+.team-slot.box-slot {
+  border-style: dotted;
+  filter: saturate(0.7);
+  opacity: 0.85;
+}
+
+.team-slot.box-slot:hover {
+  filter: saturate(1);
+  opacity: 1;
+}
+
+.team-slot.box-slot.empty {
+  border-style: dotted;
 }
 </style>

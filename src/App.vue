@@ -7,6 +7,7 @@
 
       <TeamSection
         :team="team"
+        :box="box"
         :draftAction="draftAction"
         :draftActive="!!draftAction"
         @addPokemon="startAddPokemon"
@@ -18,6 +19,10 @@
         @updateDraftAbility="updateDraftAbility"
         @updateDraftMove="updateDraftMove"
         @reorderTeam="reorderTeam"
+        @addToBox="startAddToBox"
+        @removeFromBox="removeFromBox"
+        @startSwap="startSwap"
+        @selectSwapTarget="selectSwapTarget"
       />
 
       <GymColumns
@@ -45,9 +50,11 @@ import { themeOverrides } from './theme/colors.js'
 const {
   team,
   defeatedGyms,
+  box,
   loadData,
   persistTeam,
-  persistDefeatedGyms
+  persistDefeatedGyms,
+  persistBox
 } = useStorage()
 
 const draftAction = ref(null)
@@ -80,7 +87,30 @@ const defeatedGymsList = computed(() => {
 
 // Helper to get draft team
 function getDraftTeam() {
-  if (!draftAction.value?.pokemon) return team.value
+  if (!draftAction.value?.pokemon) {
+    // Handle swap preview
+    if (draftAction.value?.type === 'swap' && draftAction.value.targetSlotId) {
+      const { boxPokemon, targetSlotId } = draftAction.value
+      const swapMember = {
+        id: 'draft',
+        name: boxPokemon.name,
+        types: boxPokemon.types,
+        ability: boxPokemon.ability,
+        moves: boxPokemon.moves
+      }
+
+      if (targetSlotId.startsWith('empty-')) {
+        // Adding to empty slot
+        return [...team.value, swapMember]
+      } else {
+        // Swapping with existing Pokemon
+        return team.value.map(p =>
+          p.id === targetSlotId ? swapMember : p
+        )
+      }
+    }
+    return team.value
+  }
 
   const draftMember = {
     id: 'draft',
@@ -90,7 +120,7 @@ function getDraftTeam() {
     moves: draftAction.value.moves.filter(m => m)
   }
 
-  if (draftAction.value.type === 'add') {
+  if (draftAction.value.type === 'add' || draftAction.value.type === 'addToBox') {
     return [...team.value, draftMember]
   }
   if (draftAction.value.type === 'edit') {
@@ -143,6 +173,52 @@ function updateDraftMove({ index, value }) {
 }
 
 function confirmDraft() {
+  // Handle swap confirmation
+  if (draftAction.value?.type === 'swap' && draftAction.value.targetSlotId) {
+    const { boxPokemon, targetSlotId } = draftAction.value
+
+    const newMember = {
+      id: Date.now().toString(),
+      name: boxPokemon.name,
+      types: boxPokemon.types,
+      ability: boxPokemon.ability,
+      moves: boxPokemon.moves
+    }
+
+    if (targetSlotId.startsWith('empty-')) {
+      // Adding to empty slot - add to team, remove from box
+      if (team.value.length < 6) {
+        persistTeam([...team.value, newMember])
+        persistBox(box.value.filter(p => p.id !== boxPokemon.id))
+      }
+    } else {
+      // Swapping with existing Pokemon
+      const teamPokemon = team.value.find(p => p.id === targetSlotId)
+      if (teamPokemon) {
+        // Add team Pokemon to box
+        const boxMember = {
+          id: Date.now().toString() + '-box',
+          name: teamPokemon.name,
+          types: teamPokemon.types,
+          ability: teamPokemon.ability,
+          moves: teamPokemon.moves
+        }
+        // Replace team Pokemon with box Pokemon
+        persistTeam(team.value.map(p =>
+          p.id === targetSlotId ? newMember : p
+        ))
+        // Update box: remove swapped Pokemon, add team Pokemon
+        persistBox([
+          ...box.value.filter(p => p.id !== boxPokemon.id),
+          boxMember
+        ])
+      }
+    }
+
+    cancelDraft()
+    return
+  }
+
   if (!draftAction.value?.pokemon) return
 
   const newMember = {
@@ -156,6 +232,10 @@ function confirmDraft() {
   if (draftAction.value.type === 'add') {
     if (team.value.length < 6) {
       persistTeam([...team.value, newMember])
+    }
+  } else if (draftAction.value.type === 'addToBox') {
+    if (box.value.length < 3) {
+      persistBox([...box.value, newMember])
     }
   } else if (draftAction.value.type === 'edit') {
     persistTeam(team.value.map(p =>
@@ -178,6 +258,37 @@ function removePokemon(id) {
 
 function reorderTeam(newOrder) {
   persistTeam(newOrder)
+}
+
+// Box functions
+function startAddToBox() {
+  draftAction.value = {
+    type: 'addToBox',
+    pokemon: null,
+    ability: null,
+    moves: [null, null, null, null]
+  }
+}
+
+function removeFromBox(id) {
+  persistBox(box.value.filter(p => p.id !== id))
+}
+
+function startSwap(boxPokemonId) {
+  const pokemon = box.value.find(p => p.id === boxPokemonId)
+  if (!pokemon) return
+
+  draftAction.value = {
+    type: 'swap',
+    boxPokemon: { ...pokemon },
+    targetSlotId: null
+  }
+}
+
+function selectSwapTarget(slotId) {
+  if (draftAction.value?.type === 'swap') {
+    draftAction.value.targetSlotId = slotId
+  }
 }
 
 function defeatGym(type) {
