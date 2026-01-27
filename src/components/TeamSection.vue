@@ -1,14 +1,14 @@
 <template>
   <div class="team-section">
-    <TransitionGroup name="list" tag="div" class="team-grid">
+    <div class="team-grid">
       <TeamSlot
         v-for="(pokemon, index) in paddedTeam"
-        :key="pokemon?.id || `empty-${index}`"
+        :key="index"
         :pokemon="pokemon"
         @remove="$emit('removePokemon', $event)"
         @edit="$emit('editPokemon', $event)"
       />
-    </TransitionGroup>
+    </div>
 
     <div class="action-buttons">
       <n-auto-complete

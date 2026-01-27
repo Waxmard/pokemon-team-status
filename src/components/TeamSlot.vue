@@ -5,43 +5,43 @@
     :style="cardBackgroundStyle"
     @click="pokemon && $emit('edit', pokemon.id)"
   >
-    <template v-if="pokemon">
-      <button
-        class="remove-btn"
-        @click.stop="$emit('remove', pokemon.id)"
-        aria-label="Remove Pokemon"
-      >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-          <path d="M9.5 3.205L8.795 2.5 6 5.295 3.205 2.5 2.5 3.205 5.295 6 2.5 8.795 3.205 9.5 6 6.705 8.795 9.5 9.5 8.795 6.705 6z"/>
-        </svg>
-      </button>
-      <div class="slot-content">
-        <img
-          v-if="spriteUrl"
-          :src="spriteUrl"
-          :alt="pokemon.name"
-          class="pokemon-sprite"
-        />
-        <div class="pokemon-info">
-          <div class="pokemon-name">{{ pokemon.name }}</div>
-          <div v-if="pokemon.ability" class="pokemon-ability">
-            {{ pokemon.ability }}
-          </div>
-          <div v-if="pokemon.moves.length" class="pokemon-moves">
-            <span
-              v-for="move in pokemon.moves"
-              :key="move"
-              class="move-badge"
-              :style="{ background: getTypeGradient(move), color: getTextColor(move) }"
-            >
-              {{ move }}
-            </span>
+    <Transition name="slot-content" mode="out-in">
+      <div v-if="pokemon" key="filled" class="slot-inner">
+        <button
+          class="remove-btn"
+          @click.stop="$emit('remove', pokemon.id)"
+          aria-label="Remove Pokemon"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+            <path d="M9.5 3.205L8.795 2.5 6 5.295 3.205 2.5 2.5 3.205 5.295 6 2.5 8.795 3.205 9.5 6 6.705 8.795 9.5 9.5 8.795 6.705 6z"/>
+          </svg>
+        </button>
+        <div class="slot-content">
+          <img
+            v-if="spriteUrl"
+            :src="spriteUrl"
+            :alt="pokemon.name"
+            class="pokemon-sprite"
+          />
+          <div class="pokemon-info">
+            <div class="pokemon-name">{{ pokemon.name }}</div>
+            <div v-if="pokemon.ability" class="pokemon-ability">
+              {{ pokemon.ability }}
+            </div>
+            <div v-if="pokemon.moves.length" class="pokemon-moves">
+              <span
+                v-for="move in pokemon.moves"
+                :key="move"
+                class="move-badge"
+                :style="{ background: getTypeGradient(move), color: getTextColor(move) }"
+              >
+                {{ move }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
-    </template>
-    <template v-else>
-      <div class="empty-content">
+      <div v-else key="empty" class="empty-content">
         <svg class="empty-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"/>
           <line x1="12" y1="8" x2="12" y2="16"/>
@@ -49,7 +49,7 @@
         </svg>
         <span class="empty-text">Empty Slot</span>
       </div>
-    </template>
+    </Transition>
   </div>
 </template>
 
@@ -151,7 +151,25 @@ function adjustColor(hex, amount) {
   position: relative;
   box-shadow: var(--shadow-md);
   transition: transform var(--transition-base), box-shadow var(--transition-base);
-  animation: fadeInUp var(--transition-slow) ease forwards;
+}
+
+.slot-inner {
+  position: relative;
+}
+
+.slot-content-enter-active,
+.slot-content-leave-active {
+  transition: opacity var(--transition-base), transform var(--transition-base);
+}
+
+.slot-content-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.slot-content-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
 }
 
 .team-slot:hover {
