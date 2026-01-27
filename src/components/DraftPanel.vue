@@ -1,93 +1,41 @@
 <template>
   <div class="draft-panel">
-    <!-- Swap Preview UI -->
-    <template v-if="isSwapPreview">
-      <div class="swap-preview">
-        <div class="swap-pokemon">
+      <div class="form-header">
+        <div class="form-header-fields">
+          <div v-if="!hideSearch" class="form-group">
+            <label class="form-label">Pokemon Name</label>
+            <n-auto-complete
+              v-model:value="searchQuery"
+              :options="autocompleteOptions"
+              placeholder="Search Pokemon..."
+              :get-show="() => true"
+              @select="onSelectPokemon"
+              @update:value="onSearchInput"
+              clearable
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ability (Optional)</label>
+            <n-select
+              v-model:value="localAbility"
+              :options="abilityOptions"
+              placeholder="Select ability..."
+              filterable
+              clearable
+              @update:value="updateAbility"
+            />
+          </div>
+        </div>
+
+        <div v-if="draftAction.pokemon" class="selected-pokemon-preview">
           <img
-            :src="boxPokemonSpriteUrl"
-            :alt="draftAction.boxPokemon.name"
+            v-if="selectedSpriteUrl"
+            :src="selectedSpriteUrl"
+            :alt="draftAction.pokemon.name"
             class="pokemon-sprite"
           />
-          <div class="pokemon-name">{{ draftAction.boxPokemon.name }}</div>
-          <div class="swap-label">From Box</div>
         </div>
-
-        <div class="swap-arrow">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
-            <path d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-          </svg>
-        </div>
-
-        <div class="swap-pokemon">
-          <template v-if="targetPokemon">
-            <img
-              :src="targetPokemonSpriteUrl"
-              :alt="targetPokemon.name"
-              class="pokemon-sprite"
-            />
-            <div class="pokemon-name">{{ targetPokemon.name }}</div>
-            <div class="swap-label">To Box</div>
-          </template>
-          <template v-else>
-            <div class="empty-slot-icon">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="16"/>
-                <line x1="8" y1="12" x2="16" y2="12"/>
-              </svg>
-            </div>
-            <div class="pokemon-name">Empty Slot</div>
-            <div class="swap-label">Add to Team</div>
-          </template>
-        </div>
-      </div>
-
-      <div class="draft-actions">
-        <button class="btn btn-success" @click="$emit('confirm')">
-          Confirm Swap
-        </button>
-        <button class="btn btn-secondary" @click="$emit('cancel')">
-          Cancel
-        </button>
-      </div>
-    </template>
-
-    <!-- Standard Add/Edit Form -->
-    <template v-else-if="!isSwapMode">
-      <div v-if="!hideSearch" class="form-group">
-        <label class="form-label">Pokemon Name</label>
-        <n-auto-complete
-          v-model:value="searchQuery"
-          :options="autocompleteOptions"
-          placeholder="Search Pokemon..."
-          :get-show="() => true"
-          @select="onSelectPokemon"
-          @update:value="onSearchInput"
-          clearable
-        />
-      </div>
-
-      <div v-if="draftAction.pokemon" class="selected-pokemon-preview">
-        <img
-          v-if="selectedSpriteUrl"
-          :src="selectedSpriteUrl"
-          :alt="draftAction.pokemon.name"
-          class="pokemon-sprite"
-        />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Ability (Optional)</label>
-        <n-select
-          v-model:value="localAbility"
-          :options="abilityOptions"
-          placeholder="Select ability..."
-          filterable
-          clearable
-          @update:value="updateAbility"
-        />
       </div>
 
       <div class="form-group">
@@ -107,6 +55,18 @@
         </div>
       </div>
 
+      <!-- Replace dropdown for box Pokemon -->
+      <div v-if="draftAction.isBoxPokemon" class="form-group">
+        <label class="form-label">Move to Team (Replace)</label>
+        <n-select
+          v-model:value="localReplaceTarget"
+          :options="replaceTargetOptions"
+          placeholder="Keep in box (no replace)"
+          clearable
+          @update:value="updateReplaceTarget"
+        />
+      </div>
+
       <div class="draft-actions">
         <button
           class="btn btn-success"
@@ -119,7 +79,6 @@
           Cancel
         </button>
       </div>
-    </template>
   </div>
 </template>
 
@@ -146,42 +105,44 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability', 'update:move'])
+const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability', 'update:move', 'update:replaceTarget'])
 
 const searchQuery = ref('')
 const localAbility = ref(null)
 const moveQueries = ref(['', '', '', ''])
+const localReplaceTarget = ref(null)
 
-// Check if this is a swap action
-const isSwapMode = computed(() => props.draftAction?.type === 'swap')
-const isSwapPreview = computed(() => isSwapMode.value && props.draftAction?.targetSlotId)
-
-// Swap-related computed properties
-const boxPokemonSpriteUrl = computed(() => {
-  if (!isSwapMode.value || !props.draftAction?.boxPokemon) return null
-  return getSpriteUrl(props.draftAction.boxPokemon.name)
-})
-
-const targetPokemon = computed(() => {
-  if (!isSwapPreview.value) return null
-  const targetId = props.draftAction.targetSlotId
-  if (targetId.startsWith('empty-')) return null
-  return props.team.find(p => p.id === targetId)
-})
-
-const targetPokemonSpriteUrl = computed(() => {
-  if (!targetPokemon.value) return null
-  return getSpriteUrl(targetPokemon.value.name)
-})
-
-// Initialize form state when draftAction changes (for edit mode)
+// Initialize form state when draftAction changes
 watch(() => props.draftAction, (action) => {
-  if (action.type !== 'swap') {
-    searchQuery.value = action.pokemon?.name || ''
-    localAbility.value = action.ability
-    moveQueries.value = (action.moves || []).map(m => m || '')
-  }
+  searchQuery.value = action.pokemon?.name || ''
+  localAbility.value = action.ability
+  moveQueries.value = (action.moves || []).map(m => m || '')
+  localReplaceTarget.value = action.replaceTarget || null
 }, { immediate: true })
+
+// Options for replace target dropdown
+const replaceTargetOptions = computed(() => {
+  const options = []
+
+  // Add team members
+  props.team.forEach(p => {
+    options.push({
+      label: p.name,
+      value: p.id
+    })
+  })
+
+  // Add empty slots if team has room
+  const emptySlots = 6 - props.team.length
+  for (let i = 1; i <= emptySlots; i++) {
+    options.push({
+      label: `Empty Slot ${i}`,
+      value: `empty-${i}`
+    })
+  }
+
+  return options
+})
 
 const canConfirm = computed(() => {
   return !!props.draftAction.pokemon
@@ -252,6 +213,10 @@ function onMoveInput(index, value) {
     emit('update:move', { index, value: null })
   }
 }
+
+function updateReplaceTarget(value) {
+  emit('update:replaceTarget', value)
+}
 </script>
 
 <style scoped>
@@ -278,10 +243,29 @@ function onMoveInput(index, value) {
   color: var(--color-text-muted);
 }
 
-.selected-pokemon-preview {
+.form-header {
   display: flex;
-  justify-content: center;
+  gap: var(--space-4);
   margin-bottom: var(--space-4);
+}
+
+.form-header-fields {
+  flex: 1;
+}
+
+.form-header-fields .form-group {
+  margin-bottom: var(--space-3);
+}
+
+.form-header-fields .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.selected-pokemon-preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pokemon-sprite {
@@ -340,49 +324,5 @@ function onMoveInput(index, value) {
 .btn-secondary:hover {
   background: var(--color-card);
   color: var(--color-text-primary);
-}
-
-/* Swap Preview Styles */
-.swap-preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  padding: var(--space-4) 0;
-}
-
-.swap-pokemon {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 100px;
-}
-
-.swap-pokemon .pokemon-name {
-  font-weight: 600;
-  color: var(--color-text-primary);
-  text-align: center;
-}
-
-.swap-label {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.swap-arrow {
-  color: var(--color-warning);
-  flex-shrink: 0;
-}
-
-.empty-slot-icon {
-  width: 96px;
-  height: 96px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
 }
 </style>

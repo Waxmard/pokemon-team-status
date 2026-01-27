@@ -3,19 +3,12 @@
     <!-- Mode Toggle Button -->
     <button
       class="mode-toggle"
-      :disabled="draftActive && draftAction?.type === 'swap'"
       @click="toggleViewMode"
     >
       <span class="mode-icon">{{ viewMode === 'team' ? '⚔️' : '📦' }}</span>
     </button>
 
     <div class="team-section">
-    <!-- Swap Banner -->
-    <div v-if="draftAction?.type === 'swap' && !draftAction.targetSlotId" class="swap-banner">
-      Select a team slot to swap with {{ draftAction.boxPokemon.name }}
-      <button class="cancel-swap-btn" @click="$emit('cancelDraft')">Cancel</button>
-    </div>
-
     <!-- Team Grid -->
     <draggable
       v-if="viewMode === 'team'"
@@ -30,9 +23,8 @@
       <template #item="{ element: pokemon }">
         <TeamSlot
           :pokemon="pokemon"
-          :class="{ 'swap-target': draftAction?.type === 'swap' && !draftAction.targetSlotId }"
           @remove="$emit('removePokemon', $event)"
-          @edit="handleSlotClick(pokemon.id)"
+          @edit="$emit('editPokemon', pokemon.id)"
         />
       </template>
       <template #footer>
@@ -40,8 +32,7 @@
           v-for="i in emptySlotCount"
           :key="'empty-' + i"
           :pokemon="null"
-          :class="{ 'swap-target': draftAction?.type === 'swap' && !draftAction.targetSlotId }"
-          @add="handleEmptySlotClick(i)"
+          @add="$emit('addPokemon')"
         />
       </template>
     </draggable>
@@ -54,7 +45,7 @@
         :pokemon="pokemon"
         :isBoxSlot="true"
         @remove="$emit('removeFromBox', pokemon.id)"
-        @edit="$emit('startSwap', pokemon.id)"
+        @edit="$emit('editBoxPokemon', pokemon.id)"
       />
       <TeamSlot
         v-for="i in emptyBoxSlotCount"
@@ -75,6 +66,7 @@
         @update:pokemon="$emit('updateDraftPokemon', $event)"
         @update:ability="$emit('updateDraftAbility', $event)"
         @update:move="$emit('updateDraftMove', $event)"
+        @update:replaceTarget="$emit('updateDraftReplaceTarget', $event)"
       />
     </Transition>
     </div>
@@ -115,11 +107,11 @@ const emit = defineEmits([
   'updateDraftPokemon',
   'updateDraftAbility',
   'updateDraftMove',
+  'updateDraftReplaceTarget',
   'reorderTeam',
   'addToBox',
   'removeFromBox',
-  'startSwap',
-  'selectSwapTarget'
+  'editBoxPokemon'
 ])
 
 const viewMode = ref('team')
@@ -132,45 +124,18 @@ watch(() => props.team, (newTeam) => {
   localTeam.value = [...newTeam]
 }, { deep: true })
 
-// Force view to team when swap is initiated
-watch(() => props.draftAction, (action) => {
-  if (action?.type === 'swap') {
-    viewMode.value = 'team'
-  }
-})
-
 // Number of empty slots to show
 const emptySlotCount = computed(() => Math.max(0, 6 - props.team.length))
 const emptyBoxSlotCount = computed(() => Math.max(0, 3 - props.box.length))
 
-// Show draft panel for add/edit modes, or swap mode when target is selected
+// Show draft panel for add/edit modes
 const showDraftPanel = computed(() => {
-  if (!props.draftAction) return false
-  if (props.draftAction.type === 'swap') {
-    return !!props.draftAction.targetSlotId
-  }
-  return true
+  return !!props.draftAction
 })
 
 // Emit reorder when drag ends
 function onDragEnd() {
   emit('reorderTeam', localTeam.value)
-}
-
-function handleSlotClick(pokemonId) {
-  if (props.draftAction?.type === 'swap' && !props.draftAction.targetSlotId) {
-    emit('selectSwapTarget', pokemonId)
-  } else {
-    emit('editPokemon', pokemonId)
-  }
-}
-
-function handleEmptySlotClick(slotIndex) {
-  if (props.draftAction?.type === 'swap' && !props.draftAction.targetSlotId) {
-    emit('selectSwapTarget', `empty-${slotIndex}`)
-  } else {
-    emit('addPokemon')
-  }
 }
 
 function toggleViewMode() {
@@ -225,33 +190,6 @@ function toggleViewMode() {
   line-height: 1;
 }
 
-.swap-banner {
-  background: var(--color-warning);
-  color: #1a1a2e;
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-4);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 500;
-}
-
-.cancel-swap-btn {
-  padding: var(--space-1) var(--space-3);
-  border: none;
-  border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.2);
-  color: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background var(--transition-base);
-}
-
-.cancel-swap-btn:hover {
-  background: rgba(0, 0, 0, 0.3);
-}
-
 .team-grid {
   position: relative;
   display: grid;
@@ -289,19 +227,5 @@ function toggleViewMode() {
 
 .team-slot:not(.empty) {
   cursor: grab;
-}
-
-/* Swap target highlighting */
-:deep(.swap-target) {
-  animation: pulse-border 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse-border {
-  0%, 100% {
-    box-shadow: var(--shadow-md), 0 0 0 2px var(--color-warning);
-  }
-  50% {
-    box-shadow: var(--shadow-md), 0 0 0 4px var(--color-warning);
-  }
 }
 </style>
