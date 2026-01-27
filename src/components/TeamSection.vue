@@ -43,7 +43,6 @@
         v-for="pokemon in box"
         :key="pokemon.id"
         :pokemon="pokemon"
-        :isBoxSlot="true"
         @remove="$emit('removeFromBox', pokemon.id)"
         @edit="$emit('editBoxPokemon', pokemon.id)"
       />
@@ -51,7 +50,6 @@
         v-for="i in emptyBoxSlotCount"
         :key="'box-empty-' + i"
         :pokemon="null"
-        :isBoxSlot="true"
         @add="$emit('addToBox')"
       />
     </div>
