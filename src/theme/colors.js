@@ -1,85 +1,98 @@
 export const colors = {
-  // Base
-  background: '#1a1a2e',
-  surface: '#16213e',
-  surfaceLight: '#1e3a5f',
-  card: '#0f3460',
+  // Base - Clean light palette
+  background: '#f8f9fc',
+  surface: '#ffffff',
+  surfaceLight: '#f1f3f8',
+  card: '#ffffff',
 
-  // Text
-  textPrimary: '#eeeeee',
-  textSecondary: '#aaaaaa',
-  textMuted: '#666666',
+  // Text hierarchy
+  textPrimary: '#1a1d2e',
+  textSecondary: '#5a5f7a',
+  textMuted: '#9298b0',
 
-  // Accents
-  primary: '#3498db',
-  success: '#2ecc71',
-  danger: '#e74c3c',
-  warning: '#f39c12',
+  // Accents - Adjusted for light bg readability
+  primary: '#3b82f6',
+  success: '#10b981',
+  danger: '#ef4444',
+  warning: '#f59e0b',
 
   // Score colors
-  positive: '#2ecc71',
-  negative: '#e74c3c',
+  positive: '#10b981',
+  negative: '#ef4444',
+
+  // Borders
+  border: 'rgba(0, 0, 0, 0.08)',
+  borderLight: 'rgba(0, 0, 0, 0.04)',
 }
 
-// Naive UI theme overrides
+// Naive UI theme overrides for light mode
 export const themeOverrides = {
   common: {
     primaryColor: colors.primary,
-    primaryColorHover: '#5dade2',
-    primaryColorPressed: '#2980b9',
+    primaryColorHover: '#60a5fa',
+    primaryColorPressed: '#2563eb',
     successColor: colors.success,
     errorColor: colors.danger,
     warningColor: colors.warning,
     bodyColor: colors.background,
     cardColor: colors.card,
-    modalColor: colors.surfaceLight,
-    popoverColor: colors.card,
+    modalColor: colors.surface,
+    popoverColor: colors.surface,
     tableColor: colors.surface,
-    inputColor: colors.card,
-    actionColor: colors.surface,
+    inputColor: colors.surface,
+    actionColor: colors.surfaceLight,
     textColorBase: colors.textPrimary,
     textColor1: colors.textPrimary,
     textColor2: colors.textSecondary,
     textColor3: colors.textMuted,
-    borderColor: '#333',
-    dividerColor: '#333',
+    borderColor: colors.border,
+    dividerColor: colors.border,
+    borderRadius: '12px',
+    borderRadiusSmall: '8px',
   },
   Button: {
     textColorPrimary: '#ffffff',
     textColorSuccess: '#ffffff',
     textColorError: '#ffffff',
+    borderRadiusMedium: '10px',
+    borderRadiusSmall: '8px',
   },
   Card: {
     color: colors.surface,
-    borderColor: 'transparent',
+    borderColor: colors.border,
+    borderRadius: '16px',
   },
   Input: {
-    color: colors.card,
-    borderColor: '#333',
+    color: colors.surface,
+    borderColor: colors.border,
     borderColorFocus: colors.primary,
+    borderRadius: '10px',
   },
   Select: {
     peers: {
       InternalSelection: {
-        color: colors.card,
-        borderColor: '#333',
+        color: colors.surface,
+        borderColor: colors.border,
         borderColorFocus: colors.primary,
+        borderRadius: '10px',
       },
     },
   },
   AutoComplete: {
     peers: {
       InternalSelectMenu: {
-        color: colors.card,
+        color: colors.surface,
+        borderRadius: '12px',
       },
       Input: {
-        color: colors.card,
-        borderColor: '#333',
+        color: colors.surface,
+        borderColor: colors.border,
         borderColorFocus: colors.primary,
+        borderRadius: '10px',
       },
     },
   },
   Tag: {
-    borderRadius: '4px',
+    borderRadius: '6px',
   },
 }

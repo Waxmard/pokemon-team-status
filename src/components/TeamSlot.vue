@@ -1,58 +1,103 @@
 <template>
-  <n-card class="team-slot" :class="{ empty: !pokemon }" size="small">
-    <template v-if="pokemon">
-      <n-button
-        class="remove-btn"
-        circle
-        size="tiny"
-        type="error"
-        @click="$emit('remove', pokemon.id)"
-      >
-        <template #icon>&times;</template>
-      </n-button>
-      <div class="pokemon-name">{{ pokemon.name }}</div>
-      <div class="pokemon-types">
-        <n-tag
-          v-for="type in pokemon.types"
-          :key="type"
-          :color="{ color: typeColors[type], textColor: getTextColor(type) }"
-          size="small"
+  <div
+    class="team-slot"
+    :class="{ empty: !pokemon, clickable: true }"
+    :style="cardBackgroundStyle"
+    @click="pokemon ? $emit('edit', pokemon.id) : $emit('add')"
+  >
+    <Transition name="slot-content" mode="out-in">
+      <div v-if="pokemon" key="filled" class="slot-inner">
+        <button
+          class="remove-btn"
+          @click.stop="$emit('remove', pokemon.id)"
+          aria-label="Remove Pokemon"
         >
-          {{ type }}
-        </n-tag>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+            <path d="M9.5 3.205L8.795 2.5 6 5.295 3.205 2.5 2.5 3.205 5.295 6 2.5 8.795 3.205 9.5 6 6.705 8.795 9.5 9.5 8.795 6.705 6z"/>
+          </svg>
+        </button>
+        <div class="slot-content">
+          <img
+            v-if="spriteUrl"
+            :src="spriteUrl"
+            :alt="pokemon.name"
+            class="pokemon-sprite"
+          />
+          <div class="pokemon-info">
+            <div class="pokemon-name">{{ pokemon.name }}</div>
+            <div v-if="pokemon.ability" class="pokemon-ability">
+              {{ pokemon.ability }}
+            </div>
+            <div v-if="pokemon.moves.length" class="pokemon-moves">
+              <span
+                v-for="move in pokemon.moves"
+                :key="move"
+                class="move-badge"
+                :style="{ background: getTypeGradient(move), color: getTextColor(move) }"
+              >
+                {{ move }}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div v-if="pokemon.ability" class="pokemon-ability">
-        {{ pokemon.ability }}
+      <div v-else key="empty" class="empty-content">
+        <svg class="empty-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="16"/>
+          <line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+        <span class="empty-text">Empty Slot</span>
       </div>
-      <div v-if="pokemon.moves.length" class="pokemon-moves">
-        Moves:
-        <n-tag
-          v-for="move in pokemon.moves"
-          :key="move"
-          :color="{ color: typeColors[move], textColor: getTextColor(move) }"
-          size="tiny"
-        >
-          {{ move }}
-        </n-tag>
-      </div>
-    </template>
-    <template v-else>
-      <span class="empty-text">Empty</span>
-    </template>
-  </n-card>
+    </Transition>
+  </div>
 </template>
 
 <script setup>
-import { NCard, NButton, NTag } from 'naive-ui'
+import { computed } from 'vue'
+import { getSpriteUrl } from '../utils/pokemon.js'
 
-defineProps({
+const props = defineProps({
   pokemon: {
     type: Object,
     default: null
   }
 })
 
-defineEmits(['remove'])
+defineEmits(['remove', 'edit', 'add'])
+
+const spriteUrl = computed(() => {
+  if (!props.pokemon) return null
+  return getSpriteUrl(props.pokemon.name)
+})
+
+const cardBackgroundStyle = computed(() => {
+  if (!props.pokemon || !props.pokemon.types?.length) return {}
+
+  const types = props.pokemon.types
+  const opacity = 0.15
+
+  if (types.length === 1) {
+    const color = typeColors[types[0]]
+    return {
+      background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`
+    }
+  } else {
+    const color1 = typeColors[types[0]]
+    const color2 = typeColors[types[1]]
+    return {
+      background: `linear-gradient(135deg, ${hexToRgba(color1, opacity)} 0%, ${hexToRgba(color2, opacity)} 100%)`
+    }
+  }
+})
+
+function hexToRgba(hex, alpha) {
+  const num = parseInt(hex.replace('#', ''), 16)
+  const r = (num >> 16) & 255
+  const g = (num >> 8) & 255
+  const b = num & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
 
 // Type colors for tags
 const typeColors = {
@@ -79,58 +124,156 @@ const typeColors = {
 const lightTextTypes = ['electric', 'ice', 'ground', 'steel', 'fairy']
 
 function getTextColor(type) {
-  return lightTextTypes.includes(type) ? '#333' : '#fff'
+  return lightTextTypes.includes(type) ? '#1a1a2e' : '#fff'
+}
+
+function getTypeGradient(type) {
+  const color = typeColors[type]
+  return `linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -20)} 100%)`
+}
+
+function adjustColor(hex, amount) {
+  const num = parseInt(hex.replace('#', ''), 16)
+  const r = Math.max(0, Math.min(255, (num >> 16) + amount))
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount))
+  const b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount))
+  return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
 }
 </script>
 
 <style scoped>
 .team-slot {
-  min-height: 100px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  min-height: 110px;
   position: relative;
+  box-shadow: var(--shadow-md);
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.slot-inner {
+  position: relative;
+}
+
+.slot-content-enter-active,
+.slot-content-leave-active {
+  transition: opacity var(--transition-base), transform var(--transition-base);
+}
+
+.slot-content-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.slot-content-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.team-slot:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.team-slot.clickable {
+  cursor: pointer;
 }
 
 .team-slot.empty {
   display: flex;
   justify-content: center;
   align-items: center;
-  border: 2px dashed #333;
-  background: transparent;
+  border: 2px dashed var(--color-border);
+  background: var(--color-surface-light);
+  box-shadow: none;
 }
 
-.team-slot.empty :deep(.n-card__content) {
+.team-slot.empty:hover {
+  transform: none;
+  border-color: var(--color-text-muted);
+}
+
+.empty-content {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  gap: var(--space-2);
+}
+
+.empty-icon {
+  color: var(--color-text-muted);
+  opacity: 0.5;
 }
 
 .empty-text {
-  color: #666;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
 }
 
 .remove-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--color-danger);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-base), transform var(--transition-fast);
   z-index: 1;
+}
+
+.team-slot:hover .remove-btn {
+  opacity: 1;
+}
+
+.remove-btn:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-glow-danger);
+}
+
+.remove-btn:active {
+  transform: scale(0.95);
+}
+
+.slot-content {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.pokemon-sprite {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.pokemon-info {
+  flex: 1;
+  min-width: 0;
 }
 
 .pokemon-name {
   font-weight: 600;
-  margin-bottom: 6px;
-  padding-right: 28px;
-}
-
-.pokemon-types {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  margin-bottom: 6px;
+  font-size: 1rem;
+  margin-bottom: var(--space-2);
+  padding-right: var(--space-6);
+  color: var(--color-text-primary);
 }
 
 .pokemon-ability {
   font-size: 0.8rem;
-  color: #aaa;
-  margin-bottom: 6px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2);
 }
 
 .pokemon-moves {
@@ -138,7 +281,17 @@ function getTextColor(type) {
   margin-top: auto;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
   align-items: center;
 }
+
+.move-badge {
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  box-shadow: var(--shadow-sm);
+}
+
 </style>

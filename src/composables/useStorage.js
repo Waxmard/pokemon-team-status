@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 const DB_NAME = 'pokemon-team-calculator'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -18,6 +18,9 @@ function openDB() {
       if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings', { keyPath: 'name' })
       }
+      if (!db.objectStoreNames.contains('box')) {
+        db.createObjectStore('box', { keyPath: 'id' })
+      }
     }
   })
 }
@@ -29,7 +32,9 @@ async function saveTeam(team) {
 
   // Clear existing and add all
   store.clear()
-  for (const member of team) {
+  // Convert to plain objects to strip Vue reactivity
+  const plainTeam = JSON.parse(JSON.stringify(team))
+  for (const member of plainTeam) {
     store.add(member)
   }
 
@@ -55,7 +60,9 @@ async function saveDefeatedGyms(gyms) {
   const db = await openDB()
   const tx = db.transaction('settings', 'readwrite')
   const store = tx.objectStore('settings')
-  store.put({ name: 'defeatedGyms', value: gyms })
+  // Convert to plain array to strip Vue reactivity
+  const plainGyms = JSON.parse(JSON.stringify(gyms))
+  store.put({ name: 'defeatedGyms', value: plainGyms })
 
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve()
@@ -75,16 +82,48 @@ async function loadDefeatedGyms() {
   })
 }
 
-export function useStorage() {
-  const team = ref([])
-  const defeatedGyms = ref([])
-  const isLoading = ref(true)
+async function saveBox(boxData) {
+  const db = await openDB()
+  const tx = db.transaction('box', 'readwrite')
+  const store = tx.objectStore('box')
 
+  store.clear()
+  const plainBox = JSON.parse(JSON.stringify(boxData))
+  for (const member of plainBox) {
+    store.add(member)
+  }
+
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
+async function loadBox() {
+  const db = await openDB()
+  const tx = db.transaction('box', 'readonly')
+  const store = tx.objectStore('box')
+  const request = store.getAll()
+
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result || [])
+    request.onerror = () => reject(request.error)
+  })
+}
+
+// Singleton state - shared across all calls
+const team = ref([])
+const defeatedGyms = ref([])
+const box = ref([])
+const isLoading = ref(true)
+
+export function useStorage() {
   async function loadData() {
     try {
       isLoading.value = true
       team.value = await loadTeam()
       defeatedGyms.value = await loadDefeatedGyms()
+      box.value = await loadBox()
     } catch (e) {
       console.error('Failed to load data:', e)
     } finally {
@@ -102,12 +141,19 @@ export function useStorage() {
     await saveDefeatedGyms(newGyms)
   }
 
+  async function persistBox(newBox) {
+    box.value = newBox
+    await saveBox(newBox)
+  }
+
   return {
     team,
     defeatedGyms,
+    box,
     isLoading,
     loadData,
     persistTeam,
-    persistDefeatedGyms
+    persistDefeatedGyms,
+    persistBox
   }
 }
