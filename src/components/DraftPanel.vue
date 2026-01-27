@@ -29,14 +29,22 @@
 
           <div class="form-group">
             <label class="form-label">Berry (Optional)</label>
-            <n-select
-              v-model:value="localBerry"
-              :options="berryOptions"
-              placeholder="Select berry..."
-              filterable
-              clearable
-              @update:value="updateBerry"
-            />
+            <div class="berry-select-row">
+              <n-select
+                v-model:value="localBerry"
+                :options="berryOptions"
+                placeholder="Select berry..."
+                filterable
+                clearable
+                @update:value="updateBerry"
+              />
+              <img
+                v-if="berrySpriteUrl"
+                :src="berrySpriteUrl"
+                :alt="localBerry"
+                class="berry-preview"
+              />
+            </div>
           </div>
         </div>
 
@@ -101,7 +109,7 @@ import { POKEMON_DATA } from '../data/pokemon.js'
 import { ALL_TYPES } from '../data/types.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_NAMES } from '../data/berries.js'
-import { getSpriteUrl } from '../utils/pokemon.js'
+import { getSpriteUrl, getBerrySprite } from '../utils/pokemon.js'
 
 const props = defineProps({
   draftAction: {
@@ -166,6 +174,10 @@ const canConfirm = computed(() => {
 const selectedSpriteUrl = computed(() => {
   if (!props.draftAction.pokemon) return null
   return getSpriteUrl(props.draftAction.pokemon.name)
+})
+
+const berrySpriteUrl = computed(() => {
+  return getBerrySprite(localBerry.value)
 })
 
 const autocompleteOptions = computed(() => {
@@ -298,6 +310,23 @@ function updateReplaceTarget(value) {
   width: 96px;
   height: 96px;
   object-fit: contain;
+}
+
+.berry-select-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.berry-select-row .n-select {
+  flex: 1;
+}
+
+.berry-preview {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .moves-grid {

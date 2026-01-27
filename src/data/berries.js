@@ -19,3 +19,8 @@ export const BERRIES = {
 }
 
 export const BERRY_NAMES = Object.keys(BERRIES)
+
+// Reverse lookup: type → berry name
+export const BERRY_BY_TYPE = Object.fromEntries(
+  Object.entries(BERRIES).map(([berry, type]) => [type, berry])
+)

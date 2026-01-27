@@ -24,7 +24,16 @@
             class="pokemon-sprite"
           />
           <div class="pokemon-info">
-            <div class="pokemon-name">{{ pokemon.name }}</div>
+            <div class="pokemon-name">
+              {{ pokemon.name }}
+              <img
+                v-if="pokemon.berry"
+                :src="getBerrySprite(pokemon.berry)"
+                :alt="pokemon.berry"
+                :title="pokemon.berry"
+                class="berry-sprite"
+              />
+            </div>
             <div v-if="pokemon.moves.length" class="pokemon-moves">
               <span
                 v-for="move in pokemon.moves"
@@ -52,7 +61,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { getSpriteUrl } from '../utils/pokemon.js'
+import { getSpriteUrl, getBerrySprite } from '../utils/pokemon.js'
 import { ABILITIES } from '../data/abilities.js'
 
 const props = defineProps({
@@ -298,6 +307,14 @@ function adjustColor(hex, amount) {
   font-weight: 600;
   text-transform: capitalize;
   box-shadow: var(--shadow-sm);
+}
+
+.berry-sprite {
+  width: 18px;
+  height: 18px;
+  margin-left: var(--space-1);
+  vertical-align: middle;
+  object-fit: contain;
 }
 
 </style>

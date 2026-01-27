@@ -8,6 +8,19 @@
       <span class="gym-name">{{ type }}</span>
     </span>
     <span class="gym-scores">
+      <span
+        v-if="berryCount > 0"
+        class="berry-icons"
+        :title="`${berryCount} ${BERRY_BY_TYPE[type]}${berryCount > 1 ? 's' : ''}`"
+      >
+        <img
+          v-for="i in berryCount"
+          :key="i"
+          :src="berrySprite"
+          class="berry-sprite"
+          :alt="BERRY_BY_TYPE[type]"
+        />
+      </span>
       <span class="gym-score" :class="{ positive: score > 0, negative: score < 0 }">
         {{ score > 0 ? '+' : '' }}{{ score }}
       </span>
@@ -23,7 +36,11 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { getBerrySprite } from '../utils/pokemon.js'
+import { BERRY_BY_TYPE } from '../data/berries.js'
+
+const props = defineProps({
   type: {
     type: String,
     required: true
@@ -35,10 +52,16 @@ defineProps({
   diff: {
     type: Number,
     default: 0
+  },
+  berryCount: {
+    type: Number,
+    default: 0
   }
 })
 
 defineEmits(['click'])
+
+const berrySprite = computed(() => getBerrySprite(BERRY_BY_TYPE[props.type]))
 
 // Type colors
 const typeColors = {
@@ -147,5 +170,21 @@ const typeColors = {
 .score-diff.negative {
   background: rgba(239, 68, 68, 0.15);
   color: var(--color-danger);
+}
+
+.berry-icons {
+  display: flex;
+  align-items: center;
+}
+
+.berry-sprite {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  margin-left: -4px;
+}
+
+.berry-sprite:first-child {
+  margin-left: 0;
 }
 </style>
