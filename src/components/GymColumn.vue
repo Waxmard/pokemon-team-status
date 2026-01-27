@@ -58,6 +58,8 @@ defineEmits(['gymClick'])
   padding: var(--space-4);
   box-shadow: var(--shadow-md);
   height: fit-content;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .column-header {

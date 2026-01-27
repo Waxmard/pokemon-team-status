@@ -156,6 +156,8 @@ function toggleViewMode() {
   padding: var(--space-5);
   margin-bottom: var(--space-5);
   box-shadow: var(--shadow-lg);
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 .mode-toggle {
@@ -214,6 +216,13 @@ function toggleViewMode() {
 @media (max-width: 500px) {
   .box-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 430px) {
+  .team-grid {
+    padding: var(--space-2);
+    gap: var(--space-2);
   }
 }
 
