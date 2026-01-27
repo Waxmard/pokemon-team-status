@@ -18,6 +18,7 @@
         @updateDraftAbility="updateDraftAbility"
         @updateDraftMove="updateDraftMove"
         @updateDraftReplaceId="updateDraftReplaceId"
+        @reorderTeam="reorderTeam"
       />
 
       <GymColumns
@@ -192,6 +193,10 @@ function cancelDraft() {
 
 function removePokemon(id) {
   persistTeam(team.value.filter(m => m.id !== id))
+}
+
+function reorderTeam(newOrder) {
+  persistTeam(newOrder)
 }
 
 function defeatGym(type) {

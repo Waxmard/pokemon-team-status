@@ -1,14 +1,25 @@
 <template>
   <div class="team-section">
-    <div class="team-grid">
-      <TeamSlot
-        v-for="(pokemon, index) in paddedTeam"
-        :key="index"
-        :pokemon="pokemon"
-        @remove="$emit('removePokemon', $event)"
-        @edit="$emit('editPokemon', $event)"
-      />
-    </div>
+    <draggable
+      v-model="localTeam"
+      :disabled="draftActive"
+      item-key="id"
+      ghost-class="drag-ghost"
+      drag-class="drag-active"
+      class="team-grid"
+      @end="onDragEnd"
+    >
+      <template #item="{ element: pokemon }">
+        <TeamSlot
+          :pokemon="pokemon"
+          @remove="$emit('removePokemon', $event)"
+          @edit="$emit('editPokemon', $event)"
+        />
+      </template>
+      <template #footer>
+        <TeamSlot v-for="i in emptySlotCount" :key="'empty-' + i" :pokemon="null" />
+      </template>
+    </draggable>
 
     <div class="action-buttons">
       <n-auto-complete
@@ -43,6 +54,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { NAutoComplete } from 'naive-ui'
+import draggable from 'vuedraggable'
 import TeamSlot from './TeamSlot.vue'
 import DraftPanel from './DraftPanel.vue'
 import { POKEMON_DATA } from '../data/pokemon.js'
@@ -71,7 +83,8 @@ const emit = defineEmits([
   'updateDraftPokemon',
   'updateDraftAbility',
   'updateDraftMove',
-  'updateDraftReplaceId'
+  'updateDraftReplaceId',
+  'reorderTeam'
 ])
 
 const searchQuery = ref('')
@@ -104,14 +117,21 @@ watch(() => props.draftAction, (action) => {
   }
 })
 
-// Pad team to always show 6 slots
-const paddedTeam = computed(() => {
-  const slots = [...props.team]
-  while (slots.length < 6) {
-    slots.push(null)
-  }
-  return slots
-})
+// Local copy for draggable (only actual Pokemon, no nulls)
+const localTeam = ref([...props.team])
+
+// Sync when props change
+watch(() => props.team, (newTeam) => {
+  localTeam.value = [...newTeam]
+}, { deep: true })
+
+// Number of empty slots to show
+const emptySlotCount = computed(() => Math.max(0, 6 - props.team.length))
+
+// Emit reorder when drag ends
+function onDragEnd() {
+  emit('reorderTeam', localTeam.value)
+}
 </script>
 
 <style scoped>
@@ -147,5 +167,17 @@ const paddedTeam = computed(() => {
 .pokemon-search {
   width: 100%;
   max-width: 300px;
+}
+
+.drag-ghost {
+  opacity: 0.5;
+}
+
+.drag-active {
+  cursor: grabbing;
+}
+
+.team-slot:not(.empty) {
+  cursor: grab;
 }
 </style>
