@@ -11,36 +11,41 @@
     </TransitionGroup>
 
     <div class="action-buttons">
-      <button
-        class="add-btn"
-        @click="$emit('addPokemon')"
-        :disabled="team.length >= 6 || draftActive"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M8 2a.75.75 0 01.75.75v4.5h4.5a.75.75 0 010 1.5h-4.5v4.5a.75.75 0 01-1.5 0v-4.5h-4.5a.75.75 0 010-1.5h4.5v-4.5A.75.75 0 018 2z"/>
-        </svg>
-        Add Pokemon
-      </button>
+      <n-auto-complete
+        v-model:value="searchQuery"
+        :options="autocompleteOptions"
+        placeholder="Add Pokemon..."
+        :disabled="draftActive"
+        :get-show="() => true"
+        @select="onSelectPokemon"
+        clearable
+        class="pokemon-search"
+      />
     </div>
 
     <Transition name="scale">
       <DraftPanel
         v-if="draftAction"
         :draftAction="draftAction"
+        :team="team"
+        :hideSearch="draftAction.type === 'add'"
         @confirm="$emit('confirmDraft')"
         @cancel="$emit('cancelDraft')"
         @update:pokemon="$emit('updateDraftPokemon', $event)"
         @update:ability="$emit('updateDraftAbility', $event)"
         @update:move="$emit('updateDraftMove', $event)"
+        @update:replaceId="$emit('updateDraftReplaceId', $event)"
       />
     </Transition>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { NAutoComplete } from 'naive-ui'
 import TeamSlot from './TeamSlot.vue'
 import DraftPanel from './DraftPanel.vue'
+import { POKEMON_DATA } from '../data/pokemon.js'
 
 const props = defineProps({
   team: {
@@ -57,7 +62,7 @@ const props = defineProps({
   }
 })
 
-defineEmits([
+const emit = defineEmits([
   'addPokemon',
   'removePokemon',
   'editPokemon',
@@ -65,8 +70,39 @@ defineEmits([
   'cancelDraft',
   'updateDraftPokemon',
   'updateDraftAbility',
-  'updateDraftMove'
+  'updateDraftMove',
+  'updateDraftReplaceId'
 ])
+
+const searchQuery = ref('')
+
+const autocompleteOptions = computed(() => {
+  if (!searchQuery.value) return []
+  const query = searchQuery.value.toLowerCase()
+  return POKEMON_DATA
+    .filter(p => p.name.toLowerCase().includes(query))
+    .slice(0, 20)
+    .map(p => ({
+      label: p.name,
+      value: p.name,
+      pokemon: p
+    }))
+})
+
+function onSelectPokemon(value) {
+  const pokemon = POKEMON_DATA.find(p => p.name === value)
+  if (pokemon) {
+    emit('addPokemon', pokemon)
+    searchQuery.value = ''
+  }
+}
+
+// Clear search when draft is cancelled
+watch(() => props.draftAction, (action) => {
+  if (!action) {
+    searchQuery.value = ''
+  }
+})
 
 // Pad team to always show 6 slots
 const paddedTeam = computed(() => {
@@ -107,33 +143,8 @@ const paddedTeam = computed(() => {
   flex-wrap: wrap;
 }
 
-.add-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
-}
-
-.add-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-glow-primary);
-  background: #60a5fa;
-}
-
-.add-btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.add-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.pokemon-search {
+  width: 100%;
+  max-width: 300px;
 }
 </style>
