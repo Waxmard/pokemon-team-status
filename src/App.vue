@@ -124,6 +124,9 @@ function getDraftTeam() {
 
 // Methods
 function startAddPokemon(pokemon = null) {
+  if (draftAction.value?.type === 'add') {
+    return cancelDraft()
+  }
   draftAction.value = {
     type: 'add',
     pokemon: pokemon,
@@ -133,6 +136,9 @@ function startAddPokemon(pokemon = null) {
 }
 
 function startEditPokemon(id) {
+  if (draftAction.value?.type === 'edit' && draftAction.value?.editId === id) {
+    return cancelDraft()
+  }
   const pokemon = team.value.find(p => p.id === id)
   if (!pokemon) return
   const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
@@ -147,6 +153,9 @@ function startEditPokemon(id) {
 }
 
 function startEditBoxPokemon(boxPokemonId) {
+  if (draftAction.value?.type === 'edit' && draftAction.value?.boxPokemonId === boxPokemonId) {
+    return cancelDraft()
+  }
   const pokemon = box.value.find(p => p.id === boxPokemonId)
   if (!pokemon) return
   const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
@@ -283,6 +292,9 @@ function reorderTeam(newOrder) {
 
 // Box functions
 function startAddToBox() {
+  if (draftAction.value?.type === 'addToBox') {
+    return cancelDraft()
+  }
   draftAction.value = {
     type: 'addToBox',
     pokemon: null,
