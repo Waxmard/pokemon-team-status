@@ -25,9 +25,6 @@
           />
           <div class="pokemon-info">
             <div class="pokemon-name">{{ pokemon.name }}</div>
-            <div v-if="pokemon.ability" class="pokemon-ability">
-              {{ pokemon.ability }}
-            </div>
             <div v-if="pokemon.moves.length" class="pokemon-moves">
               <span
                 v-for="move in pokemon.moves"
@@ -56,6 +53,7 @@
 <script setup>
 import { computed } from 'vue'
 import { getSpriteUrl } from '../utils/pokemon.js'
+import { ABILITIES } from '../data/abilities.js'
 
 const props = defineProps({
   pokemon: {
@@ -74,8 +72,18 @@ const spriteUrl = computed(() => {
 const cardBackgroundStyle = computed(() => {
   if (!props.pokemon || !props.pokemon.types?.length) return {}
 
-  const types = props.pokemon.types
   const opacity = 0.15
+  let types = [...props.pokemon.types]
+
+  // For Protean, include move types in the gradient
+  const abilityData = ABILITIES[props.pokemon.ability]
+  if (abilityData?.protean && props.pokemon.moves?.length) {
+    for (const moveType of props.pokemon.moves) {
+      if (moveType && !types.includes(moveType)) {
+        types.push(moveType)
+      }
+    }
+  }
 
   if (types.length === 1) {
     const color = typeColors[types[0]]
@@ -83,10 +91,14 @@ const cardBackgroundStyle = computed(() => {
       background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`
     }
   } else {
-    const color1 = typeColors[types[0]]
-    const color2 = typeColors[types[1]]
+    // Create gradient stops for all types
+    const stops = types.map((type, i) => {
+      const color = typeColors[type]
+      const percent = (i / (types.length - 1)) * 100
+      return `${hexToRgba(color, opacity)} ${percent}%`
+    })
     return {
-      background: `linear-gradient(135deg, ${hexToRgba(color1, opacity)} 0%, ${hexToRgba(color2, opacity)} 100%)`
+      background: `linear-gradient(135deg, ${stops.join(', ')})`
     }
   }
 })
@@ -268,12 +280,6 @@ function adjustColor(hex, amount) {
   margin-bottom: var(--space-2);
   padding-right: var(--space-6);
   color: var(--color-text-primary);
-}
-
-.pokemon-ability {
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-2);
 }
 
 .pokemon-moves {

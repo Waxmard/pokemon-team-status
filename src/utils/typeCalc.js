@@ -53,6 +53,19 @@ export function calculateScore(gymType, team) {
     else if (multiplier === 2) score -= 1     // weakness
     else if (multiplier === 4) score -= 2     // double weakness
 
+    // Protean: move types act as additional defensive types (resistances only)
+    const abilityData = ABILITIES[member.ability]
+    if (abilityData?.protean && member.moves?.length) {
+      for (const moveType of member.moves) {
+        // Skip empty moves and types already covered by base types
+        if (!moveType || member.types.includes(moveType)) continue
+        const moveMultiplier = getTypeEffectiveness(gymType, moveType)
+        // Only count resistances, not weaknesses - user can choose not to use that move
+        if (moveMultiplier === 0) score += 2        // immunity
+        else if (moveMultiplier === 0.5) score += 1 // resist
+      }
+    }
+
     // Check offensive coverage
     if (hasEffectiveMove(member.moves, gymType)) score += 1
   }
