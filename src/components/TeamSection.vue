@@ -1,25 +1,15 @@
 <template>
-  <div class="team-section">
-    <!-- View Toggle -->
-    <div class="view-toggle">
-      <button
-        class="toggle-btn"
-        :class="{ active: viewMode === 'team' }"
-        :disabled="draftActive && draftAction?.type === 'swap'"
-        @click="viewMode = 'team'"
-      >
-        Active Team ({{ team.length }}/6)
-      </button>
-      <button
-        class="toggle-btn"
-        :class="{ active: viewMode === 'box' }"
-        :disabled="draftActive && draftAction?.type === 'swap'"
-        @click="viewMode = 'box'"
-      >
-        Box ({{ box.length }}/3)
-      </button>
-    </div>
+  <div class="team-section-wrapper">
+    <!-- Mode Toggle Button -->
+    <button
+      class="mode-toggle"
+      :disabled="draftActive && draftAction?.type === 'swap'"
+      @click="toggleViewMode"
+    >
+      <span class="mode-icon">{{ viewMode === 'team' ? '⚔️' : '📦' }}</span>
+    </button>
 
+    <div class="team-section">
     <!-- Swap Banner -->
     <div v-if="draftAction?.type === 'swap' && !draftAction.targetSlotId" class="swap-banner">
       Select a team slot to swap with {{ draftAction.boxPokemon.name }}
@@ -87,6 +77,7 @@
         @update:move="$emit('updateDraftMove', $event)"
       />
     </Transition>
+    </div>
   </div>
 </template>
 
@@ -181,10 +172,19 @@ function handleEmptySlotClick(slotIndex) {
     emit('addPokemon')
   }
 }
+
+function toggleViewMode() {
+  viewMode.value = viewMode.value === 'team' ? 'box' : 'team'
+}
 </script>
 
 <style scoped>
+.team-section-wrapper {
+  position: relative;
+}
+
 .team-section {
+  position: relative;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -193,39 +193,36 @@ function handleEmptySlotClick(slotIndex) {
   box-shadow: var(--shadow-lg);
 }
 
-.view-toggle {
+.mode-toggle {
+  position: absolute;
+  top: calc(-1 * var(--space-6));
+  right: var(--space-4);
+  z-index: 1;
   display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-}
-
-.toggle-btn {
-  flex: 1;
-  padding: var(--space-2) var(--space-3);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-light);
-  color: var(--color-text-secondary);
-  font-size: 0.85rem;
-  font-weight: 500;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
   transition: all var(--transition-base);
 }
 
-.toggle-btn:hover:not(:disabled) {
+.mode-toggle:hover:not(:disabled) {
   background: var(--color-card);
-  color: var(--color-text-primary);
+  box-shadow: var(--shadow-md);
 }
 
-.toggle-btn.active {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-}
-
-.toggle-btn:disabled {
+.mode-toggle:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.mode-icon {
+  font-size: 1.1rem;
+  line-height: 1;
 }
 
 .swap-banner {
