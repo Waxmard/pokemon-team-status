@@ -46,14 +46,16 @@
     <div class="form-group">
       <label class="form-label">Move Types (Optional)</label>
       <div class="moves-grid">
-        <n-select
+        <n-auto-complete
           v-for="i in 4"
           :key="i"
-          :value="draftAction.moves[i-1]"
-          :options="typeOptions"
-          placeholder="None"
+          v-model:value="moveQueries[i-1]"
+          :options="getMoveAutocompleteOptions(i-1)"
+          :placeholder="draftAction.moves[i-1] || 'Type...'"
+          :get-show="() => true"
+          @select="(val) => onSelectMove(i-1, val)"
+          @update:value="(val) => onMoveInput(i-1, val)"
           clearable
-          @update:value="(val) => updateMove(i-1, val)"
         />
       </div>
     </div>
@@ -120,6 +122,7 @@ const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability
 
 const searchQuery = ref('')
 const localAbility = ref(props.draftAction.ability)
+const moveQueries = ref(['', '', '', ''])
 
 // Type colors for tags
 const typeColors = {
@@ -182,9 +185,14 @@ const abilityOptions = computed(() => {
   ]
 })
 
-const typeOptions = computed(() => {
-  return ALL_TYPES.map(type => ({ label: type, value: type }))
-})
+function getMoveAutocompleteOptions(index) {
+  const query = moveQueries.value[index]
+  if (!query) return ALL_TYPES.map(type => ({ label: type, value: type }))
+  const lowerQuery = query.toLowerCase()
+  return ALL_TYPES
+    .filter(type => type.toLowerCase().includes(lowerQuery))
+    .map(type => ({ label: type, value: type }))
+}
 
 function onSelectPokemon(value) {
   const pokemon = POKEMON_DATA.find(p => p.name === value)
@@ -202,8 +210,15 @@ function updateAbility(value) {
   emit('update:ability', value)
 }
 
-function updateMove(index, value) {
-  emit('update:move', { index, value: value || null })
+function onSelectMove(index, value) {
+  moveQueries.value[index] = value
+  emit('update:move', { index, value })
+}
+
+function onMoveInput(index, value) {
+  if (!value) {
+    emit('update:move', { index, value: null })
+  }
 }
 </script>
 
@@ -329,12 +344,12 @@ function updateMove(index, value) {
 }
 
 .diff-badge.positive {
-  background: rgba(52, 211, 153, 0.2);
+  background: rgba(16, 185, 129, 0.15);
   color: var(--color-success);
 }
 
 .diff-badge.negative {
-  background: rgba(248, 113, 113, 0.2);
+  background: rgba(239, 68, 68, 0.15);
   color: var(--color-danger);
 }
 

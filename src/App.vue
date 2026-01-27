@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
+  <n-config-provider :theme-overrides="themeOverrides">
     <div class="app-container">
       <h1 class="app-title">
         <span class="title-text">Pokemon Team</span>
@@ -32,7 +32,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { darkTheme, NConfigProvider } from 'naive-ui'
+import { NConfigProvider } from 'naive-ui'
 import TeamSection from './components/TeamSection.vue'
 import GymColumns from './components/GymColumns.vue'
 import { ALL_TYPES } from './data/types.js'

@@ -114,7 +114,7 @@ const paddedTeam = computed(() => {
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--color-text-muted);
-  background: var(--color-card);
+  background: var(--color-surface-light);
   padding: 4px 10px;
   border-radius: var(--radius-md);
 }
@@ -156,7 +156,7 @@ const paddedTeam = computed(() => {
 .add-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: var(--shadow-glow-primary);
-  background: #5dade2;
+  background: #60a5fa;
 }
 
 .add-btn:active:not(:disabled) {

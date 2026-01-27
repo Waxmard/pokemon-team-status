@@ -1,46 +1,46 @@
 export const colors = {
-  // Base - Deeper, more refined
-  background: '#0d0d1a',
-  surface: '#12121f',
-  surfaceLight: '#1a1a2e',
-  card: '#16162a',
+  // Base - Clean light palette
+  background: '#f8f9fc',
+  surface: '#ffffff',
+  surfaceLight: '#f1f3f8',
+  card: '#ffffff',
 
   // Text hierarchy
-  textPrimary: '#f0f0f5',
-  textSecondary: '#9898b0',
-  textMuted: '#5a5a70',
+  textPrimary: '#1a1d2e',
+  textSecondary: '#5a5f7a',
+  textMuted: '#9298b0',
 
-  // Accents - Softer, more refined
-  primary: '#4a9eff',
-  success: '#34d399',
-  danger: '#f87171',
-  warning: '#fbbf24',
+  // Accents - Adjusted for light bg readability
+  primary: '#3b82f6',
+  success: '#10b981',
+  danger: '#ef4444',
+  warning: '#f59e0b',
 
   // Score colors
-  positive: '#34d399',
-  negative: '#f87171',
+  positive: '#10b981',
+  negative: '#ef4444',
 
   // Borders
-  border: 'rgba(255, 255, 255, 0.06)',
-  borderLight: 'rgba(255, 255, 255, 0.1)',
+  border: 'rgba(0, 0, 0, 0.08)',
+  borderLight: 'rgba(0, 0, 0, 0.04)',
 }
 
-// Naive UI theme overrides
+// Naive UI theme overrides for light mode
 export const themeOverrides = {
   common: {
     primaryColor: colors.primary,
-    primaryColorHover: '#6bb3ff',
-    primaryColorPressed: '#3a8ae6',
+    primaryColorHover: '#60a5fa',
+    primaryColorPressed: '#2563eb',
     successColor: colors.success,
     errorColor: colors.danger,
     warningColor: colors.warning,
     bodyColor: colors.background,
     cardColor: colors.card,
-    modalColor: colors.surfaceLight,
-    popoverColor: colors.card,
+    modalColor: colors.surface,
+    popoverColor: colors.surface,
     tableColor: colors.surface,
-    inputColor: colors.card,
-    actionColor: colors.surface,
+    inputColor: colors.surface,
+    actionColor: colors.surfaceLight,
     textColorBase: colors.textPrimary,
     textColor1: colors.textPrimary,
     textColor2: colors.textSecondary,
@@ -63,7 +63,7 @@ export const themeOverrides = {
     borderRadius: '16px',
   },
   Input: {
-    color: colors.card,
+    color: colors.surface,
     borderColor: colors.border,
     borderColorFocus: colors.primary,
     borderRadius: '10px',
@@ -71,7 +71,7 @@ export const themeOverrides = {
   Select: {
     peers: {
       InternalSelection: {
-        color: colors.card,
+        color: colors.surface,
         borderColor: colors.border,
         borderColorFocus: colors.primary,
         borderRadius: '10px',
@@ -81,11 +81,11 @@ export const themeOverrides = {
   AutoComplete: {
     peers: {
       InternalSelectMenu: {
-        color: colors.card,
+        color: colors.surface,
         borderRadius: '12px',
       },
       Input: {
-        color: colors.card,
+        color: colors.surface,
         borderColor: colors.border,
         borderColorFocus: colors.primary,
         borderRadius: '10px',

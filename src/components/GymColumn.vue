@@ -76,7 +76,7 @@ defineEmits(['gymClick'])
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--color-text-secondary);
-  background: var(--color-card);
+  background: var(--color-surface-light);
   padding: 3px 8px;
   border-radius: var(--radius-sm);
   min-width: 24px;

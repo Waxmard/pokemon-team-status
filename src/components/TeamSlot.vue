@@ -123,8 +123,8 @@ function adjustColor(hex, amount) {
   display: flex;
   justify-content: center;
   align-items: center;
-  border: 2px dashed var(--color-border-light);
-  background: transparent;
+  border: 2px dashed var(--color-border);
+  background: var(--color-surface-light);
   box-shadow: none;
 }
 

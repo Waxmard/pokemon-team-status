@@ -1,11 +1,12 @@
 <template>
   <div
     class="gym-row touchable"
-    :style="{ background: getTypeGradient(type) }"
-    :class="[getTextColorClass(type)]"
     @click="$emit('click', type)"
   >
-    <span class="gym-name">{{ type }}</span>
+    <span class="gym-name-wrapper">
+      <span class="type-dot" :style="{ background: typeColors[type] }"></span>
+      <span class="gym-name">{{ type }}</span>
+    </span>
     <span class="gym-scores">
       <span class="gym-score" :class="{ positive: score > 0, negative: score < 0 }">
         {{ score > 0 ? '+' : '' }}{{ score }}
@@ -61,24 +62,6 @@ const typeColors = {
   fairy: '#EE99AC'
 }
 
-const lightTextTypes = ['electric', 'ice', 'ground', 'steel', 'fairy', 'normal', 'bug', 'rock']
-
-function getTypeGradient(type) {
-  const color = typeColors[type]
-  return `linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -25)} 100%)`
-}
-
-function getTextColorClass(type) {
-  return lightTextTypes.includes(type) ? 'light-bg' : 'dark-bg'
-}
-
-function adjustColor(hex, amount) {
-  const num = parseInt(hex.replace('#', ''), 16)
-  const r = Math.max(0, Math.min(255, (num >> 16) + amount))
-  const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount))
-  const b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount))
-  return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
-}
 </script>
 
 <style scoped>
@@ -93,21 +76,31 @@ function adjustColor(hex, amount) {
   transition: transform var(--transition-base), box-shadow var(--transition-base);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  box-shadow: var(--shadow-sm);
-  color: #fff;
-}
-
-.gym-row.light-bg {
-  color: #1a1a2e;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
 }
 
 .gym-row:hover {
-  transform: translateX(4px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
 .gym-row:active {
   transform: scale(0.98);
+}
+
+.gym-name-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .gym-name {
@@ -126,31 +119,16 @@ function adjustColor(hex, amount) {
   font-size: 1.1rem;
   padding: 2px 8px;
   border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--color-surface-light);
+  color: var(--color-text-secondary);
 }
 
 .gym-score.positive {
-  color: #34d399;
-  text-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
+  color: var(--color-success);
 }
 
 .gym-score.negative {
-  color: #f87171;
-  text-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
-}
-
-.light-bg .gym-score {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.light-bg .gym-score.positive {
-  color: #059669;
-  text-shadow: none;
-}
-
-.light-bg .gym-score.negative {
-  color: #dc2626;
-  text-shadow: none;
+  color: var(--color-danger);
 }
 
 .score-diff {
@@ -162,22 +140,12 @@ function adjustColor(hex, amount) {
 }
 
 .score-diff.positive {
-  background: rgba(52, 211, 153, 0.25);
-  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--color-success);
 }
 
 .score-diff.negative {
-  background: rgba(248, 113, 113, 0.25);
-  color: #f87171;
-}
-
-.light-bg .score-diff.positive {
-  background: rgba(5, 150, 105, 0.2);
-  color: #059669;
-}
-
-.light-bg .score-diff.negative {
-  background: rgba(220, 38, 38, 0.2);
-  color: #dc2626;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-danger);
 }
 </style>
