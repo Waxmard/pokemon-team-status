@@ -202,8 +202,13 @@ function onSelectPokemon(value) {
   }
 }
 
-function onSearchInput() {
-  emit('update:pokemon', null)
+function onSearchInput(value) {
+  // Only reset if the input doesn't match a valid Pokemon name
+  // This prevents resetting after selection when searchQuery is set programmatically
+  const matchesPokemon = POKEMON_DATA.some(p => p.name === value)
+  if (!matchesPokemon) {
+    emit('update:pokemon', null)
+  }
 }
 
 function updateAbility(value) {
