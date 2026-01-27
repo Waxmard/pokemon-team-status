@@ -29,7 +29,9 @@ async function saveTeam(team) {
 
   // Clear existing and add all
   store.clear()
-  for (const member of team) {
+  // Convert to plain objects to strip Vue reactivity
+  const plainTeam = JSON.parse(JSON.stringify(team))
+  for (const member of plainTeam) {
     store.add(member)
   }
 
@@ -55,7 +57,9 @@ async function saveDefeatedGyms(gyms) {
   const db = await openDB()
   const tx = db.transaction('settings', 'readwrite')
   const store = tx.objectStore('settings')
-  store.put({ name: 'defeatedGyms', value: gyms })
+  // Convert to plain array to strip Vue reactivity
+  const plainGyms = JSON.parse(JSON.stringify(gyms))
+  store.put({ name: 'defeatedGyms', value: plainGyms })
 
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve()
@@ -75,11 +79,12 @@ async function loadDefeatedGyms() {
   })
 }
 
-export function useStorage() {
-  const team = ref([])
-  const defeatedGyms = ref([])
-  const isLoading = ref(true)
+// Singleton state - shared across all calls
+const team = ref([])
+const defeatedGyms = ref([])
+const isLoading = ref(true)
 
+export function useStorage() {
   async function loadData() {
     try {
       isLoading.value = true
