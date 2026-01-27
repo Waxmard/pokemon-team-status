@@ -56,31 +56,6 @@
       </div>
     </div>
 
-    <!-- Preview Section -->
-    <div v-if="draftAction.pokemon && scoreChanges.length" class="preview-section">
-      <h4 class="preview-title">Score Changes Preview</h4>
-      <div class="preview-list">
-        <div
-          v-for="change in scoreChanges"
-          :key="change.type"
-          class="preview-change"
-          :class="{ positive: change.diff > 0, negative: change.diff < 0, neutral: change.diff === 0 }"
-        >
-          <span class="change-gym">{{ change.type }}</span>
-          <span class="change-values">
-            <span class="old-score">{{ change.oldScore }}</span>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" class="arrow-icon">
-              <path d="M4 6h4.5L6.5 4l.7-.7L10 6l-2.8 2.7-.7-.7 2-2H4V6z"/>
-            </svg>
-            <span class="new-score">{{ change.newScore }}</span>
-            <span class="diff-badge" :class="{ positive: change.diff > 0, negative: change.diff < 0 }">
-              {{ change.diff > 0 ? '+' : '' }}{{ change.diff }}
-            </span>
-          </span>
-        </div>
-      </div>
-    </div>
-
     <div class="draft-actions">
       <button
         class="btn btn-success"
@@ -107,10 +82,6 @@ const props = defineProps({
   draftAction: {
     type: Object,
     required: true
-  },
-  scoreChanges: {
-    type: Array,
-    default: () => []
   }
 })
 
@@ -266,80 +237,6 @@ function onMoveInput(index, value) {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-2);
-}
-
-.preview-section {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  margin-top: var(--space-4);
-}
-
-.preview-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  margin: 0 0 var(--space-3) 0;
-}
-
-.preview-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.preview-change {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  font-size: 0.85rem;
-  background: var(--color-card);
-}
-
-.change-gym {
-  text-transform: capitalize;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.change-values {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.old-score {
-  color: var(--color-text-muted);
-}
-
-.arrow-icon {
-  color: var(--color-text-muted);
-}
-
-.new-score {
-  color: var(--color-text-primary);
-  font-weight: 600;
-}
-
-.diff-badge {
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  font-size: 0.75rem;
-  font-weight: 600;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.diff-badge.positive {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--color-success);
-}
-
-.diff-badge.negative {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--color-danger);
 }
 
 .draft-actions {

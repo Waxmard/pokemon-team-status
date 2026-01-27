@@ -3,6 +3,7 @@
     <GymColumn
       title="Remaining Gyms"
       :gyms="remainingGyms"
+      :draftActive="draftActive"
       transitionName="slide-right"
       emptyMessage="All gyms defeated!"
       @gymClick="$emit('defeatGym', $event)"
@@ -28,6 +29,10 @@ defineProps({
   defeatedGymsList: {
     type: Array,
     required: true
+  },
+  draftActive: {
+    type: Boolean,
+    default: false
   }
 })
 

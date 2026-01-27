@@ -26,7 +26,6 @@
       <DraftPanel
         v-if="draftAction"
         :draftAction="draftAction"
-        :scoreChanges="scoreChanges"
         @confirm="$emit('confirmDraft')"
         @cancel="$emit('cancelDraft')"
         @update:pokemon="$emit('updateDraftPokemon', $event)"
@@ -54,10 +53,6 @@ const props = defineProps({
   draftActive: {
     type: Boolean,
     default: false
-  },
-  scoreChanges: {
-    type: Array,
-    default: () => []
   }
 })
 

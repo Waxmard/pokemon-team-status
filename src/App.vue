@@ -9,7 +9,6 @@
         :team="team"
         :draftAction="draftAction"
         :draftActive="!!draftAction"
-        :scoreChanges="draftScoreChanges"
         @addPokemon="startAddPokemon"
         @removePokemon="removePokemon"
         @confirmDraft="confirmDraft"
@@ -22,6 +21,7 @@
       <GymColumns
         :remainingGyms="remainingGyms"
         :defeatedGymsList="defeatedGymsList"
+        :draftActive="!!draftAction"
         @defeatGym="defeatGym"
         @undefeatGym="undefeatGym"
       />
@@ -73,23 +73,6 @@ const defeatedGymsList = computed(() => {
       score: calculateScore(type, team.value)
     }))
     .sort((a, b) => a.score - b.score)
-})
-
-const draftScoreChanges = computed(() => {
-  if (!draftAction.value?.pokemon) return []
-
-  const draftTeam = getDraftTeam()
-
-  return ALL_TYPES.map(type => {
-    const oldScore = calculateScore(type, team.value)
-    const newScore = calculateScore(type, draftTeam)
-    return {
-      type,
-      oldScore,
-      newScore,
-      diff: newScore - oldScore
-    }
-  }).filter(c => c.diff !== 0)
 })
 
 // Helper to get draft team

@@ -1,7 +1,7 @@
 <template>
   <div class="gym-column">
     <div class="column-header">
-      <h3 class="column-title">{{ title }}</h3>
+      <h3 class="column-title">{{ title }}{{ draftActive ? ' (Draft)' : '' }}</h3>
       <span class="gym-count">{{ gyms.length }}</span>
     </div>
     <TransitionGroup :name="transitionName" tag="div" class="gym-list">
@@ -40,6 +40,10 @@ const props = defineProps({
   emptyMessage: {
     type: String,
     default: 'No gyms'
+  },
+  draftActive: {
+    type: Boolean,
+    default: false
   }
 })
 
