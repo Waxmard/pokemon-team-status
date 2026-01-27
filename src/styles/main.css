@@ -175,6 +175,8 @@ h3 {
 }
 
 .list-leave-active {
+  position: absolute;
+  width: 100%;
   animation: fadeIn var(--transition-base) ease reverse forwards;
 }
 
@@ -187,6 +189,8 @@ h3 {
 }
 
 .slide-left-leave-active {
+  position: absolute;
+  width: 100%;
   animation: slideInLeft var(--transition-base) ease reverse forwards;
 }
 
@@ -195,7 +199,14 @@ h3 {
 }
 
 .slide-right-leave-active {
+  position: absolute;
+  width: 100%;
   animation: slideInRight var(--transition-base) ease reverse forwards;
+}
+
+.slide-left-move,
+.slide-right-move {
+  transition: transform var(--transition-base) ease;
 }
 
 .scale-enter-active {

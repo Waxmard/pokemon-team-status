@@ -76,6 +76,7 @@ defineEmits(['gymClick'])
 }
 
 .gym-list {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

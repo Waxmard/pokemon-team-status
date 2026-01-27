@@ -125,6 +125,7 @@ const paddedTeam = computed(() => {
 }
 
 .team-grid {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-3);
