@@ -1,0 +1,68 @@
+/* CSS Variables for colors */
+:root {
+  --color-background: #1a1a2e;
+  --color-surface: #16213e;
+  --color-surface-light: #1e3a5f;
+  --color-card: #0f3460;
+  --color-text-primary: #eeeeee;
+  --color-text-secondary: #aaaaaa;
+  --color-text-muted: #666666;
+  --color-primary: #3498db;
+  --color-success: #2ecc71;
+  --color-danger: #e74c3c;
+  --color-warning: #f39c12;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  /* iOS safe area handling */
+  padding: 16px;
+  padding-top: calc(16px + env(safe-area-inset-top));
+  padding-right: calc(16px + env(safe-area-inset-right));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  padding-left: calc(16px + env(safe-area-inset-left));
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+
+h3 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+/* Minimum touch targets for mobile */
+.touchable {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Gym Columns Layout */
+.gym-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 500px) {
+  .gym-section {
+    grid-template-columns: 1fr;
+  }
+}
