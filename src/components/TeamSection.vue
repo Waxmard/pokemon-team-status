@@ -123,9 +123,9 @@ watch(() => props.team, (newTeam) => {
   localTeam.value = [...newTeam]
 }, { deep: true })
 
-// Number of empty slots to show
-const emptySlotCount = computed(() => Math.max(0, 6 - props.team.length))
-const emptyBoxSlotCount = computed(() => Math.max(0, 3 - props.box.length))
+// Number of empty slots to show (max 1)
+const emptySlotCount = computed(() => props.team.length < 6 ? 1 : 0)
+const emptyBoxSlotCount = computed(() => props.box.length < 3 ? 1 : 0)
 
 // Show draft panel for add/edit modes
 const showDraftPanel = computed(() => {
@@ -194,35 +194,16 @@ function toggleViewMode() {
 .team-grid {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
 
 .box-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
-}
-
-@media (min-width: 768px) {
-  .team-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 500px) {
-  .box-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 430px) {
-  .team-grid {
-    padding: var(--space-2);
-    gap: var(--space-2);
-  }
 }
 
 .drag-ghost {

@@ -8,23 +8,22 @@
     <Transition name="slot-content" mode="out-in">
       <div v-if="pokemon" key="filled" class="slot-inner">
         <div class="slot-content">
-          <img
-            v-if="spriteUrl"
-            :src="spriteUrl"
-            :alt="pokemon.name"
-            class="pokemon-sprite"
-          />
+          <div class="sprite-container">
+            <img
+              v-if="spriteUrl"
+              :src="spriteUrl"
+              :alt="pokemon.name"
+              class="pokemon-sprite"
+            />
+            <img
+              v-if="pokemon.berry"
+              :src="getBerrySprite(pokemon.berry)"
+              :alt="pokemon.berry"
+              :title="pokemon.berry"
+              class="berry-sprite"
+            />
+          </div>
           <div class="pokemon-info">
-            <div class="pokemon-name">
-              {{ pokemon.name }}
-              <img
-                v-if="pokemon.berry"
-                :src="getBerrySprite(pokemon.berry)"
-                :alt="pokemon.berry"
-                :title="pokemon.berry"
-                class="berry-sprite"
-              />
-            </div>
             <div v-if="pokemon.moves.length" class="pokemon-moves">
               <span
                 v-for="move in pokemon.moves"
@@ -227,32 +226,36 @@ function adjustColor(hex, amount) {
 .slot-content {
   display: flex;
   gap: var(--space-3);
-  align-items: flex-start;
+  align-items: center;
+}
+
+.sprite-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .pokemon-sprite {
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
   object-fit: contain;
-  flex-shrink: 0;
+}
+
+.berry-sprite {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .pokemon-info {
   flex: 1;
   min-width: 0;
-}
-
-.pokemon-name {
-  font-weight: 600;
-  font-size: 1rem;
-  margin-bottom: var(--space-2);
-  padding-right: var(--space-6);
-  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
 }
 
 .pokemon-moves {
-  font-size: 0.75rem;
-  margin-top: auto;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
@@ -260,20 +263,12 @@ function adjustColor(hex, amount) {
 }
 
 .move-badge {
-  padding: 2px 6px;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   font-weight: 600;
   text-transform: capitalize;
   box-shadow: var(--shadow-sm);
-}
-
-.berry-sprite {
-  width: 18px;
-  height: 18px;
-  margin-left: var(--space-1);
-  vertical-align: middle;
-  object-fit: contain;
 }
 
 </style>
