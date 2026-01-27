@@ -25,7 +25,6 @@
         <template #item="{ element: pokemon }">
           <TeamSlot
             :pokemon="pokemon"
-            @remove="$emit('removePokemon', $event)"
             @edit="$emit('editPokemon', pokemon.id)"
           />
         </template>
@@ -45,7 +44,6 @@
           v-for="pokemon in box"
           :key="pokemon.id"
           :pokemon="pokemon"
-          @remove="$emit('removeFromBox', pokemon.id)"
           @edit="$emit('editBoxPokemon', pokemon.id)"
         />
         <TeamSlot
@@ -102,7 +100,6 @@ const props = defineProps({
 
 const emit = defineEmits([
   'addPokemon',
-  'removePokemon',
   'editPokemon',
   'confirmDraft',
   'cancelDraft',
@@ -113,7 +110,6 @@ const emit = defineEmits([
   'updateDraftReplaceTarget',
   'reorderTeam',
   'addToBox',
-  'removeFromBox',
   'editBoxPokemon'
 ])
 

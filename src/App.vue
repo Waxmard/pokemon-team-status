@@ -11,7 +11,6 @@
         :draftAction="draftAction"
         :draftActive="!!draftAction"
         @addPokemon="startAddPokemon"
-        @removePokemon="removePokemon"
         @editPokemon="startEditPokemon"
         @confirmDraft="confirmDraft"
         @cancelDraft="cancelDraft"
@@ -22,7 +21,6 @@
         @updateDraftReplaceTarget="updateDraftReplaceTarget"
         @reorderTeam="reorderTeam"
         @addToBox="startAddToBox"
-        @removeFromBox="removeFromBox"
         @editBoxPokemon="startEditBoxPokemon"
       />
 
@@ -214,7 +212,21 @@ function updateDraftReplaceTarget(targetId) {
 }
 
 function confirmDraft() {
-  if (!draftAction.value?.pokemon) return
+  if (!draftAction.value) return
+
+  // Handle deletion (wizard mode: confirmed with no pokemon)
+  if (!draftAction.value.pokemon) {
+    if (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) {
+      // Delete team Pokemon
+      persistTeam(team.value.filter(p => p.id !== draftAction.value.editId))
+    } else if (draftAction.value.type === 'edit' && draftAction.value.isBoxPokemon) {
+      // Delete box Pokemon
+      persistBox(box.value.filter(p => p.id !== draftAction.value.boxPokemonId))
+    }
+    // For 'add' type with no pokemon, just cancel
+    cancelDraft()
+    return
+  }
 
   const newMember = {
     id: Date.now().toString(),
@@ -304,10 +316,6 @@ function cancelDraft() {
   draftAction.value = null
 }
 
-function removePokemon(id) {
-  persistTeam(team.value.filter(m => m.id !== id))
-}
-
 function reorderTeam(newOrder) {
   persistTeam(newOrder)
 }
@@ -324,10 +332,6 @@ function startAddToBox() {
     berry: null,
     moves: [null, null, null, null]
   }
-}
-
-function removeFromBox(id) {
-  persistBox(box.value.filter(p => p.id !== id))
 }
 
 function defeatGym(type) {

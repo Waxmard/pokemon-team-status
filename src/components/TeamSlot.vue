@@ -7,15 +7,6 @@
   >
     <Transition name="slot-content" mode="out-in">
       <div v-if="pokemon" key="filled" class="slot-inner">
-        <button
-          class="remove-btn"
-          @click.stop="$emit('remove', pokemon.id)"
-          aria-label="Remove Pokemon"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-            <path d="M9.5 3.205L8.795 2.5 6 5.295 3.205 2.5 2.5 3.205 5.295 6 2.5 8.795 3.205 9.5 6 6.705 8.795 9.5 9.5 8.795 6.705 6z"/>
-          </svg>
-        </button>
         <div class="slot-content">
           <img
             v-if="spriteUrl"
@@ -71,7 +62,7 @@ const props = defineProps({
   }
 })
 
-defineEmits(['remove', 'edit', 'add'])
+defineEmits(['edit', 'add'])
 
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null
@@ -231,38 +222,6 @@ function adjustColor(hex, amount) {
 .empty-text {
   color: var(--color-text-muted);
   font-size: 0.85rem;
-}
-
-.remove-btn {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  background: var(--color-danger);
-  color: white;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity var(--transition-base), transform var(--transition-fast);
-  z-index: 1;
-}
-
-.team-slot:hover .remove-btn {
-  opacity: 1;
-}
-
-.remove-btn:hover {
-  transform: scale(1.1);
-  box-shadow: var(--shadow-glow-danger);
-}
-
-.remove-btn:active {
-  transform: scale(0.95);
 }
 
 .slot-content {
