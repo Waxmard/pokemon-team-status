@@ -4,7 +4,7 @@
     @click="$emit('click', type)"
   >
     <span class="gym-name-wrapper">
-      <span class="type-dot" :style="{ background: typeColors[type] }"></span>
+      <img :src="getTypeIcon(type)" :alt="type" class="type-icon" />
       <span class="gym-name">{{ type }}</span>
     </span>
     <span class="gym-scores">
@@ -39,6 +39,7 @@
 import { computed } from 'vue'
 import { getBerrySprite } from '../utils/pokemon.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
+import { getTypeIcon } from '../data/types.js'
 
 const props = defineProps({
   type: {
@@ -63,28 +64,6 @@ defineEmits(['click'])
 
 const berrySprite = computed(() => getBerrySprite(BERRY_BY_TYPE[props.type]))
 
-// Type colors
-const typeColors = {
-  normal: '#A8A878',
-  fire: '#F08030',
-  water: '#6890F0',
-  electric: '#F8D030',
-  grass: '#78C850',
-  ice: '#98D8D8',
-  fighting: '#C03028',
-  poison: '#A040A0',
-  ground: '#E0C068',
-  flying: '#A890F0',
-  psychic: '#F85888',
-  bug: '#A8B820',
-  rock: '#B8A038',
-  ghost: '#705898',
-  dragon: '#7038F8',
-  dark: '#705848',
-  steel: '#B8B8D0',
-  fairy: '#EE99AC'
-}
-
 </script>
 
 <style scoped>
@@ -104,11 +83,6 @@ const typeColors = {
   color: var(--color-text-primary);
 }
 
-.gym-row:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
 .gym-row:active {
   transform: scale(0.98);
 }
@@ -119,10 +93,10 @@ const typeColors = {
   gap: var(--space-2);
 }
 
-.type-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.type-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 

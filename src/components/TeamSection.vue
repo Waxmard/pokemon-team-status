@@ -9,63 +9,58 @@
     </button>
 
     <div class="team-section">
-    <!-- Team Grid -->
-    <draggable
-      v-if="viewMode === 'team'"
-      v-model="localTeam"
-      :disabled="draftActive"
-      item-key="id"
-      ghost-class="drag-ghost"
-      drag-class="drag-active"
-      class="team-grid"
-      @end="onDragEnd"
-    >
-      <template #item="{ element: pokemon }">
-        <TeamSlot
-          :pokemon="pokemon"
-          @remove="$emit('removePokemon', $event)"
-          @edit="$emit('editPokemon', pokemon.id)"
-        />
-      </template>
-      <template #footer>
-        <TeamSlot
-          v-for="i in emptySlotCount"
-          :key="'empty-' + i"
-          :pokemon="null"
-          @add="$emit('addPokemon')"
-        />
-      </template>
-    </draggable>
+    <!-- Grid Container - handles show/hide based on draft state -->
+    <div v-show="!showDraftPanel">
+      <!-- Team Grid -->
+      <draggable
+        v-if="viewMode === 'team'"
+        v-model="localTeam"
+        :disabled="isActive"
+        item-key="id"
+        ghost-class="drag-ghost"
+        drag-class="drag-active"
+        class="team-grid"
+        @end="onDragEnd"
+      >
+        <template #item="{ element: pokemon }">
+          <TeamSlot
+            :pokemon="pokemon"
+            @edit="handleEditPokemon(pokemon.id)"
+          />
+        </template>
+        <template #footer>
+          <TeamSlot
+            v-for="i in emptySlotCount"
+            :key="'empty-' + i"
+            :pokemon="null"
+            @add="startAdd()"
+          />
+        </template>
+      </draggable>
 
-    <!-- Box Grid -->
-    <div v-else class="box-grid">
-      <TeamSlot
-        v-for="pokemon in box"
-        :key="pokemon.id"
-        :pokemon="pokemon"
-        @remove="$emit('removeFromBox', pokemon.id)"
-        @edit="$emit('editBoxPokemon', pokemon.id)"
-      />
-      <TeamSlot
-        v-for="i in emptyBoxSlotCount"
-        :key="'box-empty-' + i"
-        :pokemon="null"
-        @add="$emit('addToBox')"
-      />
+      <!-- Box Grid -->
+      <div v-else class="box-grid">
+        <TeamSlot
+          v-for="pokemon in box"
+          :key="pokemon.id"
+          :pokemon="pokemon"
+          @edit="handleEditBoxPokemon(pokemon.id)"
+        />
+        <TeamSlot
+          v-for="i in emptyBoxSlotCount"
+          :key="'box-empty-' + i"
+          :pokemon="null"
+          @add="startAddToBox()"
+        />
+      </div>
     </div>
 
     <Transition name="scale">
       <DraftPanel
         v-if="showDraftPanel"
-        :draftAction="draftAction"
         :team="team"
         @confirm="$emit('confirmDraft')"
-        @cancel="$emit('cancelDraft')"
-        @update:pokemon="$emit('updateDraftPokemon', $event)"
-        @update:ability="$emit('updateDraftAbility', $event)"
-        @update:berry="$emit('updateDraftBerry', $event)"
-        @update:move="$emit('updateDraftMove', $event)"
-        @update:replaceTarget="$emit('updateDraftReplaceTarget', $event)"
+        @cancel="cancel"
       />
     </Transition>
     </div>
@@ -77,6 +72,8 @@ import { ref, computed, watch } from 'vue'
 import draggable from 'vuedraggable'
 import TeamSlot from './TeamSlot.vue'
 import DraftPanel from './DraftPanel.vue'
+import { useDraftAction } from '../composables/useDraftAction.js'
+import { POKEMON_DATA } from '../data/pokemon.js'
 
 const props = defineProps({
   team: {
@@ -86,33 +83,15 @@ const props = defineProps({
   box: {
     type: Array,
     default: () => []
-  },
-  draftAction: {
-    type: Object,
-    default: null
-  },
-  draftActive: {
-    type: Boolean,
-    default: false
   }
 })
 
 const emit = defineEmits([
-  'addPokemon',
-  'removePokemon',
-  'editPokemon',
   'confirmDraft',
-  'cancelDraft',
-  'updateDraftPokemon',
-  'updateDraftAbility',
-  'updateDraftBerry',
-  'updateDraftMove',
-  'updateDraftReplaceTarget',
-  'reorderTeam',
-  'addToBox',
-  'removeFromBox',
-  'editBoxPokemon'
+  'reorderTeam'
 ])
+
+const { draftAction, isActive, startAdd, startEdit, startEditBox, startAddToBox, cancel } = useDraftAction()
 
 const viewMode = ref('team')
 
@@ -124,13 +103,13 @@ watch(() => props.team, (newTeam) => {
   localTeam.value = [...newTeam]
 }, { deep: true })
 
-// Number of empty slots to show
-const emptySlotCount = computed(() => Math.max(0, 6 - props.team.length))
-const emptyBoxSlotCount = computed(() => Math.max(0, 3 - props.box.length))
+// Number of empty slots to show (max 1)
+const emptySlotCount = computed(() => props.team.length < 6 ? 1 : 0)
+const emptyBoxSlotCount = computed(() => props.box.length < 3 ? 1 : 0)
 
 // Show draft panel for add/edit modes
 const showDraftPanel = computed(() => {
-  return !!props.draftAction
+  return !!draftAction.value
 })
 
 // Emit reorder when drag ends
@@ -138,7 +117,35 @@ function onDragEnd() {
   emit('reorderTeam', localTeam.value)
 }
 
+function handleEditPokemon(id) {
+  const pokemon = props.team.find(p => p.id === id)
+  if (!pokemon) return
+  const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
+  startEdit(id, {
+    pokemonData,
+    ability: pokemon.ability,
+    berry: pokemon.berry || null,
+    moves: pokemon.moves
+  })
+}
+
+function handleEditBoxPokemon(boxPokemonId) {
+  const pokemon = props.box.find(p => p.id === boxPokemonId)
+  if (!pokemon) return
+  const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
+  startEditBox({
+    id: boxPokemonId,
+    pokemonData,
+    ability: pokemon.ability,
+    berry: pokemon.berry || null,
+    moves: pokemon.moves
+  })
+}
+
 function toggleViewMode() {
+  if (showDraftPanel.value) {
+    cancel()
+  }
   viewMode.value = viewMode.value === 'team' ? 'box' : 'team'
 }
 </script>
@@ -156,28 +163,27 @@ function toggleViewMode() {
   padding: var(--space-5);
   margin-bottom: var(--space-5);
   box-shadow: var(--shadow-lg);
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 .mode-toggle {
   position: absolute;
-  top: calc(-1 * var(--space-6));
+  top: calc(-1 * var(--space-8) - var(--space-8));
   right: var(--space-4);
   z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2);
+  width: 48px;
+  height: 48px;
+  padding: var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--color-surface);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-base);
-}
-
-.mode-toggle:hover:not(:disabled) {
-  background: var(--color-card);
   box-shadow: var(--shadow-md);
+  transition: all var(--transition-base);
 }
 
 .mode-toggle:disabled {
@@ -186,35 +192,23 @@ function toggleViewMode() {
 }
 
 .mode-icon {
-  font-size: 1.1rem;
+  font-size: 1.5rem;
   line-height: 1;
 }
 
 .team-grid {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
 
 .box-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
-}
-
-@media (min-width: 768px) {
-  .team-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 500px) {
-  .box-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 .drag-ghost {

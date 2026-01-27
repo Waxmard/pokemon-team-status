@@ -7,42 +7,32 @@
   >
     <Transition name="slot-content" mode="out-in">
       <div v-if="pokemon" key="filled" class="slot-inner">
-        <button
-          class="remove-btn"
-          @click.stop="$emit('remove', pokemon.id)"
-          aria-label="Remove Pokemon"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-            <path d="M9.5 3.205L8.795 2.5 6 5.295 3.205 2.5 2.5 3.205 5.295 6 2.5 8.795 3.205 9.5 6 6.705 8.795 9.5 9.5 8.795 6.705 6z"/>
-          </svg>
-        </button>
         <div class="slot-content">
-          <img
-            v-if="spriteUrl"
-            :src="spriteUrl"
-            :alt="pokemon.name"
-            class="pokemon-sprite"
-          />
+          <div class="sprite-container">
+            <img
+              v-if="spriteUrl"
+              :src="spriteUrl"
+              :alt="pokemon.name"
+              class="pokemon-sprite"
+            />
+            <img
+              v-if="pokemon.berry"
+              :src="getBerrySprite(pokemon.berry)"
+              :alt="pokemon.berry"
+              :title="pokemon.berry"
+              class="berry-sprite"
+            />
+          </div>
           <div class="pokemon-info">
-            <div class="pokemon-name">
-              {{ pokemon.name }}
-              <img
-                v-if="pokemon.berry"
-                :src="getBerrySprite(pokemon.berry)"
-                :alt="pokemon.berry"
-                :title="pokemon.berry"
-                class="berry-sprite"
-              />
-            </div>
             <div v-if="pokemon.moves.length" class="pokemon-moves">
-              <span
+              <img
                 v-for="move in pokemon.moves"
                 :key="move"
-                class="move-badge"
-                :style="{ background: getTypeGradient(move), color: getTextColor(move) }"
-              >
-                {{ move }}
-              </span>
+                :src="getTypeIcon(move)"
+                :alt="move"
+                :title="move"
+                class="move-type-icon"
+              />
             </div>
           </div>
         </div>
@@ -63,6 +53,7 @@
 import { computed } from 'vue'
 import { getSpriteUrl, getBerrySprite } from '../utils/pokemon.js'
 import { ABILITIES } from '../data/abilities.js'
+import { TYPE_COLORS, getTypeIcon } from '../data/types.js'
 
 const props = defineProps({
   pokemon: {
@@ -71,7 +62,7 @@ const props = defineProps({
   }
 })
 
-defineEmits(['remove', 'edit', 'add'])
+defineEmits(['edit', 'add'])
 
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null
@@ -95,14 +86,14 @@ const cardBackgroundStyle = computed(() => {
   }
 
   if (types.length === 1) {
-    const color = typeColors[types[0]]
+    const color = TYPE_COLORS[types[0]].bg
     return {
       background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`
     }
   } else {
     // Create gradient stops for all types
     const stops = types.map((type, i) => {
-      const color = typeColors[type]
+      const color = TYPE_COLORS[type].bg
       const percent = (i / (types.length - 1)) * 100
       return `${hexToRgba(color, opacity)} ${percent}%`
     })
@@ -120,46 +111,6 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-// Type colors for tags
-const typeColors = {
-  normal: '#A8A878',
-  fire: '#F08030',
-  water: '#6890F0',
-  electric: '#F8D030',
-  grass: '#78C850',
-  ice: '#98D8D8',
-  fighting: '#C03028',
-  poison: '#A040A0',
-  ground: '#E0C068',
-  flying: '#A890F0',
-  psychic: '#F85888',
-  bug: '#A8B820',
-  rock: '#B8A038',
-  ghost: '#705898',
-  dragon: '#7038F8',
-  dark: '#705848',
-  steel: '#B8B8D0',
-  fairy: '#EE99AC'
-}
-
-const lightTextTypes = ['electric', 'ice', 'ground', 'steel', 'fairy']
-
-function getTextColor(type) {
-  return lightTextTypes.includes(type) ? '#1a1a2e' : '#fff'
-}
-
-function getTypeGradient(type) {
-  const color = typeColors[type]
-  return `linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -20)} 100%)`
-}
-
-function adjustColor(hex, amount) {
-  const num = parseInt(hex.replace('#', ''), 16)
-  const r = Math.max(0, Math.min(255, (num >> 16) + amount))
-  const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount))
-  const b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount))
-  return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
-}
 </script>
 
 <style scoped>
@@ -193,11 +144,6 @@ function adjustColor(hex, amount) {
   transform: scale(0.95);
 }
 
-.team-slot:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
 .team-slot.clickable {
   cursor: pointer;
 }
@@ -209,11 +155,6 @@ function adjustColor(hex, amount) {
   border: 2px dashed var(--color-border);
   background: var(--color-surface-light);
   box-shadow: none;
-}
-
-.team-slot.empty:hover {
-  transform: none;
-  border-color: var(--color-text-muted);
 }
 
 .empty-content {
@@ -233,87 +174,48 @@ function adjustColor(hex, amount) {
   font-size: 0.85rem;
 }
 
-.remove-btn {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  background: var(--color-danger);
-  color: white;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity var(--transition-base), transform var(--transition-fast);
-  z-index: 1;
-}
-
-.team-slot:hover .remove-btn {
-  opacity: 1;
-}
-
-.remove-btn:hover {
-  transform: scale(1.1);
-  box-shadow: var(--shadow-glow-danger);
-}
-
-.remove-btn:active {
-  transform: scale(0.95);
-}
-
 .slot-content {
   display: flex;
   gap: var(--space-3);
-  align-items: flex-start;
+  align-items: center;
+}
+
+.sprite-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .pokemon-sprite {
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
   object-fit: contain;
-  flex-shrink: 0;
+}
+
+.berry-sprite {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .pokemon-info {
   flex: 1;
   min-width: 0;
-}
-
-.pokemon-name {
-  font-weight: 600;
-  font-size: 1rem;
-  margin-bottom: var(--space-2);
-  padding-right: var(--space-6);
-  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
 }
 
 .pokemon-moves {
-  font-size: 0.75rem;
-  margin-top: auto;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
   align-items: center;
 }
 
-.move-badge {
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: capitalize;
-  box-shadow: var(--shadow-sm);
-}
-
-.berry-sprite {
-  width: 18px;
-  height: 18px;
-  margin-left: var(--space-1);
-  vertical-align: middle;
+.move-type-icon {
+  width: 24px;
+  height: 24px;
   object-fit: contain;
 }
 

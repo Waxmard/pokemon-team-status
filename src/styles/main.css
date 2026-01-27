@@ -117,6 +117,11 @@
   padding: 0;
 }
 
+/* Prevent tap zoom on mobile */
+input, select, textarea, button {
+  touch-action: manipulation;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--color-background);
@@ -163,9 +168,16 @@ h3 {
   gap: var(--space-4);
 }
 
-@media (max-width: 500px) {
+@media (max-width: 360px) {
   .gym-section {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile padding reduction */
+@media (max-width: 430px) {
+  :root {
+    --space-4: 12px;
   }
 }
 
