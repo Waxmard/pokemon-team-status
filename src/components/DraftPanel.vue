@@ -26,6 +26,18 @@
               @update:value="updateAbility"
             />
           </div>
+
+          <div class="form-group">
+            <label class="form-label">Berry (Optional)</label>
+            <n-select
+              v-model:value="localBerry"
+              :options="berryOptions"
+              placeholder="Select berry..."
+              filterable
+              clearable
+              @update:value="updateBerry"
+            />
+          </div>
         </div>
 
         <div v-if="draftAction.pokemon" class="selected-pokemon-preview">
@@ -88,6 +100,7 @@ import { NAutoComplete, NSelect } from 'naive-ui'
 import { POKEMON_DATA } from '../data/pokemon.js'
 import { ALL_TYPES } from '../data/types.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
+import { BERRY_NAMES } from '../data/berries.js'
 import { getSpriteUrl } from '../utils/pokemon.js'
 
 const props = defineProps({
@@ -105,10 +118,11 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability', 'update:move', 'update:replaceTarget'])
+const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability', 'update:berry', 'update:move', 'update:replaceTarget'])
 
 const searchQuery = ref('')
 const localAbility = ref(null)
+const localBerry = ref(null)
 const moveQueries = ref(['', '', '', ''])
 const localReplaceTarget = ref(null)
 
@@ -116,6 +130,7 @@ const localReplaceTarget = ref(null)
 watch(() => props.draftAction, (action) => {
   searchQuery.value = action.pokemon?.name || ''
   localAbility.value = action.ability
+  localBerry.value = action.berry
   moveQueries.value = (action.moves || []).map(m => m || '')
   localReplaceTarget.value = action.replaceTarget || null
 }, { immediate: true })
@@ -173,6 +188,13 @@ const abilityOptions = computed(() => {
   ]
 })
 
+const berryOptions = computed(() => {
+  return [
+    { label: 'None', value: null },
+    ...BERRY_NAMES.map(name => ({ label: name, value: name }))
+  ]
+})
+
 function getMoveAutocompleteOptions(index) {
   const query = moveQueries.value[index]
   if (!query) return ALL_TYPES.map(type => ({ label: type, value: type }))
@@ -201,6 +223,10 @@ function onSearchInput(value) {
 
 function updateAbility(value) {
   emit('update:ability', value)
+}
+
+function updateBerry(value) {
+  emit('update:berry', value)
 }
 
 function onSelectMove(index, value) {
