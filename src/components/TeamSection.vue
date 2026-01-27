@@ -1,6 +1,5 @@
 <template>
-  <div class="team-section">
-    <h2>Your Team</h2>
+  <n-card class="team-section" title="Your Team">
     <div class="team-grid">
       <TeamSlot
         v-for="(_, index) in 6"
@@ -11,13 +10,13 @@
     </div>
 
     <div class="action-buttons">
-      <button
-        class="btn btn-primary"
+      <n-button
+        type="primary"
         @click="$emit('addPokemon')"
         :disabled="team.length >= 6 || draftActive"
       >
         Add Pokemon
-      </button>
+      </n-button>
     </div>
 
     <DraftPanel
@@ -30,10 +29,11 @@
       @update:ability="$emit('updateDraftAbility', $event)"
       @update:move="$emit('updateDraftMove', $event)"
     />
-  </div>
+  </n-card>
 </template>
 
 <script setup>
+import { NCard, NButton } from 'naive-ui'
 import TeamSlot from './TeamSlot.vue'
 import DraftPanel from './DraftPanel.vue'
 
@@ -66,3 +66,28 @@ defineEmits([
   'updateDraftMove'
 ])
 </script>
+
+<style scoped>
+.team-section {
+  margin-bottom: 20px;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 768px) {
+  .team-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+</style>

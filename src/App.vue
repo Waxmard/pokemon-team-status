@@ -1,37 +1,41 @@
 <template>
-  <div>
-    <h1>Pokemon Team Weakness Calculator</h1>
+  <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
+    <n-layout class="app-layout">
+      <h1>Pokemon Team Weakness Calculator</h1>
 
-    <TeamSection
-      :team="team"
-      :draftAction="draftAction"
-      :draftActive="!!draftAction"
-      :scoreChanges="draftScoreChanges"
-      @addPokemon="startAddPokemon"
-      @removePokemon="removePokemon"
-      @confirmDraft="confirmDraft"
-      @cancelDraft="cancelDraft"
-      @updateDraftPokemon="updateDraftPokemon"
-      @updateDraftAbility="updateDraftAbility"
-      @updateDraftMove="updateDraftMove"
-    />
+      <TeamSection
+        :team="team"
+        :draftAction="draftAction"
+        :draftActive="!!draftAction"
+        :scoreChanges="draftScoreChanges"
+        @addPokemon="startAddPokemon"
+        @removePokemon="removePokemon"
+        @confirmDraft="confirmDraft"
+        @cancelDraft="cancelDraft"
+        @updateDraftPokemon="updateDraftPokemon"
+        @updateDraftAbility="updateDraftAbility"
+        @updateDraftMove="updateDraftMove"
+      />
 
-    <GymColumns
-      :remainingGyms="remainingGyms"
-      :defeatedGymsList="defeatedGymsList"
-      @defeatGym="defeatGym"
-      @undefeatGym="undefeatGym"
-    />
-  </div>
+      <GymColumns
+        :remainingGyms="remainingGyms"
+        :defeatedGymsList="defeatedGymsList"
+        @defeatGym="defeatGym"
+        @undefeatGym="undefeatGym"
+      />
+    </n-layout>
+  </n-config-provider>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { darkTheme, NConfigProvider, NLayout } from 'naive-ui'
 import TeamSection from './components/TeamSection.vue'
 import GymColumns from './components/GymColumns.vue'
 import { ALL_TYPES } from './data/types.js'
 import { calculateScore } from './utils/typeCalc.js'
 import { useStorage } from './composables/useStorage.js'
+import { themeOverrides } from './theme/colors.js'
 
 const {
   team,
@@ -173,3 +177,10 @@ onMounted(() => {
   loadData()
 })
 </script>
+
+<style scoped>
+.app-layout {
+  background: transparent;
+  min-height: 100vh;
+}
+</style>

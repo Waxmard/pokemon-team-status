@@ -1,66 +1,56 @@
 <template>
-  <div class="draft-panel">
-    <h3>{{ draftAction.type === 'add' ? 'Add Pokemon' : 'Replace Pokemon' }}</h3>
-
+  <n-card class="draft-panel" :title="draftAction.type === 'add' ? 'Add Pokemon' : 'Replace Pokemon'">
     <div class="form-group">
       <label>Pokemon Name</label>
-      <div class="pokemon-search-container">
-        <input
-          type="text"
-          v-model="searchQuery"
-          @input="onSearchInput"
-          @focus="showSearchResults = true"
-          placeholder="Search Pokemon..."
-        >
-        <div v-if="showSearchResults && filteredPokemon.length" class="pokemon-search-results">
-          <div
-            v-for="pokemon in filteredPokemon.slice(0, 20)"
-            :key="pokemon.name"
-            @click="selectPokemon(pokemon)"
-          >
-            {{ pokemon.name }}
-            <span v-for="type in pokemon.types" :key="type" class="type-badge" :class="'type-' + type">{{ type }}</span>
-          </div>
-        </div>
-      </div>
+      <n-auto-complete
+        v-model:value="searchQuery"
+        :options="autocompleteOptions"
+        placeholder="Search Pokemon..."
+        :get-show="() => true"
+        @select="onSelectPokemon"
+        @update:value="onSearchInput"
+        clearable
+      />
     </div>
 
     <div v-if="draftAction.pokemon" class="form-group">
       <label>Types</label>
-      <div>
-        <span
+      <div class="type-badges">
+        <n-tag
           v-for="type in draftAction.pokemon.types"
           :key="type"
-          class="type-badge"
-          :class="'type-' + type"
-        >{{ type }}</span>
+          :color="{ color: typeColors[type], textColor: getTextColor(type) }"
+          size="small"
+        >
+          {{ type }}
+        </n-tag>
       </div>
     </div>
 
     <div class="form-group">
       <label>Ability (Optional)</label>
-      <select v-model="localAbility" @change="updateAbility">
-        <option :value="null">None</option>
-        <option v-for="ability in abilityNames" :key="ability" :value="ability">
-          {{ ability }}
-        </option>
-      </select>
+      <n-select
+        v-model:value="localAbility"
+        :options="abilityOptions"
+        placeholder="Select ability..."
+        filterable
+        clearable
+        @update:value="updateAbility"
+      />
     </div>
 
     <div class="form-group">
       <label>Move Types (Optional)</label>
       <div class="moves-grid">
-        <select
+        <n-select
           v-for="i in 4"
           :key="i"
           :value="draftAction.moves[i-1]"
-          @change="updateMove(i-1, $event.target.value)"
-        >
-          <option :value="null">None</option>
-          <option v-for="type in allTypes" :key="type" :value="type">
-            {{ type }}
-          </option>
-        </select>
+          :options="typeOptions"
+          placeholder="None"
+          clearable
+          @update:value="(val) => updateMove(i-1, val)"
+        />
       </div>
     </div>
 
@@ -78,21 +68,24 @@
       </div>
     </div>
 
-    <div class="draft-actions">
-      <button
-        class="btn btn-success"
-        @click="$emit('confirm')"
-        :disabled="!draftAction.pokemon"
-      >
-        Confirm
-      </button>
-      <button class="btn btn-secondary" @click="$emit('cancel')">Cancel</button>
-    </div>
-  </div>
+    <template #footer>
+      <div class="draft-actions">
+        <n-button
+          type="success"
+          @click="$emit('confirm')"
+          :disabled="!draftAction.pokemon"
+        >
+          Confirm
+        </n-button>
+        <n-button secondary @click="$emit('cancel')">Cancel</n-button>
+      </div>
+    </template>
+  </n-card>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
+import { NCard, NAutoComplete, NSelect, NButton, NTag } from 'naive-ui'
 import { POKEMON_DATA } from '../data/pokemon.js'
 import { ALL_TYPES } from '../data/types.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
@@ -111,51 +104,146 @@ const props = defineProps({
 const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability', 'update:move'])
 
 const searchQuery = ref('')
-const showSearchResults = ref(false)
 const localAbility = ref(props.draftAction.ability)
 
-const allTypes = ALL_TYPES
-const abilityNames = ABILITY_NAMES
+// Type colors for tags
+const typeColors = {
+  normal: '#A8A878',
+  fire: '#F08030',
+  water: '#6890F0',
+  electric: '#F8D030',
+  grass: '#78C850',
+  ice: '#98D8D8',
+  fighting: '#C03028',
+  poison: '#A040A0',
+  ground: '#E0C068',
+  flying: '#A890F0',
+  psychic: '#F85888',
+  bug: '#A8B820',
+  rock: '#B8A038',
+  ghost: '#705898',
+  dragon: '#7038F8',
+  dark: '#705848',
+  steel: '#B8B8D0',
+  fairy: '#EE99AC'
+}
 
-const filteredPokemon = computed(() => {
-  if (!searchQuery.value) return POKEMON_DATA
+const lightTextTypes = ['electric', 'ice', 'ground', 'steel', 'fairy']
+
+function getTextColor(type) {
+  return lightTextTypes.includes(type) ? '#333' : '#fff'
+}
+
+const autocompleteOptions = computed(() => {
+  if (!searchQuery.value) return []
   const query = searchQuery.value.toLowerCase()
-  return POKEMON_DATA.filter(p =>
-    p.name.toLowerCase().includes(query)
-  )
+  return POKEMON_DATA
+    .filter(p => p.name.toLowerCase().includes(query))
+    .slice(0, 20)
+    .map(p => ({
+      label: p.name,
+      value: p.name,
+      pokemon: p
+    }))
 })
 
-function selectPokemon(pokemon) {
-  emit('update:pokemon', pokemon)
-  showSearchResults.value = false
-  searchQuery.value = pokemon.name
+const abilityOptions = computed(() => {
+  return [
+    { label: 'None', value: null },
+    ...ABILITY_NAMES.map(name => ({ label: name, value: name }))
+  ]
+})
+
+const typeOptions = computed(() => {
+  return ALL_TYPES.map(type => ({ label: type, value: type }))
+})
+
+function onSelectPokemon(value) {
+  const pokemon = POKEMON_DATA.find(p => p.name === value)
+  if (pokemon) {
+    emit('update:pokemon', pokemon)
+    searchQuery.value = pokemon.name
+  }
 }
 
 function onSearchInput() {
-  showSearchResults.value = true
   emit('update:pokemon', null)
 }
 
-function updateAbility() {
-  emit('update:ability', localAbility.value)
+function updateAbility(value) {
+  emit('update:ability', value)
 }
 
 function updateMove(index, value) {
   emit('update:move', { index, value: value || null })
 }
+</script>
 
-// Close search results when clicking outside
-function handleClickOutside(e) {
-  if (!e.target.closest('.pokemon-search-container')) {
-    showSearchResults.value = false
-  }
+<style scoped>
+.draft-panel {
+  margin-top: 16px;
 }
 
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
+.form-group {
+  margin-bottom: 16px;
+}
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
-</script>
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.type-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.moves-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.preview-section {
+  background: var(--card-color, #0f3460);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 16px;
+}
+
+.preview-section h4 {
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.preview-change {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.85rem;
+}
+
+.preview-change.positive {
+  color: #2ecc71;
+}
+
+.preview-change.negative {
+  color: #e74c3c;
+}
+
+.preview-change.neutral {
+  color: #aaa;
+}
+
+.gym-name {
+  text-transform: capitalize;
+}
+
+.draft-actions {
+  display: flex;
+  gap: 12px;
+}
+</style>
