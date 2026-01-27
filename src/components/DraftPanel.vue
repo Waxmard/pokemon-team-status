@@ -26,6 +26,26 @@
               @update:value="updateAbility"
             />
           </div>
+
+          <div class="form-group">
+            <label class="form-label">Berry (Optional)</label>
+            <div class="berry-select-row">
+              <n-select
+                v-model:value="localBerry"
+                :options="berryOptions"
+                placeholder="Select berry..."
+                filterable
+                clearable
+                @update:value="updateBerry"
+              />
+              <img
+                v-if="berrySpriteUrl"
+                :src="berrySpriteUrl"
+                :alt="localBerry"
+                class="berry-preview"
+              />
+            </div>
+          </div>
         </div>
 
         <div v-if="draftAction.pokemon" class="selected-pokemon-preview">
@@ -88,7 +108,8 @@ import { NAutoComplete, NSelect } from 'naive-ui'
 import { POKEMON_DATA } from '../data/pokemon.js'
 import { ALL_TYPES } from '../data/types.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
-import { getSpriteUrl } from '../utils/pokemon.js'
+import { BERRY_NAMES } from '../data/berries.js'
+import { getSpriteUrl, getBerrySprite } from '../utils/pokemon.js'
 
 const props = defineProps({
   draftAction: {
@@ -105,10 +126,11 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability', 'update:move', 'update:replaceTarget'])
+const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability', 'update:berry', 'update:move', 'update:replaceTarget'])
 
 const searchQuery = ref('')
 const localAbility = ref(null)
+const localBerry = ref(null)
 const moveQueries = ref(['', '', '', ''])
 const localReplaceTarget = ref(null)
 
@@ -116,6 +138,7 @@ const localReplaceTarget = ref(null)
 watch(() => props.draftAction, (action) => {
   searchQuery.value = action.pokemon?.name || ''
   localAbility.value = action.ability
+  localBerry.value = action.berry
   moveQueries.value = (action.moves || []).map(m => m || '')
   localReplaceTarget.value = action.replaceTarget || null
 }, { immediate: true })
@@ -153,6 +176,10 @@ const selectedSpriteUrl = computed(() => {
   return getSpriteUrl(props.draftAction.pokemon.name)
 })
 
+const berrySpriteUrl = computed(() => {
+  return getBerrySprite(localBerry.value)
+})
+
 const autocompleteOptions = computed(() => {
   if (!searchQuery.value) return []
   const query = searchQuery.value.toLowerCase()
@@ -170,6 +197,13 @@ const abilityOptions = computed(() => {
   return [
     { label: 'None', value: null },
     ...ABILITY_NAMES.map(name => ({ label: name, value: name }))
+  ]
+})
+
+const berryOptions = computed(() => {
+  return [
+    { label: 'None', value: null },
+    ...BERRY_NAMES.map(name => ({ label: name, value: name }))
   ]
 })
 
@@ -201,6 +235,10 @@ function onSearchInput(value) {
 
 function updateAbility(value) {
   emit('update:ability', value)
+}
+
+function updateBerry(value) {
+  emit('update:berry', value)
 }
 
 function onSelectMove(index, value) {
@@ -272,6 +310,23 @@ function updateReplaceTarget(value) {
   width: 96px;
   height: 96px;
   object-fit: contain;
+}
+
+.berry-select-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.berry-select-row .n-select {
+  flex: 1;
+}
+
+.berry-preview {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .moves-grid {

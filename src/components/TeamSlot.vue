@@ -24,9 +24,15 @@
             class="pokemon-sprite"
           />
           <div class="pokemon-info">
-            <div class="pokemon-name">{{ pokemon.name }}</div>
-            <div v-if="pokemon.ability" class="pokemon-ability">
-              {{ pokemon.ability }}
+            <div class="pokemon-name">
+              {{ pokemon.name }}
+              <img
+                v-if="pokemon.berry"
+                :src="getBerrySprite(pokemon.berry)"
+                :alt="pokemon.berry"
+                :title="pokemon.berry"
+                class="berry-sprite"
+              />
             </div>
             <div v-if="pokemon.moves.length" class="pokemon-moves">
               <span
@@ -55,7 +61,8 @@
 
 <script setup>
 import { computed } from 'vue'
-import { getSpriteUrl } from '../utils/pokemon.js'
+import { getSpriteUrl, getBerrySprite } from '../utils/pokemon.js'
+import { ABILITIES } from '../data/abilities.js'
 
 const props = defineProps({
   pokemon: {
@@ -74,8 +81,18 @@ const spriteUrl = computed(() => {
 const cardBackgroundStyle = computed(() => {
   if (!props.pokemon || !props.pokemon.types?.length) return {}
 
-  const types = props.pokemon.types
   const opacity = 0.15
+  let types = [...props.pokemon.types]
+
+  // For Protean, include move types in the gradient
+  const abilityData = ABILITIES[props.pokemon.ability]
+  if (abilityData?.protean && props.pokemon.moves?.length) {
+    for (const moveType of props.pokemon.moves) {
+      if (moveType && !types.includes(moveType)) {
+        types.push(moveType)
+      }
+    }
+  }
 
   if (types.length === 1) {
     const color = typeColors[types[0]]
@@ -83,10 +100,14 @@ const cardBackgroundStyle = computed(() => {
       background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`
     }
   } else {
-    const color1 = typeColors[types[0]]
-    const color2 = typeColors[types[1]]
+    // Create gradient stops for all types
+    const stops = types.map((type, i) => {
+      const color = typeColors[type]
+      const percent = (i / (types.length - 1)) * 100
+      return `${hexToRgba(color, opacity)} ${percent}%`
+    })
     return {
-      background: `linear-gradient(135deg, ${hexToRgba(color1, opacity)} 0%, ${hexToRgba(color2, opacity)} 100%)`
+      background: `linear-gradient(135deg, ${stops.join(', ')})`
     }
   }
 })
@@ -270,12 +291,6 @@ function adjustColor(hex, amount) {
   color: var(--color-text-primary);
 }
 
-.pokemon-ability {
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-2);
-}
-
 .pokemon-moves {
   font-size: 0.75rem;
   margin-top: auto;
@@ -292,6 +307,14 @@ function adjustColor(hex, amount) {
   font-weight: 600;
   text-transform: capitalize;
   box-shadow: var(--shadow-sm);
+}
+
+.berry-sprite {
+  width: 18px;
+  height: 18px;
+  margin-left: var(--space-1);
+  vertical-align: middle;
+  object-fit: contain;
 }
 
 </style>

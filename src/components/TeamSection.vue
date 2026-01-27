@@ -63,6 +63,7 @@
         @cancel="$emit('cancelDraft')"
         @update:pokemon="$emit('updateDraftPokemon', $event)"
         @update:ability="$emit('updateDraftAbility', $event)"
+        @update:berry="$emit('updateDraftBerry', $event)"
         @update:move="$emit('updateDraftMove', $event)"
         @update:replaceTarget="$emit('updateDraftReplaceTarget', $event)"
       />
@@ -104,6 +105,7 @@ const emit = defineEmits([
   'cancelDraft',
   'updateDraftPokemon',
   'updateDraftAbility',
+  'updateDraftBerry',
   'updateDraftMove',
   'updateDraftReplaceTarget',
   'reorderTeam',

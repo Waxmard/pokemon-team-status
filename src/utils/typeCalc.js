@@ -1,5 +1,6 @@
 import { TYPE_CHART, ALL_TYPES } from '../data/types.js'
 import { ABILITIES } from '../data/abilities.js'
+import { BERRIES } from '../data/berries.js'
 
 export function getTypeEffectiveness(attackingType, defendingType) {
   return TYPE_CHART[attackingType]?.[defendingType] ?? 1
@@ -53,6 +54,19 @@ export function calculateScore(gymType, team) {
     else if (multiplier === 2) score -= 1     // weakness
     else if (multiplier === 4) score -= 2     // double weakness
 
+    // Protean: move types act as additional defensive types (resistances only)
+    const abilityData = ABILITIES[member.ability]
+    if (abilityData?.protean && member.moves?.length) {
+      for (const moveType of member.moves) {
+        // Skip empty moves and types already covered by base types
+        if (!moveType || member.types.includes(moveType)) continue
+        const moveMultiplier = getTypeEffectiveness(gymType, moveType)
+        // Only count resistances, not weaknesses - user can choose not to use that move
+        if (moveMultiplier === 0) score += 2        // immunity
+        else if (moveMultiplier === 0.5) score += 1 // resist
+      }
+    }
+
     // Check offensive coverage
     if (hasEffectiveMove(member.moves, gymType)) score += 1
   }
@@ -71,4 +85,19 @@ export function calculateScoreChanges(team, draftMember) {
       diff: newScore - oldScore
     }
   }).filter(c => c.diff !== 0)
+}
+
+export function calculateBerryTiebreaker(gymType, team) {
+  let count = 0
+  for (const member of team) {
+    if (member.berry && BERRIES[member.berry] === gymType) {
+      // Only count berry if the gym type deals super effective damage
+      let multiplier = getDefensiveMultiplier(gymType, member.types)
+      multiplier = applyAbilityDefense(multiplier, gymType, member.ability)
+      if (multiplier > 1) {
+        count++
+      }
+    }
+  }
+  return count
 }

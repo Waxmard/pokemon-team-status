@@ -10,6 +10,7 @@
         :type="gym.type"
         :score="gym.score"
         :diff="gym.diff || 0"
+        :berryCount="gym.berryCount || 0"
         :style="{ animationDelay: `${index * 30}ms` }"
         @click="$emit('gymClick', gym.type)"
       />

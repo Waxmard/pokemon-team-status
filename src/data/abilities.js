@@ -10,7 +10,9 @@ export const ABILITIES = {
   "Thick Fat": { resistance: ["fire", "ice"] },
   "Dry Skin": { immunity: ["water"], weakness: ["fire"] },
   "Motor Drive": { immunity: ["electric"] },
-  "Heatproof": { resistance: ["fire"] }
+  "Heatproof": { resistance: ["fire"] },
+  "Protean": { protean: true },
+  "Libero": { protean: true }
 }
 
 export const ABILITY_NAMES = Object.keys(ABILITIES)

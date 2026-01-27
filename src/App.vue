@@ -17,6 +17,7 @@
         @cancelDraft="cancelDraft"
         @updateDraftPokemon="updateDraftPokemon"
         @updateDraftAbility="updateDraftAbility"
+        @updateDraftBerry="updateDraftBerry"
         @updateDraftMove="updateDraftMove"
         @updateDraftReplaceTarget="updateDraftReplaceTarget"
         @reorderTeam="reorderTeam"
@@ -43,7 +44,7 @@ import TeamSection from './components/TeamSection.vue'
 import GymColumns from './components/GymColumns.vue'
 import { ALL_TYPES } from './data/types.js'
 import { POKEMON_DATA } from './data/pokemon.js'
-import { calculateScore } from './utils/typeCalc.js'
+import { calculateScore, calculateBerryTiebreaker } from './utils/typeCalc.js'
 import { useStorage } from './composables/useStorage.js'
 import { themeOverrides } from './theme/colors.js'
 
@@ -65,24 +66,32 @@ const remainingGyms = computed(() => {
     .filter(type => !defeatedGyms.value.includes(type))
     .map(type => {
       const score = calculateScore(type, team.value)
+      const berryCount = calculateBerryTiebreaker(type, team.value)
       let diff = 0
       if (draftAction.value?.pokemon) {
         const draftTeam = getDraftTeam()
         const newScore = calculateScore(type, draftTeam)
         diff = newScore - score
       }
-      return { type, score, diff }
+      return { type, score, berryCount, diff }
     })
-    .sort((a, b) => a.score - b.score)
+    .sort((a, b) => {
+      if (a.score !== b.score) return a.score - b.score
+      return a.berryCount - b.berryCount
+    })
 })
 
 const defeatedGymsList = computed(() => {
   return defeatedGyms.value
     .map(type => ({
       type,
-      score: calculateScore(type, team.value)
+      score: calculateScore(type, team.value),
+      berryCount: calculateBerryTiebreaker(type, team.value)
     }))
-    .sort((a, b) => a.score - b.score)
+    .sort((a, b) => {
+      if (a.score !== b.score) return a.score - b.score
+      return a.berryCount - b.berryCount
+    })
 })
 
 // Helper to get draft team
@@ -96,6 +105,7 @@ function getDraftTeam() {
     name: draftAction.value.pokemon.name,
     types: draftAction.value.pokemon.types,
     ability: draftAction.value.ability,
+    berry: draftAction.value.berry,
     moves: draftAction.value.moves.filter(m => m)
   }
 
@@ -131,6 +141,7 @@ function startAddPokemon(pokemon = null) {
     type: 'add',
     pokemon: pokemon,
     ability: null,
+    berry: null,
     moves: [null, null, null, null]
   }
 }
@@ -148,6 +159,7 @@ function startEditPokemon(id) {
     isBoxPokemon: false,
     pokemon: pokemonData,
     ability: pokemon.ability,
+    berry: pokemon.berry || null,
     moves: [...pokemon.moves, null, null, null, null].slice(0, 4)
   }
 }
@@ -165,6 +177,7 @@ function startEditBoxPokemon(boxPokemonId) {
     boxPokemonId: boxPokemonId,
     pokemon: pokemonData,
     ability: pokemon.ability,
+    berry: pokemon.berry || null,
     moves: [...pokemon.moves, null, null, null, null].slice(0, 4),
     replaceTarget: null
   }
@@ -179,6 +192,12 @@ function updateDraftPokemon(pokemon) {
 function updateDraftAbility(ability) {
   if (draftAction.value) {
     draftAction.value.ability = ability
+  }
+}
+
+function updateDraftBerry(berry) {
+  if (draftAction.value) {
+    draftAction.value.berry = berry
   }
 }
 
@@ -202,6 +221,7 @@ function confirmDraft() {
     name: draftAction.value.pokemon.name,
     types: draftAction.value.pokemon.types,
     ability: draftAction.value.ability,
+    berry: draftAction.value.berry,
     moves: draftAction.value.moves.filter(m => m)
   }
 
@@ -222,6 +242,7 @@ function confirmDraft() {
         name: draftAction.value.pokemon.name,
         types: draftAction.value.pokemon.types,
         ability: draftAction.value.ability,
+        berry: draftAction.value.berry,
         moves: draftAction.value.moves.filter(m => m)
       }
 
@@ -244,6 +265,7 @@ function confirmDraft() {
               name: replacedPokemon.name,
               types: replacedPokemon.types,
               ability: replacedPokemon.ability,
+              berry: replacedPokemon.berry,
               moves: replacedPokemon.moves
             }
             // Replace team Pokemon with box Pokemon
@@ -299,6 +321,7 @@ function startAddToBox() {
     type: 'addToBox',
     pokemon: null,
     ability: null,
+    berry: null,
     moves: [null, null, null, null]
   }
 }
