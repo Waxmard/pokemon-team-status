@@ -2,7 +2,6 @@
   <div class="gym-column">
     <div class="column-header">
       <h3 class="column-title">{{ title }}{{ draftActive ? ' (Draft)' : '' }}</h3>
-      <span class="gym-count">{{ gyms.length }}</span>
     </div>
     <TransitionGroup :name="transitionName" tag="div" class="gym-list">
       <GymRow
@@ -74,17 +73,6 @@ defineEmits(['gymClick'])
   font-weight: 600;
   color: var(--color-text-primary);
   margin: 0;
-}
-
-.gym-count {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  background: var(--color-surface-light);
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  min-width: 24px;
-  text-align: center;
 }
 
 .gym-list {
