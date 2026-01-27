@@ -231,10 +231,9 @@ function onMoveInput(index, value) {
 .draft-panel {
   margin-top: var(--space-4);
   background: var(--color-card);
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: var(--space-5);
-  box-shadow: var(--shadow-glow-primary);
   animation: scaleIn var(--transition-slow) ease forwards;
 }
 
