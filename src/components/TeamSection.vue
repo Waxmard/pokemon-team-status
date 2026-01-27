@@ -9,49 +9,52 @@
     </button>
 
     <div class="team-section">
-    <!-- Team Grid -->
-    <draggable
-      v-if="viewMode === 'team'"
-      v-model="localTeam"
-      :disabled="draftActive"
-      item-key="id"
-      ghost-class="drag-ghost"
-      drag-class="drag-active"
-      class="team-grid"
-      @end="onDragEnd"
-    >
-      <template #item="{ element: pokemon }">
-        <TeamSlot
-          :pokemon="pokemon"
-          @remove="$emit('removePokemon', $event)"
-          @edit="$emit('editPokemon', pokemon.id)"
-        />
-      </template>
-      <template #footer>
-        <TeamSlot
-          v-for="i in emptySlotCount"
-          :key="'empty-' + i"
-          :pokemon="null"
-          @add="$emit('addPokemon')"
-        />
-      </template>
-    </draggable>
+    <!-- Grid Container - handles show/hide based on draft state -->
+    <div v-show="!showDraftPanel">
+      <!-- Team Grid -->
+      <draggable
+        v-if="viewMode === 'team'"
+        v-model="localTeam"
+        :disabled="draftActive"
+        item-key="id"
+        ghost-class="drag-ghost"
+        drag-class="drag-active"
+        class="team-grid"
+        @end="onDragEnd"
+      >
+        <template #item="{ element: pokemon }">
+          <TeamSlot
+            :pokemon="pokemon"
+            @remove="$emit('removePokemon', $event)"
+            @edit="$emit('editPokemon', pokemon.id)"
+          />
+        </template>
+        <template #footer>
+          <TeamSlot
+            v-for="i in emptySlotCount"
+            :key="'empty-' + i"
+            :pokemon="null"
+            @add="$emit('addPokemon')"
+          />
+        </template>
+      </draggable>
 
-    <!-- Box Grid -->
-    <div v-else class="box-grid">
-      <TeamSlot
-        v-for="pokemon in box"
-        :key="pokemon.id"
-        :pokemon="pokemon"
-        @remove="$emit('removeFromBox', pokemon.id)"
-        @edit="$emit('editBoxPokemon', pokemon.id)"
-      />
-      <TeamSlot
-        v-for="i in emptyBoxSlotCount"
-        :key="'box-empty-' + i"
-        :pokemon="null"
-        @add="$emit('addToBox')"
-      />
+      <!-- Box Grid -->
+      <div v-else class="box-grid">
+        <TeamSlot
+          v-for="pokemon in box"
+          :key="pokemon.id"
+          :pokemon="pokemon"
+          @remove="$emit('removeFromBox', pokemon.id)"
+          @edit="$emit('editBoxPokemon', pokemon.id)"
+        />
+        <TeamSlot
+          v-for="i in emptyBoxSlotCount"
+          :key="'box-empty-' + i"
+          :pokemon="null"
+          @add="$emit('addToBox')"
+        />
+      </div>
     </div>
 
     <Transition name="scale">
