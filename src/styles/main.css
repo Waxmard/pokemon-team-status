@@ -1,18 +1,116 @@
-/* CSS Variables for colors */
+/* Design Tokens */
 :root {
-  --color-background: #1a1a2e;
-  --color-surface: #16213e;
-  --color-surface-light: #1e3a5f;
-  --color-card: #0f3460;
-  --color-text-primary: #eeeeee;
-  --color-text-secondary: #aaaaaa;
-  --color-text-muted: #666666;
-  --color-primary: #3498db;
-  --color-success: #2ecc71;
-  --color-danger: #e74c3c;
-  --color-warning: #f39c12;
+  /* Colors - Refined palette */
+  --color-background: #0d0d1a;
+  --color-surface: #12121f;
+  --color-surface-light: #1a1a2e;
+  --color-card: #16162a;
+  --color-text-primary: #f0f0f5;
+  --color-text-secondary: #9898b0;
+  --color-text-muted: #5a5a70;
+  --color-primary: #4a9eff;
+  --color-success: #34d399;
+  --color-danger: #f87171;
+  --color-warning: #fbbf24;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-light: rgba(255, 255, 255, 0.1);
+
+  /* Spacing scale (4px increments) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Border radius system */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* Shadow system */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.6);
+  --shadow-glow-primary: 0 0 20px rgba(74, 158, 255, 0.3);
+  --shadow-glow-success: 0 0 12px rgba(52, 211, 153, 0.4);
+  --shadow-glow-danger: 0 0 12px rgba(248, 113, 113, 0.4);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
 }
 
+/* Keyframe animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Base reset */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -22,30 +120,39 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--color-background);
+  /* Subtle gradient for depth */
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(74, 158, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(52, 211, 153, 0.02) 0%, transparent 40%);
+  background-attachment: fixed;
   color: var(--color-text-primary);
   min-height: 100vh;
   /* iOS safe area handling */
-  padding: 16px;
-  padding-top: calc(16px + env(safe-area-inset-top));
-  padding-right: calc(16px + env(safe-area-inset-right));
-  padding-bottom: calc(16px + env(safe-area-inset-bottom));
-  padding-left: calc(16px + env(safe-area-inset-left));
+  padding: var(--space-4);
+  padding-top: calc(var(--space-4) + env(safe-area-inset-top));
+  padding-right: calc(var(--space-4) + env(safe-area-inset-right));
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  padding-left: calc(var(--space-4) + env(safe-area-inset-left));
 }
 
 h1 {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-6);
   font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 h2 {
   font-size: 1.1rem;
-  margin-bottom: 12px;
+  font-weight: 600;
+  margin-bottom: var(--space-3);
 }
 
 h3 {
   font-size: 1rem;
-  margin-bottom: 8px;
+  font-weight: 600;
+  margin-bottom: var(--space-2);
 }
 
 /* Minimum touch targets for mobile */
@@ -58,11 +165,48 @@ h3 {
 .gym-section {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 @media (max-width: 500px) {
   .gym-section {
     grid-template-columns: 1fr;
   }
+}
+
+/* Vue transition classes */
+.list-enter-active {
+  animation: fadeInUp var(--transition-slow) ease forwards;
+}
+
+.list-leave-active {
+  animation: fadeIn var(--transition-base) ease reverse forwards;
+}
+
+.list-move {
+  transition: transform var(--transition-slow) ease;
+}
+
+.slide-left-enter-active {
+  animation: slideInLeft var(--transition-base) ease forwards;
+}
+
+.slide-left-leave-active {
+  animation: slideInLeft var(--transition-base) ease reverse forwards;
+}
+
+.slide-right-enter-active {
+  animation: slideInRight var(--transition-base) ease forwards;
+}
+
+.slide-right-leave-active {
+  animation: slideInRight var(--transition-base) ease reverse forwards;
+}
+
+.scale-enter-active {
+  animation: scaleIn var(--transition-slow) ease forwards;
+}
+
+.scale-leave-active {
+  animation: scaleIn var(--transition-base) ease reverse forwards;
 }

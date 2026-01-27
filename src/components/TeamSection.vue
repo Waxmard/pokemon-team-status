@@ -1,43 +1,53 @@
 <template>
-  <n-card class="team-section" title="Your Team">
-    <div class="team-grid">
-      <TeamSlot
-        v-for="(_, index) in 6"
-        :key="index"
-        :pokemon="team[index] || null"
-        @remove="$emit('removePokemon', $event)"
-      />
+  <div class="team-section">
+    <div class="section-header">
+      <h2 class="section-title">Your Team</h2>
+      <span class="team-count">{{ team.length }}/6</span>
     </div>
 
+    <TransitionGroup name="list" tag="div" class="team-grid">
+      <TeamSlot
+        v-for="(pokemon, index) in paddedTeam"
+        :key="pokemon?.id || `empty-${index}`"
+        :pokemon="pokemon"
+        @remove="$emit('removePokemon', $event)"
+      />
+    </TransitionGroup>
+
     <div class="action-buttons">
-      <n-button
-        type="primary"
+      <button
+        class="add-btn"
         @click="$emit('addPokemon')"
         :disabled="team.length >= 6 || draftActive"
       >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 2a.75.75 0 01.75.75v4.5h4.5a.75.75 0 010 1.5h-4.5v4.5a.75.75 0 01-1.5 0v-4.5h-4.5a.75.75 0 010-1.5h4.5v-4.5A.75.75 0 018 2z"/>
+        </svg>
         Add Pokemon
-      </n-button>
+      </button>
     </div>
 
-    <DraftPanel
-      v-if="draftAction"
-      :draftAction="draftAction"
-      :scoreChanges="scoreChanges"
-      @confirm="$emit('confirmDraft')"
-      @cancel="$emit('cancelDraft')"
-      @update:pokemon="$emit('updateDraftPokemon', $event)"
-      @update:ability="$emit('updateDraftAbility', $event)"
-      @update:move="$emit('updateDraftMove', $event)"
-    />
-  </n-card>
+    <Transition name="scale">
+      <DraftPanel
+        v-if="draftAction"
+        :draftAction="draftAction"
+        :scoreChanges="scoreChanges"
+        @confirm="$emit('confirmDraft')"
+        @cancel="$emit('cancelDraft')"
+        @update:pokemon="$emit('updateDraftPokemon', $event)"
+        @update:ability="$emit('updateDraftAbility', $event)"
+        @update:move="$emit('updateDraftMove', $event)"
+      />
+    </Transition>
+  </div>
 </template>
 
 <script setup>
-import { NCard, NButton } from 'naive-ui'
+import { computed } from 'vue'
 import TeamSlot from './TeamSlot.vue'
 import DraftPanel from './DraftPanel.vue'
 
-defineProps({
+const props = defineProps({
   team: {
     type: Array,
     required: true
@@ -65,18 +75,55 @@ defineEmits([
   'updateDraftAbility',
   'updateDraftMove'
 ])
+
+// Pad team to always show 6 slots
+const paddedTeam = computed(() => {
+  const slots = [...props.team]
+  while (slots.length < 6) {
+    slots.push(null)
+  }
+  return slots
+})
 </script>
 
 <style scoped>
 .team-section {
-  margin-bottom: 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+  box-shadow: var(--shadow-lg);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.team-count {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: var(--color-card);
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
 }
 
 .team-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 @media (min-width: 768px) {
@@ -87,7 +134,37 @@ defineEmits([
 
 .action-buttons {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+.add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+}
+
+.add-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow-primary);
+  background: #5dade2;
+}
+
+.add-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

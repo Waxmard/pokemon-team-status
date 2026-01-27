@@ -1,7 +1,10 @@
 <template>
   <n-config-provider :theme="darkTheme" :theme-overrides="themeOverrides">
-    <n-layout class="app-layout">
-      <h1>Pokemon Team Weakness Calculator</h1>
+    <div class="app-container">
+      <h1 class="app-title">
+        <span class="title-text">Pokemon Team</span>
+        <span class="title-accent">Weakness Calculator</span>
+      </h1>
 
       <TeamSection
         :team="team"
@@ -23,13 +26,13 @@
         @defeatGym="defeatGym"
         @undefeatGym="undefeatGym"
       />
-    </n-layout>
+    </div>
   </n-config-provider>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { darkTheme, NConfigProvider, NLayout } from 'naive-ui'
+import { darkTheme, NConfigProvider } from 'naive-ui'
 import TeamSection from './components/TeamSection.vue'
 import GymColumns from './components/GymColumns.vue'
 import { ALL_TYPES } from './data/types.js'
@@ -179,8 +182,32 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.app-layout {
-  background: transparent;
-  min-height: 100vh;
+.app-container {
+  max-width: 900px;
+  margin: 0 auto;
+  animation: fadeIn var(--transition-slow) ease forwards;
+}
+
+.app-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: var(--space-6);
+}
+
+.title-text {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.title-accent {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 </style>

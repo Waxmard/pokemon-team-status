@@ -1,32 +1,36 @@
 export const colors = {
-  // Base
-  background: '#1a1a2e',
-  surface: '#16213e',
-  surfaceLight: '#1e3a5f',
-  card: '#0f3460',
+  // Base - Deeper, more refined
+  background: '#0d0d1a',
+  surface: '#12121f',
+  surfaceLight: '#1a1a2e',
+  card: '#16162a',
 
-  // Text
-  textPrimary: '#eeeeee',
-  textSecondary: '#aaaaaa',
-  textMuted: '#666666',
+  // Text hierarchy
+  textPrimary: '#f0f0f5',
+  textSecondary: '#9898b0',
+  textMuted: '#5a5a70',
 
-  // Accents
-  primary: '#3498db',
-  success: '#2ecc71',
-  danger: '#e74c3c',
-  warning: '#f39c12',
+  // Accents - Softer, more refined
+  primary: '#4a9eff',
+  success: '#34d399',
+  danger: '#f87171',
+  warning: '#fbbf24',
 
   // Score colors
-  positive: '#2ecc71',
-  negative: '#e74c3c',
+  positive: '#34d399',
+  negative: '#f87171',
+
+  // Borders
+  border: 'rgba(255, 255, 255, 0.06)',
+  borderLight: 'rgba(255, 255, 255, 0.1)',
 }
 
 // Naive UI theme overrides
 export const themeOverrides = {
   common: {
     primaryColor: colors.primary,
-    primaryColorHover: '#5dade2',
-    primaryColorPressed: '#2980b9',
+    primaryColorHover: '#6bb3ff',
+    primaryColorPressed: '#3a8ae6',
     successColor: colors.success,
     errorColor: colors.danger,
     warningColor: colors.warning,
@@ -41,29 +45,36 @@ export const themeOverrides = {
     textColor1: colors.textPrimary,
     textColor2: colors.textSecondary,
     textColor3: colors.textMuted,
-    borderColor: '#333',
-    dividerColor: '#333',
+    borderColor: colors.border,
+    dividerColor: colors.border,
+    borderRadius: '12px',
+    borderRadiusSmall: '8px',
   },
   Button: {
     textColorPrimary: '#ffffff',
     textColorSuccess: '#ffffff',
     textColorError: '#ffffff',
+    borderRadiusMedium: '10px',
+    borderRadiusSmall: '8px',
   },
   Card: {
     color: colors.surface,
-    borderColor: 'transparent',
+    borderColor: colors.border,
+    borderRadius: '16px',
   },
   Input: {
     color: colors.card,
-    borderColor: '#333',
+    borderColor: colors.border,
     borderColorFocus: colors.primary,
+    borderRadius: '10px',
   },
   Select: {
     peers: {
       InternalSelection: {
         color: colors.card,
-        borderColor: '#333',
+        borderColor: colors.border,
         borderColorFocus: colors.primary,
+        borderRadius: '10px',
       },
     },
   },
@@ -71,15 +82,17 @@ export const themeOverrides = {
     peers: {
       InternalSelectMenu: {
         color: colors.card,
+        borderRadius: '12px',
       },
       Input: {
         color: colors.card,
-        borderColor: '#333',
+        borderColor: colors.border,
         borderColorFocus: colors.primary,
+        borderRadius: '10px',
       },
     },
   },
   Tag: {
-    borderRadius: '4px',
+    borderRadius: '6px',
   },
 }

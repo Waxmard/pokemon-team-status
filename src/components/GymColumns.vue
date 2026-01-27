@@ -3,11 +3,15 @@
     <GymColumn
       title="Remaining Gyms"
       :gyms="remainingGyms"
+      transitionName="slide-right"
+      emptyMessage="All gyms defeated!"
       @gymClick="$emit('defeatGym', $event)"
     />
     <GymColumn
       title="Defeated Gyms"
       :gyms="defeatedGymsList"
+      transitionName="slide-left"
+      emptyMessage="No gyms defeated yet"
       @gymClick="$emit('undefeatGym', $event)"
     />
   </div>

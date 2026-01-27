@@ -1,23 +1,30 @@
 <template>
-  <n-card class="gym-column" :title="title">
-    <div class="gym-list">
+  <div class="gym-column">
+    <div class="column-header">
+      <h3 class="column-title">{{ title }}</h3>
+      <span class="gym-count">{{ gyms.length }}</span>
+    </div>
+    <TransitionGroup :name="transitionName" tag="div" class="gym-list">
       <GymRow
-        v-for="gym in gyms"
+        v-for="(gym, index) in gyms"
         :key="gym.type"
         :type="gym.type"
         :score="gym.score"
         :diff="gym.diff || 0"
+        :style="{ animationDelay: `${index * 30}ms` }"
         @click="$emit('gymClick', gym.type)"
       />
+    </TransitionGroup>
+    <div v-if="gyms.length === 0" class="empty-state">
+      <span class="empty-message">{{ emptyMessage }}</span>
     </div>
-  </n-card>
+  </div>
 </template>
 
 <script setup>
-import { NCard } from 'naive-ui'
 import GymRow from './GymRow.vue'
 
-defineProps({
+const props = defineProps({
   title: {
     type: String,
     required: true
@@ -25,6 +32,14 @@ defineProps({
   gyms: {
     type: Array,
     required: true
+  },
+  transitionName: {
+    type: String,
+    default: 'slide-left'
+  },
+  emptyMessage: {
+    type: String,
+    default: 'No gyms'
   }
 })
 
@@ -33,12 +48,56 @@ defineEmits(['gymClick'])
 
 <style scoped>
 .gym-column {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-md);
   height: fit-content;
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.column-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.gym-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-card);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  min-width: 24px;
+  text-align: center;
 }
 
 .gym-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-6) var(--space-4);
+}
+
+.empty-message {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
 }
 </style>
