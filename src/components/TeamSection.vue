@@ -6,6 +6,7 @@
         :key="pokemon?.id || `empty-${index}`"
         :pokemon="pokemon"
         @remove="$emit('removePokemon', $event)"
+        @edit="$emit('editPokemon', $event)"
       />
     </TransitionGroup>
 
@@ -59,6 +60,7 @@ const props = defineProps({
 defineEmits([
   'addPokemon',
   'removePokemon',
+  'editPokemon',
   'confirmDraft',
   'cancelDraft',
   'updateDraftPokemon',

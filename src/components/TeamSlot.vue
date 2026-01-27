@@ -1,5 +1,9 @@
 <template>
-  <div class="team-slot" :class="{ empty: !pokemon }">
+  <div
+    class="team-slot"
+    :class="{ empty: !pokemon, clickable: !!pokemon }"
+    @click="pokemon && $emit('edit', pokemon.id)"
+  >
     <template v-if="pokemon">
       <button
         class="remove-btn"
@@ -57,7 +61,7 @@ defineProps({
   }
 })
 
-defineEmits(['remove'])
+defineEmits(['remove', 'edit'])
 
 // Type colors for tags
 const typeColors = {
@@ -117,6 +121,10 @@ function adjustColor(hex, amount) {
 .team-slot:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
+}
+
+.team-slot.clickable {
+  cursor: pointer;
 }
 
 .team-slot.empty {

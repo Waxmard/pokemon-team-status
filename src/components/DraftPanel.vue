@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { NAutoComplete, NSelect } from 'naive-ui'
 import { POKEMON_DATA } from '../data/pokemon.js'
 import { ALL_TYPES } from '../data/types.js'
@@ -88,8 +88,15 @@ const props = defineProps({
 const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability', 'update:move'])
 
 const searchQuery = ref('')
-const localAbility = ref(props.draftAction.ability)
+const localAbility = ref(null)
 const moveQueries = ref(['', '', '', ''])
+
+// Initialize form state when draftAction changes (for edit mode)
+watch(() => props.draftAction, (action) => {
+  searchQuery.value = action.pokemon?.name || ''
+  localAbility.value = action.ability
+  moveQueries.value = action.moves.map(m => m || '')
+}, { immediate: true })
 
 // Type colors for tags
 const typeColors = {

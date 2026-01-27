@@ -11,6 +11,7 @@
         :draftActive="!!draftAction"
         @addPokemon="startAddPokemon"
         @removePokemon="removePokemon"
+        @editPokemon="startEditPokemon"
         @confirmDraft="confirmDraft"
         @cancelDraft="cancelDraft"
         @updateDraftPokemon="updateDraftPokemon"
@@ -35,6 +36,7 @@ import { NConfigProvider } from 'naive-ui'
 import TeamSection from './components/TeamSection.vue'
 import GymColumns from './components/GymColumns.vue'
 import { ALL_TYPES } from './data/types.js'
+import { POKEMON_DATA } from './data/pokemon.js'
 import { calculateScore } from './utils/typeCalc.js'
 import { useStorage } from './composables/useStorage.js'
 import { themeOverrides } from './theme/colors.js'
@@ -90,6 +92,11 @@ function getDraftTeam() {
   if (draftAction.value.type === 'add') {
     return [...team.value, draftMember]
   }
+  if (draftAction.value.type === 'edit') {
+    return team.value.map(p =>
+      p.id === draftAction.value.editId ? draftMember : p
+    )
+  }
   return team.value
 }
 
@@ -100,6 +107,19 @@ function startAddPokemon() {
     pokemon: null,
     ability: null,
     moves: [null, null, null, null]
+  }
+}
+
+function startEditPokemon(id) {
+  const pokemon = team.value.find(p => p.id === id)
+  if (!pokemon) return
+  const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
+  draftAction.value = {
+    type: 'edit',
+    editId: id,
+    pokemon: pokemonData,
+    ability: pokemon.ability,
+    moves: [...pokemon.moves, null, null, null, null].slice(0, 4)
   }
 }
 
@@ -134,6 +154,12 @@ function confirmDraft() {
 
   if (draftAction.value.type === 'add' && team.value.length < 6) {
     persistTeam([...team.value, newMember])
+  } else if (draftAction.value.type === 'edit') {
+    persistTeam(team.value.map(p =>
+      p.id === draftAction.value.editId
+        ? { ...newMember, id: draftAction.value.editId }
+        : p
+    ))
   }
 
   cancelDraft()
