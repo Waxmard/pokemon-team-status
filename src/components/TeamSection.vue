@@ -1,10 +1,5 @@
 <template>
   <div class="team-section">
-    <div class="section-header">
-      <h2 class="section-title">Your Team</h2>
-      <span class="team-count">{{ team.length }}/6</span>
-    </div>
-
     <TransitionGroup name="list" tag="div" class="team-grid">
       <TeamSlot
         v-for="(pokemon, index) in paddedTeam"
@@ -94,29 +89,6 @@ const paddedTeam = computed(() => {
   padding: var(--space-5);
   margin-bottom: var(--space-5);
   box-shadow: var(--shadow-lg);
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-}
-
-.section-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0;
-}
-
-.team-count {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--color-text-muted);
-  background: var(--color-surface-light);
-  padding: 4px 10px;
-  border-radius: var(--radius-md);
 }
 
 .team-grid {

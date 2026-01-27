@@ -1,9 +1,5 @@
 <template>
   <div class="draft-panel">
-    <div class="panel-header">
-      <h3 class="panel-title">{{ draftAction.type === 'add' ? 'Add Pokemon' : 'Replace Pokemon' }}</h3>
-    </div>
-
     <div class="form-group">
       <label class="form-label">Pokemon Name</label>
       <n-auto-complete
@@ -235,17 +231,6 @@ function onMoveInput(index, value) {
   border-radius: var(--radius-xl);
   padding: var(--space-5);
   animation: scaleIn var(--transition-slow) ease forwards;
-}
-
-.panel-header {
-  margin-bottom: var(--space-4);
-}
-
-.panel-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0;
 }
 
 .form-group {

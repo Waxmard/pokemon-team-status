@@ -2,7 +2,6 @@
   <n-config-provider :theme-overrides="themeOverrides">
     <div class="app-container">
       <h1 class="app-title">
-        <span class="title-text">Pokemon Team</span>
         <span class="title-accent">Weakness Calculator</span>
       </h1>
 
@@ -194,12 +193,6 @@ onMounted(() => {
   align-items: center;
   gap: 2px;
   margin-bottom: var(--space-6);
-}
-
-.title-text {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
 }
 
 .title-accent {
