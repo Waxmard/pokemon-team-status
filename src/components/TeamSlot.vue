@@ -2,6 +2,7 @@
   <div
     class="team-slot"
     :class="{ empty: !pokemon, clickable: !!pokemon }"
+    :style="cardBackgroundStyle"
     @click="pokemon && $emit('edit', pokemon.id)"
   >
     <template v-if="pokemon">
@@ -14,30 +15,29 @@
           <path d="M9.5 3.205L8.795 2.5 6 5.295 3.205 2.5 2.5 3.205 5.295 6 2.5 8.795 3.205 9.5 6 6.705 8.795 9.5 9.5 8.795 6.705 6z"/>
         </svg>
       </button>
-      <div class="pokemon-name">{{ pokemon.name }}</div>
-      <div class="pokemon-types">
-        <span
-          v-for="type in pokemon.types"
-          :key="type"
-          class="type-badge"
-          :style="{ background: getTypeGradient(type), color: getTextColor(type) }"
-        >
-          {{ type }}
-        </span>
-      </div>
-      <div v-if="pokemon.ability" class="pokemon-ability">
-        {{ pokemon.ability }}
-      </div>
-      <div v-if="pokemon.moves.length" class="pokemon-moves">
-        <span class="moves-label">Moves:</span>
-        <span
-          v-for="move in pokemon.moves"
-          :key="move"
-          class="move-badge"
-          :style="{ background: getTypeGradient(move), color: getTextColor(move) }"
-        >
-          {{ move }}
-        </span>
+      <div class="slot-content">
+        <img
+          v-if="spriteUrl"
+          :src="spriteUrl"
+          :alt="pokemon.name"
+          class="pokemon-sprite"
+        />
+        <div class="pokemon-info">
+          <div class="pokemon-name">{{ pokemon.name }}</div>
+          <div v-if="pokemon.ability" class="pokemon-ability">
+            {{ pokemon.ability }}
+          </div>
+          <div v-if="pokemon.moves.length" class="pokemon-moves">
+            <span
+              v-for="move in pokemon.moves"
+              :key="move"
+              class="move-badge"
+              :style="{ background: getTypeGradient(move), color: getTextColor(move) }"
+            >
+              {{ move }}
+            </span>
+          </div>
+        </div>
       </div>
     </template>
     <template v-else>
@@ -54,7 +54,10 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { getSpriteUrl } from '../utils/pokemon.js'
+
+const props = defineProps({
   pokemon: {
     type: Object,
     default: null
@@ -62,6 +65,39 @@ defineProps({
 })
 
 defineEmits(['remove', 'edit'])
+
+const spriteUrl = computed(() => {
+  if (!props.pokemon) return null
+  return getSpriteUrl(props.pokemon.name)
+})
+
+const cardBackgroundStyle = computed(() => {
+  if (!props.pokemon || !props.pokemon.types?.length) return {}
+
+  const types = props.pokemon.types
+  const opacity = 0.15
+
+  if (types.length === 1) {
+    const color = typeColors[types[0]]
+    return {
+      background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`
+    }
+  } else {
+    const color1 = typeColors[types[0]]
+    const color2 = typeColors[types[1]]
+    return {
+      background: `linear-gradient(135deg, ${hexToRgba(color1, opacity)} 0%, ${hexToRgba(color2, opacity)} 100%)`
+    }
+  }
+})
+
+function hexToRgba(hex, alpha) {
+  const num = parseInt(hex.replace('#', ''), 16)
+  const r = (num >> 16) & 255
+  const g = (num >> 8) & 255
+  const b = num & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
 
 // Type colors for tags
 const typeColors = {
@@ -190,28 +226,30 @@ function adjustColor(hex, amount) {
   transform: scale(0.95);
 }
 
+.slot-content {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.pokemon-sprite {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.pokemon-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .pokemon-name {
   font-weight: 600;
   font-size: 1rem;
   margin-bottom: var(--space-2);
   padding-right: var(--space-6);
   color: var(--color-text-primary);
-}
-
-.pokemon-types {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-2);
-}
-
-.type-badge {
-  padding: 3px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
-  box-shadow: var(--shadow-sm);
 }
 
 .pokemon-ability {
@@ -227,11 +265,6 @@ function adjustColor(hex, amount) {
   flex-wrap: wrap;
   gap: var(--space-1);
   align-items: center;
-}
-
-.moves-label {
-  color: var(--color-text-muted);
-  margin-right: var(--space-1);
 }
 
 .move-badge {

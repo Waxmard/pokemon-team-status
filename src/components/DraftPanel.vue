@@ -13,18 +13,13 @@
       />
     </div>
 
-    <div v-if="draftAction.pokemon" class="form-group">
-      <label class="form-label">Types</label>
-      <div class="type-badges">
-        <span
-          v-for="type in draftAction.pokemon.types"
-          :key="type"
-          class="type-badge"
-          :style="{ background: getTypeGradient(type), color: getTextColor(type) }"
-        >
-          {{ type }}
-        </span>
-      </div>
+    <div v-if="draftAction.pokemon" class="selected-pokemon-preview">
+      <img
+        v-if="selectedSpriteUrl"
+        :src="selectedSpriteUrl"
+        :alt="draftAction.pokemon.name"
+        class="pokemon-sprite"
+      />
     </div>
 
     <div class="form-group">
@@ -77,6 +72,7 @@ import { NAutoComplete, NSelect } from 'naive-ui'
 import { POKEMON_DATA } from '../data/pokemon.js'
 import { ALL_TYPES } from '../data/types.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
+import { getSpriteUrl } from '../utils/pokemon.js'
 
 const props = defineProps({
   draftAction: {
@@ -98,46 +94,10 @@ watch(() => props.draftAction, (action) => {
   moveQueries.value = action.moves.map(m => m || '')
 }, { immediate: true })
 
-// Type colors for tags
-const typeColors = {
-  normal: '#A8A878',
-  fire: '#F08030',
-  water: '#6890F0',
-  electric: '#F8D030',
-  grass: '#78C850',
-  ice: '#98D8D8',
-  fighting: '#C03028',
-  poison: '#A040A0',
-  ground: '#E0C068',
-  flying: '#A890F0',
-  psychic: '#F85888',
-  bug: '#A8B820',
-  rock: '#B8A038',
-  ghost: '#705898',
-  dragon: '#7038F8',
-  dark: '#705848',
-  steel: '#B8B8D0',
-  fairy: '#EE99AC'
-}
-
-const lightTextTypes = ['electric', 'ice', 'ground', 'steel', 'fairy']
-
-function getTextColor(type) {
-  return lightTextTypes.includes(type) ? '#1a1a2e' : '#fff'
-}
-
-function getTypeGradient(type) {
-  const color = typeColors[type]
-  return `linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -20)} 100%)`
-}
-
-function adjustColor(hex, amount) {
-  const num = parseInt(hex.replace('#', ''), 16)
-  const r = Math.max(0, Math.min(255, (num >> 16) + amount))
-  const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount))
-  const b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount))
-  return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
-}
+const selectedSpriteUrl = computed(() => {
+  if (!props.draftAction.pokemon) return null
+  return getSpriteUrl(props.draftAction.pokemon.name)
+})
 
 const autocompleteOptions = computed(() => {
   if (!searchQuery.value) return []
@@ -225,19 +185,16 @@ function onMoveInput(index, value) {
   color: var(--color-text-muted);
 }
 
-.type-badges {
+.selected-pokemon-preview {
   display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: var(--space-4);
 }
 
-.type-badge {
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: capitalize;
-  box-shadow: var(--shadow-sm);
+.pokemon-sprite {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
 }
 
 .moves-grid {
