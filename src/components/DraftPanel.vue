@@ -207,13 +207,17 @@ const berryOptions = computed(() => {
   ]
 })
 
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
 function getMoveAutocompleteOptions(index) {
   const query = moveQueries.value[index]
-  if (!query) return ALL_TYPES.map(type => ({ label: type, value: type }))
+  if (!query) return ALL_TYPES.map(type => ({ label: capitalize(type), value: type }))
   const lowerQuery = query.toLowerCase()
   return ALL_TYPES
     .filter(type => type.toLowerCase().includes(lowerQuery))
-    .map(type => ({ label: type, value: type }))
+    .map(type => ({ label: capitalize(type), value: type }))
 }
 
 function onSelectPokemon(value) {
@@ -288,7 +292,7 @@ function updateReplaceTarget(value) {
 }
 
 .form-header-fields {
-  flex: 1;
+  flex: 3;
 }
 
 .form-header-fields .form-group {
