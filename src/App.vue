@@ -17,7 +17,6 @@
         @updateDraftPokemon="updateDraftPokemon"
         @updateDraftAbility="updateDraftAbility"
         @updateDraftMove="updateDraftMove"
-        @updateDraftReplaceId="updateDraftReplaceId"
         @reorderTeam="reorderTeam"
       />
 
@@ -92,11 +91,6 @@ function getDraftTeam() {
   }
 
   if (draftAction.value.type === 'add') {
-    if (draftAction.value.replaceId) {
-      return team.value.map(p =>
-        p.id === draftAction.value.replaceId ? draftMember : p
-      )
-    }
     return [...team.value, draftMember]
   }
   if (draftAction.value.type === 'edit') {
@@ -113,8 +107,7 @@ function startAddPokemon(pokemon = null) {
     type: 'add',
     pokemon: pokemon,
     ability: null,
-    moves: [null, null, null, null],
-    replaceId: null
+    moves: [null, null, null, null]
   }
 }
 
@@ -149,12 +142,6 @@ function updateDraftMove({ index, value }) {
   }
 }
 
-function updateDraftReplaceId(replaceId) {
-  if (draftAction.value) {
-    draftAction.value.replaceId = replaceId
-  }
-}
-
 function confirmDraft() {
   if (!draftAction.value?.pokemon) return
 
@@ -167,13 +154,7 @@ function confirmDraft() {
   }
 
   if (draftAction.value.type === 'add') {
-    if (draftAction.value.replaceId) {
-      // Replace existing Pokemon
-      persistTeam(team.value.map(p =>
-        p.id === draftAction.value.replaceId ? newMember : p
-      ))
-    } else if (team.value.length < 6) {
-      // Add new Pokemon
+    if (team.value.length < 6) {
       persistTeam([...team.value, newMember])
     }
   } else if (draftAction.value.type === 'edit') {

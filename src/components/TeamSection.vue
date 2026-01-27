@@ -17,35 +17,24 @@
         />
       </template>
       <template #footer>
-        <TeamSlot v-for="i in emptySlotCount" :key="'empty-' + i" :pokemon="null" />
+        <TeamSlot
+          v-for="i in emptySlotCount"
+          :key="'empty-' + i"
+          :pokemon="null"
+          @add="$emit('addPokemon')"
+        />
       </template>
     </draggable>
-
-    <div class="action-buttons">
-      <n-auto-complete
-        v-model:value="searchQuery"
-        :options="autocompleteOptions"
-        placeholder="Add Pokemon..."
-        :disabled="draftActive"
-        :get-show="() => true"
-        @select="onSelectPokemon"
-        clearable
-        class="pokemon-search"
-      />
-    </div>
 
     <Transition name="scale">
       <DraftPanel
         v-if="draftAction"
         :draftAction="draftAction"
-        :team="team"
-        :hideSearch="draftAction.type === 'add'"
         @confirm="$emit('confirmDraft')"
         @cancel="$emit('cancelDraft')"
         @update:pokemon="$emit('updateDraftPokemon', $event)"
         @update:ability="$emit('updateDraftAbility', $event)"
         @update:move="$emit('updateDraftMove', $event)"
-        @update:replaceId="$emit('updateDraftReplaceId', $event)"
       />
     </Transition>
   </div>
@@ -53,11 +42,9 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { NAutoComplete } from 'naive-ui'
 import draggable from 'vuedraggable'
 import TeamSlot from './TeamSlot.vue'
 import DraftPanel from './DraftPanel.vue'
-import { POKEMON_DATA } from '../data/pokemon.js'
 
 const props = defineProps({
   team: {
@@ -83,39 +70,8 @@ const emit = defineEmits([
   'updateDraftPokemon',
   'updateDraftAbility',
   'updateDraftMove',
-  'updateDraftReplaceId',
   'reorderTeam'
 ])
-
-const searchQuery = ref('')
-
-const autocompleteOptions = computed(() => {
-  if (!searchQuery.value) return []
-  const query = searchQuery.value.toLowerCase()
-  return POKEMON_DATA
-    .filter(p => p.name.toLowerCase().includes(query))
-    .slice(0, 20)
-    .map(p => ({
-      label: p.name,
-      value: p.name,
-      pokemon: p
-    }))
-})
-
-function onSelectPokemon(value) {
-  const pokemon = POKEMON_DATA.find(p => p.name === value)
-  if (pokemon) {
-    emit('addPokemon', pokemon)
-    searchQuery.value = ''
-  }
-}
-
-// Clear search when draft is cancelled
-watch(() => props.draftAction, (action) => {
-  if (!action) {
-    searchQuery.value = ''
-  }
-})
 
 // Local copy for draggable (only actual Pokemon, no nulls)
 const localTeam = ref([...props.team])
@@ -156,17 +112,6 @@ function onDragEnd() {
   .team-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-}
-
-.action-buttons {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.pokemon-search {
-  width: 100%;
-  max-width: 300px;
 }
 
 .drag-ghost {

@@ -1,9 +1,9 @@
 <template>
   <div
     class="team-slot"
-    :class="{ empty: !pokemon, clickable: !!pokemon }"
+    :class="{ empty: !pokemon, clickable: true }"
     :style="cardBackgroundStyle"
-    @click="pokemon && $emit('edit', pokemon.id)"
+    @click="pokemon ? $emit('edit', pokemon.id) : $emit('add')"
   >
     <Transition name="slot-content" mode="out-in">
       <div v-if="pokemon" key="filled" class="slot-inner">
@@ -64,7 +64,7 @@ const props = defineProps({
   }
 })
 
-defineEmits(['remove', 'edit'])
+defineEmits(['remove', 'edit', 'add'])
 
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null

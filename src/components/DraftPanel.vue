@@ -51,16 +51,6 @@
       </div>
     </div>
 
-    <div v-if="showReplaceDropdown" class="form-group">
-      <label class="form-label">Replacement Pokemon</label>
-      <n-select
-        v-model:value="replaceId"
-        :options="replaceOptions"
-        placeholder="Select Pokemon to replace..."
-        @update:value="updateReplaceId"
-      />
-    </div>
-
     <div class="draft-actions">
       <button
         class="btn btn-success"
@@ -92,49 +82,25 @@ const props = defineProps({
   hideSearch: {
     type: Boolean,
     default: false
-  },
-  team: {
-    type: Array,
-    default: () => []
   }
 })
 
-const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability', 'update:move', 'update:replaceId'])
+const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability', 'update:move'])
 
 const searchQuery = ref('')
 const localAbility = ref(null)
 const moveQueries = ref(['', '', '', ''])
-const replaceId = ref(null)
 
 // Initialize form state when draftAction changes (for edit mode)
 watch(() => props.draftAction, (action) => {
   searchQuery.value = action.pokemon?.name || ''
   localAbility.value = action.ability
   moveQueries.value = action.moves.map(m => m || '')
-  replaceId.value = null
 }, { immediate: true })
 
-const showReplaceDropdown = computed(() => {
-  return props.draftAction.type === 'add' && props.team.length >= 6
-})
-
-const replaceOptions = computed(() => {
-  return props.team.map(p => ({
-    label: p.name,
-    value: p.id
-  }))
-})
-
 const canConfirm = computed(() => {
-  if (!props.draftAction.pokemon) return false
-  if (showReplaceDropdown.value && !replaceId.value) return false
-  return true
+  return !!props.draftAction.pokemon
 })
-
-function updateReplaceId(value) {
-  replaceId.value = value
-  emit('update:replaceId', value)
-}
 
 const selectedSpriteUrl = computed(() => {
   if (!props.draftAction.pokemon) return null
