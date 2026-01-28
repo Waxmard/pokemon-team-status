@@ -123,7 +123,8 @@ function handleEditPokemon(id) {
     pokemonData,
     ability: pokemon.ability,
     berry: pokemon.berry || null,
-    moves: pokemon.moves
+    moves: pokemon.moves,
+    specialMove: pokemon.specialMove
   })
 }
 
@@ -136,7 +137,8 @@ function handleEditBoxPokemon(boxPokemonId) {
     pokemonData,
     ability: pokemon.ability,
     berry: pokemon.berry || null,
-    moves: pokemon.moves
+    moves: pokemon.moves,
+    specialMove: pokemon.specialMove
   })
 }
 

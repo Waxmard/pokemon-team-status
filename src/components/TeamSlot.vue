@@ -39,6 +39,14 @@
                 class="move-type-icon"
               />
             </div>
+            <div class="pokemon-badges">
+              <span v-if="pokemon.specialMove" class="special-move-badge">
+                {{ pokemon.specialMove }}
+              </span>
+              <span v-if="pokemon.ability" class="ability-badge">
+                {{ pokemon.ability }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -230,6 +238,26 @@ function hexToRgba(hex, alpha) {
   width: 24px;
   height: 24px;
   object-fit: contain;
+}
+
+.pokemon-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.special-move-badge,
+.ability-badge {
+  font-size: 0.7rem;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.ability-badge {
+  background: rgba(139, 92, 246, 0.2);
 }
 
 .team-slot.swap-mode {

@@ -1,6 +1,7 @@
 import { TYPE_CHART, ALL_TYPES } from '../data/types.js'
 import { ABILITIES } from '../data/abilities.js'
 import { BERRIES } from '../data/berries.js'
+import { SPECIAL_MOVES } from '../data/specialMoves.js'
 
 export function getTypeEffectiveness(attackingType, defendingType) {
   return TYPE_CHART[attackingType]?.[defendingType] ?? 1
@@ -30,7 +31,35 @@ export function applyAbilityDefense(baseMultiplier, attackingType, ability) {
   return baseMultiplier
 }
 
-export function hasEffectiveMove(moves, gymType) {
+export function getSpecialMoveEffectiveness(moveName, defenderType) {
+  const move = SPECIAL_MOVES[moveName]
+  if (!move) return 1
+
+  // Flying Press: multiply effectiveness of both types
+  if (move.types.length > 1) {
+    return move.types.reduce((mult, type) => {
+      return mult * getTypeEffectiveness(type, defenderType)
+    }, 1)
+  }
+
+  // Freeze-Dry: check superEffective override
+  if (move.superEffective?.includes(defenderType)) {
+    return 2
+  }
+
+  return getTypeEffectiveness(move.types[0], defenderType)
+}
+
+export function hasEffectiveMove(moves, gymType, specialMove = null) {
+  // Check special move first
+  if (specialMove) {
+    const effectiveness = getSpecialMoveEffectiveness(specialMove, gymType)
+    if (effectiveness > 1) {
+      return true
+    }
+  }
+
+  // Check regular move types
   for (const moveType of moves) {
     if (moveType && getTypeEffectiveness(moveType, gymType) > 1) {
       return true
@@ -68,7 +97,7 @@ export function calculateScore(gymType, team) {
     }
 
     // Check offensive coverage
-    if (hasEffectiveMove(member.moves, gymType)) score += 1
+    if (hasEffectiveMove(member.moves, gymType, member.specialMove)) score += 1
   }
 
   return score

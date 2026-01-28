@@ -17,7 +17,8 @@ export function useDraftAction() {
       pokemon,
       ability: null,
       berry: null,
-      moves: [null, null, null, null]
+      moves: [],
+      specialMove: null
     }
   }
 
@@ -32,7 +33,8 @@ export function useDraftAction() {
       pokemon: member.pokemonData,
       ability: member.ability,
       berry: member.berry,
-      moves: [...member.moves, null, null, null, null].slice(0, 4)
+      moves: [...(member.moves || [])],
+      specialMove: member.specialMove || null
     }
   }
 
@@ -47,7 +49,8 @@ export function useDraftAction() {
       pokemon: boxMember.pokemonData,
       ability: boxMember.ability,
       berry: boxMember.berry,
-      moves: [...boxMember.moves, null, null, null, null].slice(0, 4),
+      moves: [...(boxMember.moves || [])],
+      specialMove: boxMember.specialMove || null,
       replaceTarget: null
     }
   }
@@ -61,7 +64,8 @@ export function useDraftAction() {
       pokemon,
       ability: null,
       berry: null,
-      moves: [null, null, null, null]
+      moves: [],
+      specialMove: null
     }
   }
 
@@ -83,9 +87,15 @@ export function useDraftAction() {
     }
   }
 
-  function updateMove({ index, value }) {
+  function updateMoves(moves) {
     if (draftAction.value) {
-      draftAction.value.moves[index] = value
+      draftAction.value.moves = moves
+    }
+  }
+
+  function updateSpecialMove(specialMove) {
+    if (draftAction.value) {
+      draftAction.value.specialMove = specialMove
     }
   }
 
@@ -120,7 +130,8 @@ export function useDraftAction() {
     updatePokemon,
     updateAbility,
     updateBerry,
-    updateMove,
+    updateMoves,
+    updateSpecialMove,
     updateReplaceTarget,
     enterSwapMode,
     exitSwapMode,
