@@ -9,8 +9,8 @@
         :key="gym.type"
         :type="gym.type"
         :score="gym.score"
-        :diff="gym.diff || 0"
         :berryCount="gym.berryCount || 0"
+        :defeated="gym.defeated || false"
         :style="{ animationDelay: `${index * 30}ms` }"
         @click="$emit('gymClick', gym.type)"
       />
@@ -80,8 +80,8 @@ defineEmits(['gymClick'])
 
 .gym-list {
   position: relative;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-2);
 }
 

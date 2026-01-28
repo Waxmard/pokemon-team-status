@@ -14,7 +14,6 @@
       <GymColumns
         :remainingGyms="remainingGyms"
         :defeatedGymsList="defeatedGymsList"
-        :draftActive="isActive"
         :showSwapPreview="showSwapPreview"
         :swapBoxPokemon="swapBoxPokemon"
         :swapTeamPokemon="swapTeamPokemon"
@@ -49,7 +48,7 @@ const {
   persistBox
 } = useStorage()
 
-const { draftAction, isActive, swapMode, exitSwapMode, cancel } = useDraftAction()
+const { draftAction, swapMode, exitSwapMode, cancel } = useDraftAction()
 
 // Computed
 const remainingGyms = computed(() => {
@@ -58,13 +57,7 @@ const remainingGyms = computed(() => {
     .map(type => {
       const score = calculateScore(type, team.value)
       const berryCount = calculateBerryTiebreaker(type, team.value)
-      let diff = 0
-      if (draftAction.value?.pokemon) {
-        const draftTeam = getDraftTeam()
-        const newScore = calculateScore(type, draftTeam)
-        diff = newScore - score
-      }
-      return { type, score, berryCount, diff }
+      return { type, score, berryCount }
     })
     .sort((a, b) => {
       if (a.score !== b.score) return a.score - b.score
@@ -73,12 +66,13 @@ const remainingGyms = computed(() => {
 })
 
 const defeatedGymsList = computed(() => {
-  return defeatedGyms.value
-    .map(type => ({
-      type,
-      score: calculateScore(type, team.value),
-      berryCount: calculateBerryTiebreaker(type, team.value)
-    }))
+  return ALL_TYPES
+    .filter(type => defeatedGyms.value.includes(type))
+    .map(type => {
+      const score = calculateScore(type, team.value)
+      const berryCount = calculateBerryTiebreaker(type, team.value)
+      return { type, score, berryCount }
+    })
     .sort((a, b) => {
       if (a.score !== b.score) return a.score - b.score
       return a.berryCount - b.berryCount
@@ -103,44 +97,6 @@ const hasSwapTarget = computed(() => !!draftAction.value?.replaceTarget)
 
 function cancelSwap() {
   exitSwapMode()
-}
-
-// Helper to get draft team
-function getDraftTeam() {
-  if (!draftAction.value?.pokemon) {
-    return team.value
-  }
-
-  const draftMember = {
-    id: 'draft',
-    name: draftAction.value.pokemon.name,
-    types: draftAction.value.pokemon.types,
-    ability: draftAction.value.ability,
-    berry: draftAction.value.berry,
-    moves: draftAction.value.moves.filter(m => m)
-  }
-
-  if (draftAction.value.type === 'add' || draftAction.value.type === 'addToBox') {
-    return [...team.value, draftMember]
-  }
-  if (draftAction.value.type === 'edit') {
-    // For box Pokemon edits with a replace target, show the draft in place of the target
-    if (draftAction.value.isBoxPokemon && draftAction.value.replaceTarget) {
-      if (draftAction.value.replaceTarget.startsWith('empty-')) {
-        return [...team.value, draftMember]
-      }
-      return team.value.map(p =>
-        p.id === draftAction.value.replaceTarget ? draftMember : p
-      )
-    }
-    // For regular team edits
-    if (!draftAction.value.isBoxPokemon) {
-      return team.value.map(p =>
-        p.id === draftAction.value.editId ? draftMember : p
-      )
-    }
-  }
-  return team.value
 }
 
 // Methods
@@ -246,9 +202,7 @@ function confirmDraft() {
 }
 
 function defeatGym(type) {
-  if (!defeatedGyms.value.includes(type)) {
-    persistDefeatedGyms([...defeatedGyms.value, type])
-  }
+  persistDefeatedGyms([...defeatedGyms.value, type])
 }
 
 function undefeatGym(type) {
