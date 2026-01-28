@@ -95,4 +95,13 @@ export const themeOverrides = {
   Tag: {
     borderRadius: '6px',
   },
+  Popconfirm: {
+    fontSize: '16px',
+    peers: {
+      Popover: {
+        padding: '14px 18px',
+        fontSize: '16px',
+      },
+    },
+  },
 }

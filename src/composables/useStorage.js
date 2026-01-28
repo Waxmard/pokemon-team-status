@@ -154,6 +154,6 @@ export function useStorage() {
     loadData,
     persistTeam,
     persistDefeatedGyms,
-    persistBox
+    persistBox,
   }
 }

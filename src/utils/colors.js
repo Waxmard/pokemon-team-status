@@ -11,6 +11,6 @@ export function hexToRgba(hex, alpha) {
 export function getTypeBackground(type, opacity = 0.15) {
   const color = TYPE_COLORS[type].bg
   return {
-    background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`
+    background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`,
   }
 }

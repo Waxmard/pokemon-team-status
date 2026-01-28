@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const draftAction = ref(null)
 const swapMode = ref(false)
@@ -18,12 +18,15 @@ export function useDraftAction() {
       ability: null,
       berry: null,
       moves: [],
-      specialMove: null
+      specialMove: null,
     }
   }
 
   function startEdit(id, member) {
-    if (draftAction.value?.type === 'edit' && draftAction.value?.editId === id) {
+    if (
+      draftAction.value?.type === 'edit' &&
+      draftAction.value?.editId === id
+    ) {
       return cancel()
     }
     draftAction.value = {
@@ -34,12 +37,15 @@ export function useDraftAction() {
       ability: member.ability,
       berry: member.berry,
       moves: [...(member.moves || [])],
-      specialMove: member.specialMove || null
+      specialMove: member.specialMove || null,
     }
   }
 
   function startEditBox(boxMember) {
-    if (draftAction.value?.type === 'edit' && draftAction.value?.boxPokemonId === boxMember.id) {
+    if (
+      draftAction.value?.type === 'edit' &&
+      draftAction.value?.boxPokemonId === boxMember.id
+    ) {
       return cancel()
     }
     draftAction.value = {
@@ -51,7 +57,7 @@ export function useDraftAction() {
       berry: boxMember.berry,
       moves: [...(boxMember.moves || [])],
       specialMove: boxMember.specialMove || null,
-      replaceTarget: null
+      replaceTarget: null,
     }
   }
 
@@ -65,7 +71,7 @@ export function useDraftAction() {
       ability: null,
       berry: null,
       moves: [],
-      specialMove: null
+      specialMove: null,
     }
   }
 
@@ -101,7 +107,7 @@ export function useDraftAction() {
 
   function updateReplaceTarget(target) {
     if (draftAction.value) {
-      draftAction.value.replaceTarget = target
+      draftAction.value = { ...draftAction.value, replaceTarget: target }
     }
   }
 
@@ -135,6 +141,6 @@ export function useDraftAction() {
     updateReplaceTarget,
     enterSwapMode,
     exitSwapMode,
-    cancel
+    cancel,
   }
 }

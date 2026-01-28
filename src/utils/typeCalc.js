@@ -1,7 +1,7 @@
-import { TYPE_CHART, ALL_TYPES } from '../data/types.js'
 import { ABILITIES } from '../data/abilities.js'
 import { BERRIES } from '../data/berries.js'
 import { SPECIAL_MOVES } from '../data/specialMoves.js'
+import { ALL_TYPES, TYPE_CHART } from '../data/types.js'
 
 export function getTypeEffectiveness(attackingType, defendingType) {
   return TYPE_CHART[attackingType]?.[defendingType] ?? 1
@@ -77,11 +77,15 @@ export function calculateScore(gymType, team) {
     multiplier = applyAbilityDefense(multiplier, gymType, member.ability)
 
     // Convert multiplier to points
-    if (multiplier === 0) score += 2        // immunity
-    else if (multiplier === 0.25) score += 2  // double resist
-    else if (multiplier === 0.5) score += 1   // resist
-    else if (multiplier === 2) score -= 1     // weakness
-    else if (multiplier === 4) score -= 2     // double weakness
+    if (multiplier === 0)
+      score += 2 // immunity
+    else if (multiplier === 0.25)
+      score += 2 // double resist
+    else if (multiplier === 0.5)
+      score += 1 // resist
+    else if (multiplier === 2)
+      score -= 1 // weakness
+    else if (multiplier === 4) score -= 2 // double weakness
 
     // Protean: move types act as additional defensive types (resistances only)
     const abilityData = ABILITIES[member.ability]
@@ -91,7 +95,8 @@ export function calculateScore(gymType, team) {
         if (!moveType || member.types.includes(moveType)) continue
         const moveMultiplier = getTypeEffectiveness(gymType, moveType)
         // Only count resistances, not weaknesses - user can choose not to use that move
-        if (moveMultiplier === 0) score += 2        // immunity
+        if (moveMultiplier === 0)
+          score += 2 // immunity
         else if (moveMultiplier === 0.5) score += 1 // resist
       }
     }
@@ -104,16 +109,16 @@ export function calculateScore(gymType, team) {
 }
 
 export function calculateScoreChanges(team, draftMember) {
-  return ALL_TYPES.map(type => {
+  return ALL_TYPES.map((type) => {
     const oldScore = calculateScore(type, team)
     const newScore = calculateScore(type, [...team, draftMember])
     return {
       type,
       oldScore,
       newScore,
-      diff: newScore - oldScore
+      diff: newScore - oldScore,
     }
-  }).filter(c => c.diff !== 0)
+  }).filter((c) => c.diff !== 0)
 }
 
 export function calculateBerryTiebreaker(gymType, team) {

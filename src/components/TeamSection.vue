@@ -1,17 +1,25 @@
 <template>
   <div class="team-section-wrapper">
-    <!-- Mode Toggle Button -->
+    <!-- Mode Toggle Button (long-press to collapse) -->
     <button
       class="mode-toggle"
-      @click="toggleViewMode"
+      @click="handleModeClick"
+      @mousedown="startLongPress"
+      @mouseup="cancelLongPress"
+      @mouseleave="cancelLongPress"
+      @touchstart.prevent="startLongPress"
+      @touchend="handleTouchEnd"
+      @touchcancel="cancelLongPress"
     >
       <span class="mode-icon">{{ viewMode === 'team' ? '⚔️' : '📦' }}</span>
     </button>
 
-    <div class="team-section">
-    <!-- Grid Container - handles show/hide based on draft state -->
-    <Transition name="grid-fade" mode="out-in">
-      <div v-if="!showDraftPanel || swapMode" :key="viewMode">
+    <Transition name="section-collapse">
+    <div v-show="!isCollapsed" class="team-section">
+    <!-- Single transition for grid/panel switching -->
+    <Transition name="content-fade" mode="out-in">
+      <!-- Grid view -->
+      <div v-if="!showDraftPanel || swapMode" :key="'grid-' + viewMode">
         <!-- Team Grid -->
         <div v-if="viewMode === 'team'" class="team-grid">
           <TeamSlot
@@ -21,6 +29,7 @@
             :swapMode="swapMode"
             :selected="selectedSwapTarget === pokemon.id"
             @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
+            @delete="handleDeleteTeamPokemon"
           />
           <TeamSlot
             v-for="i in emptySlotCount"
@@ -30,6 +39,15 @@
             :selected="selectedSwapTarget === `empty-${i}`"
             @add="swapMode ? handleSwapSelect(`empty-${i}`) : startAdd()"
           />
+          <!-- Swap mode actions -->
+          <div v-if="swapMode" class="swap-actions">
+            <button class="btn btn-cancel" @click="emit('cancelSwap')">✕ Cancel</button>
+            <button
+              class="btn btn-confirm"
+              :disabled="!hasSwapTarget"
+              @click="emit('confirmSwap')"
+            >✓ Confirm</button>
+          </div>
         </div>
 
         <!-- Box Grid -->
@@ -39,6 +57,7 @@
             :key="pokemon.id"
             :pokemon="pokemon"
             @edit="handleEditBoxPokemon(pokemon.id)"
+            @delete="handleDeleteBoxPokemon"
           />
           <TeamSlot
             v-for="i in emptyBoxSlotCount"
@@ -48,11 +67,10 @@
           />
         </div>
       </div>
-    </Transition>
 
-    <Transition name="panel-fade" mode="out-in">
+      <!-- Draft Panel -->
       <DraftPanel
-        v-if="showDraftPanel"
+        v-else
         key="panel"
         :team="team"
         @confirm="$emit('confirmDraft')"
@@ -60,34 +78,98 @@
       />
     </Transition>
     </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import TeamSlot from './TeamSlot.vue'
-import DraftPanel from './DraftPanel.vue'
+import { computed, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { POKEMON_DATA } from '../data/pokemon.js'
+import DraftPanel from './DraftPanel.vue'
+import TeamSlot from './TeamSlot.vue'
 
 const props = defineProps({
   team: {
     type: Array,
-    required: true
+    required: true,
   },
   box: {
     type: Array,
-    default: () => []
-  }
+    default: () => [],
+  },
 })
 
 const emit = defineEmits([
-  'confirmDraft'
+  'confirmDraft',
+  'confirmSwap',
+  'cancelSwap',
+  'deleteTeamPokemon',
+  'deleteBoxPokemon',
 ])
 
-const { draftAction, swapMode, startAdd, startEdit, startEditBox, startAddToBox, updateReplaceTarget, cancel } = useDraftAction()
+const {
+  draftAction,
+  swapMode,
+  startAdd,
+  startEdit,
+  startEditBox,
+  startAddToBox,
+  updateReplaceTarget,
+  exitSwapMode,
+  cancel,
+} = useDraftAction()
+
+// Whether a swap target has been selected
+const hasSwapTarget = computed(() => !!draftAction.value?.replaceTarget)
 
 const viewMode = ref('team')
+const isCollapsed = ref(false)
+
+// Long-press handling
+let longPressTimer = null
+let longPressFired = false
+const LONG_PRESS_DURATION = 500 // ms
+
+function startLongPress() {
+  longPressFired = false
+  longPressTimer = setTimeout(() => {
+    isCollapsed.value = true
+    longPressFired = true
+    longPressTimer = null
+  }, LONG_PRESS_DURATION)
+}
+
+function cancelLongPress() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+function handleTouchEnd() {
+  // If timer is still active, this was a quick tap (not a long press)
+  if (longPressTimer) {
+    cancelLongPress()
+    handleModeClick()
+  }
+  // If timer already fired (longPressTimer is null), long press already collapsed - do nothing
+}
+
+function handleModeClick() {
+  // If long press just fired, don't also handle click
+  if (longPressFired) {
+    longPressFired = false
+    return
+  }
+  // If collapsed, expand on click
+  if (isCollapsed.value) {
+    isCollapsed.value = false
+    return
+  }
+  // Normal toggle behavior
+  toggleViewMode()
+}
 
 // Switch to team view when entering swap mode
 watch(swapMode, (isSwapMode) => {
@@ -97,8 +179,8 @@ watch(swapMode, (isSwapMode) => {
 })
 
 // Number of empty slots to show (max 1)
-const emptySlotCount = computed(() => props.team.length < 6 ? 1 : 0)
-const emptyBoxSlotCount = computed(() => props.box.length < 3 ? 1 : 0)
+const emptySlotCount = computed(() => (props.team.length < 6 ? 1 : 0))
+const emptyBoxSlotCount = computed(() => (props.box.length < 3 ? 1 : 0))
 
 // Track selected swap target for UI
 const selectedSwapTarget = computed(() => draftAction.value?.replaceTarget)
@@ -116,29 +198,29 @@ const showDraftPanel = computed(() => {
 })
 
 function handleEditPokemon(id) {
-  const pokemon = props.team.find(p => p.id === id)
+  const pokemon = props.team.find((p) => p.id === id)
   if (!pokemon) return
-  const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
+  const pokemonData = POKEMON_DATA.find((p) => p.name === pokemon.name)
   startEdit(id, {
     pokemonData,
     ability: pokemon.ability,
     berry: pokemon.berry || null,
     moves: pokemon.moves,
-    specialMove: pokemon.specialMove
+    specialMove: pokemon.specialMove,
   })
 }
 
 function handleEditBoxPokemon(boxPokemonId) {
-  const pokemon = props.box.find(p => p.id === boxPokemonId)
+  const pokemon = props.box.find((p) => p.id === boxPokemonId)
   if (!pokemon) return
-  const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
+  const pokemonData = POKEMON_DATA.find((p) => p.name === pokemon.name)
   startEditBox({
     id: boxPokemonId,
     pokemonData,
     ability: pokemon.ability,
     berry: pokemon.berry || null,
     moves: pokemon.moves,
-    specialMove: pokemon.specialMove
+    specialMove: pokemon.specialMove,
   })
 }
 
@@ -147,6 +229,14 @@ function toggleViewMode() {
     cancel()
   }
   viewMode.value = viewMode.value === 'team' ? 'box' : 'team'
+}
+
+function handleDeleteTeamPokemon(id) {
+  emit('deleteTeamPokemon', id)
+}
+
+function handleDeleteBoxPokemon(id) {
+  emit('deleteBoxPokemon', id)
 }
 </script>
 
@@ -169,8 +259,8 @@ function toggleViewMode() {
 
 .mode-toggle {
   position: absolute;
-  top: calc(-1 * var(--space-8) - var(--space-8));
-  right: var(--space-4);
+  top: calc(-1 * var(--space-8) - var(--space-2));
+  left: var(--space-4);
   z-index: 1;
   display: flex;
   align-items: center;
@@ -202,8 +292,6 @@ function toggleViewMode() {
   grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
-  max-height: calc(3 * 110px + 2 * var(--space-3));
-  overflow-y: auto;
 }
 
 .box-grid {
@@ -213,27 +301,68 @@ function toggleViewMode() {
   margin-bottom: var(--space-4);
 }
 
-/* Grid fade out/in */
-.grid-fade-enter-active,
-.grid-fade-leave-active {
+/* Content fade out/in (grid and panel transitions) */
+.content-fade-enter-active,
+.content-fade-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.grid-fade-enter-from,
-.grid-fade-leave-to {
+.content-fade-enter-from,
+.content-fade-leave-to {
   opacity: 0;
   transform: scale(0.98);
 }
 
-/* Panel fade out/in */
-.panel-fade-enter-active,
-.panel-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+.section-collapse-enter-active,
+.section-collapse-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  overflow: hidden;
 }
 
-.panel-fade-enter-from,
-.panel-fade-leave-to {
+.section-collapse-enter-from,
+.section-collapse-leave-to {
   opacity: 0;
-  transform: scale(0.98);
+  transform: scaleY(0.95);
+  transform-origin: top;
+}
+
+/* Swap actions */
+.swap-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  padding-top: var(--space-3);
+}
+
+.swap-actions .btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.swap-actions .btn-cancel {
+  background: var(--color-surface-light);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.swap-actions .btn-confirm {
+  background: var(--color-success);
+  border: 1px solid var(--color-success);
+  color: white;
+}
+
+.swap-actions .btn-confirm:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+@media (orientation: portrait) {
+  .mode-toggle {
+    left: auto;
+    right: var(--space-4);
+  }
 }
 </style>

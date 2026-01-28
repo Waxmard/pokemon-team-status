@@ -1,7 +1,7 @@
 <template>
   <div class="gym-column">
     <div class="column-header">
-      <h3 class="column-title">{{ title }}{{ draftActive ? ' (Draft)' : '' }}</h3>
+      <h3 class="column-title">{{ title }}</h3>
     </div>
     <TransitionGroup :name="transitionName" tag="div" class="gym-list">
       <GymRow
@@ -10,8 +10,6 @@
         :type="gym.type"
         :score="gym.score"
         :berryCount="gym.berryCount || 0"
-        :scoreDiff="gym.scoreDiff || 0"
-        :berryDiff="gym.berryDiff || 0"
         :defeated="gym.defeated || false"
         :style="{ animationDelay: `${index * 30}ms` }"
         @click="$emit('gymClick', gym.type)"
@@ -26,27 +24,27 @@
 <script setup>
 import GymRow from './GymRow.vue'
 
-const props = defineProps({
+defineProps({
   title: {
     type: String,
-    required: true
+    required: true,
   },
   gyms: {
     type: Array,
-    required: true
+    required: true,
   },
   transitionName: {
     type: String,
-    default: 'slide-left'
+    default: 'slide-left',
   },
   emptyMessage: {
     type: String,
-    default: 'No gyms'
+    default: 'No gyms',
   },
   draftActive: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
 
 defineEmits(['gymClick'])
@@ -62,22 +60,6 @@ defineEmits(['gymClick'])
   height: fit-content;
   overflow: hidden;
   min-width: 0;
-}
-
-.column-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-3);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.column-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0;
 }
 
 .gym-list {
@@ -97,5 +79,26 @@ defineEmits(['gymClick'])
 .empty-message {
   color: var(--color-text-muted);
   font-size: 0.9rem;
+}
+
+.column-header {
+  display: none; /* hidden by default (landscape) */
+}
+
+@media (orientation: portrait) {
+  .column-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .column-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+  }
 }
 </style>
