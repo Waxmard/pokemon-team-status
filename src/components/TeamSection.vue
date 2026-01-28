@@ -10,7 +10,7 @@
 
     <div class="team-section">
     <!-- Grid Container - handles show/hide based on draft state -->
-    <div v-show="!showDraftPanel">
+    <div v-show="!showDraftPanel || swapMode">
       <!-- Team Grid -->
       <draggable
         v-if="viewMode === 'team'"
@@ -25,7 +25,9 @@
         <template #item="{ element: pokemon }">
           <TeamSlot
             :pokemon="pokemon"
-            @edit="handleEditPokemon(pokemon.id)"
+            :swapMode="swapMode"
+            :selected="selectedSwapTarget === pokemon.id"
+            @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
           />
         </template>
         <template #footer>
@@ -33,7 +35,9 @@
             v-for="i in emptySlotCount"
             :key="'empty-' + i"
             :pokemon="null"
-            @add="startAdd()"
+            :swapMode="swapMode"
+            :selected="selectedSwapTarget === `empty-${i}`"
+            @add="swapMode ? handleSwapSelect(`empty-${i}`) : startAdd()"
           />
         </template>
       </draggable>
@@ -91,7 +95,7 @@ const emit = defineEmits([
   'reorderTeam'
 ])
 
-const { draftAction, isActive, startAdd, startEdit, startEditBox, startAddToBox, cancel } = useDraftAction()
+const { draftAction, isActive, swapMode, startAdd, startEdit, startEditBox, startAddToBox, updateReplaceTarget, cancel } = useDraftAction()
 
 const viewMode = ref('team')
 
@@ -103,13 +107,30 @@ watch(() => props.team, (newTeam) => {
   localTeam.value = [...newTeam]
 }, { deep: true })
 
+// Switch to team view when entering swap mode
+watch(swapMode, (isSwapMode) => {
+  if (isSwapMode) {
+    viewMode.value = 'team'
+  }
+})
+
 // Number of empty slots to show (max 1)
 const emptySlotCount = computed(() => props.team.length < 6 ? 1 : 0)
 const emptyBoxSlotCount = computed(() => props.box.length < 3 ? 1 : 0)
 
-// Show draft panel for add/edit modes
+// Track selected swap target for UI
+const selectedSwapTarget = computed(() => draftAction.value?.replaceTarget)
+
+// Handle clicking a team Pokémon in swap mode
+function handleSwapSelect(targetId) {
+  if (swapMode.value) {
+    updateReplaceTarget(targetId)
+  }
+}
+
+// Show draft panel for add/edit modes (but not in swap mode)
 const showDraftPanel = computed(() => {
-  return !!draftAction.value
+  return !!draftAction.value && !swapMode.value
 })
 
 // Emit reorder when drag ends

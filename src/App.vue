@@ -16,8 +16,14 @@
         :remainingGyms="remainingGyms"
         :defeatedGymsList="defeatedGymsList"
         :draftActive="isActive"
+        :showSwapPreview="showSwapPreview"
+        :swapBoxPokemon="swapBoxPokemon"
+        :swapTeamPokemon="swapTeamPokemon"
+        :hasSwapTarget="hasSwapTarget"
         @defeatGym="defeatGym"
         @undefeatGym="undefeatGym"
+        @confirmSwap="confirmDraft"
+        @cancelSwap="cancelSwap"
       />
     </div>
   </n-config-provider>
@@ -44,7 +50,7 @@ const {
   persistBox
 } = useStorage()
 
-const { draftAction, isActive, cancel } = useDraftAction()
+const { draftAction, isActive, swapMode, exitSwapMode, cancel } = useDraftAction()
 
 // Computed
 const remainingGyms = computed(() => {
@@ -79,6 +85,26 @@ const defeatedGymsList = computed(() => {
       return a.berryCount - b.berryCount
     })
 })
+
+// Computed for swap preview
+const showSwapPreview = computed(() => swapMode.value)
+
+const swapBoxPokemon = computed(() => {
+  if (!swapMode.value || !draftAction.value?.isBoxPokemon) return null
+  return draftAction.value.pokemon
+})
+
+const swapTeamPokemon = computed(() => {
+  if (!swapMode.value || !draftAction.value?.replaceTarget) return null
+  if (draftAction.value.replaceTarget.startsWith('empty-')) return null
+  return team.value.find(p => p.id === draftAction.value.replaceTarget)
+})
+
+const hasSwapTarget = computed(() => !!draftAction.value?.replaceTarget)
+
+function cancelSwap() {
+  exitSwapMode()
+}
 
 // Helper to get draft team
 function getDraftTeam() {
