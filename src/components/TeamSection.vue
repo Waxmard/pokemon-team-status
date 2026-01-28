@@ -209,8 +209,6 @@ function toggleViewMode() {
   grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
-  max-height: calc(3 * 110px + 2 * var(--space-3));
-  overflow-y: auto;
 }
 
 .box-grid {

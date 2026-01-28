@@ -138,8 +138,8 @@ function hexToRgba(hex, alpha) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: var(--space-4);
-  min-height: 110px;
+  padding: var(--space-2);
+  min-height: 90px;
   position: relative;
   box-shadow: var(--shadow-md);
   transition: transform var(--transition-base), box-shadow var(--transition-base);
@@ -234,8 +234,8 @@ function hexToRgba(hex, alpha) {
 }
 
 .move-type-icon {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 }
 
