@@ -314,6 +314,16 @@ function evolveTo(name) {
   }
 }
 
+function clearSelections() {
+  localAbility.value = null
+  localBerry.value = null
+  localSpecialMove.value = null
+  updateAbility(null)
+  updateBerry(null)
+  updateMoves([])
+  updateSpecialMove(null)
+}
+
 function onEnterSwapMode() {
   enterSwapMode()
 }
@@ -473,6 +483,7 @@ watch(
 function onSelectPokemon(value) {
   const pokemon = POKEMON_DATA.find((p) => p.name === value)
   if (pokemon) {
+    clearSelections()
     updatePokemon(pokemon)
     searchQuery.value = pokemon.name
     pokemonInputRef.value?.blur()
