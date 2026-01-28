@@ -902,4 +902,11 @@ function onSearchInput(value) {
     margin-bottom: var(--space-2);
   }
 }
+
+@media (orientation: portrait) {
+  .wizard-container {
+    min-height: 220px;
+    max-height: 390px;
+  }
+}
 </style>
