@@ -10,47 +10,50 @@
 
     <div class="team-section">
     <!-- Grid Container - handles show/hide based on draft state -->
-    <div v-show="!showDraftPanel || swapMode">
-      <!-- Team Grid -->
-      <div v-if="viewMode === 'team'" class="team-grid">
-        <TeamSlot
-          v-for="pokemon in team"
-          :key="pokemon.id"
-          :pokemon="pokemon"
-          :swapMode="swapMode"
-          :selected="selectedSwapTarget === pokemon.id"
-          @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
-        />
-        <TeamSlot
-          v-for="i in emptySlotCount"
-          :key="'empty-' + i"
-          :pokemon="null"
-          :swapMode="swapMode"
-          :selected="selectedSwapTarget === `empty-${i}`"
-          @add="swapMode ? handleSwapSelect(`empty-${i}`) : startAdd()"
-        />
-      </div>
+    <Transition name="grid-fade" mode="out-in">
+      <div v-if="!showDraftPanel || swapMode" key="grid">
+        <!-- Team Grid -->
+        <div v-if="viewMode === 'team'" class="team-grid">
+          <TeamSlot
+            v-for="pokemon in team"
+            :key="pokemon.id"
+            :pokemon="pokemon"
+            :swapMode="swapMode"
+            :selected="selectedSwapTarget === pokemon.id"
+            @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
+          />
+          <TeamSlot
+            v-for="i in emptySlotCount"
+            :key="'empty-' + i"
+            :pokemon="null"
+            :swapMode="swapMode"
+            :selected="selectedSwapTarget === `empty-${i}`"
+            @add="swapMode ? handleSwapSelect(`empty-${i}`) : startAdd()"
+          />
+        </div>
 
-      <!-- Box Grid -->
-      <div v-else class="box-grid">
-        <TeamSlot
-          v-for="pokemon in box"
-          :key="pokemon.id"
-          :pokemon="pokemon"
-          @edit="handleEditBoxPokemon(pokemon.id)"
-        />
-        <TeamSlot
-          v-for="i in emptyBoxSlotCount"
-          :key="'box-empty-' + i"
-          :pokemon="null"
-          @add="startAddToBox()"
-        />
+        <!-- Box Grid -->
+        <div v-else class="box-grid">
+          <TeamSlot
+            v-for="pokemon in box"
+            :key="pokemon.id"
+            :pokemon="pokemon"
+            @edit="handleEditBoxPokemon(pokemon.id)"
+          />
+          <TeamSlot
+            v-for="i in emptyBoxSlotCount"
+            :key="'box-empty-' + i"
+            :pokemon="null"
+            @add="startAddToBox()"
+          />
+        </div>
       </div>
-    </div>
+    </Transition>
 
-    <Transition name="scale">
+    <Transition name="panel-fade" mode="out-in">
       <DraftPanel
         v-if="showDraftPanel"
+        key="panel"
         :team="team"
         @confirm="$emit('confirmDraft')"
         @cancel="cancel"
@@ -204,5 +207,29 @@ function toggleViewMode() {
   grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
+}
+
+/* Grid fade out/in */
+.grid-fade-enter-active,
+.grid-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.grid-fade-enter-from,
+.grid-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+/* Panel fade out/in */
+.panel-fade-enter-active,
+.panel-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.panel-fade-enter-from,
+.panel-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
 }
 </style>
