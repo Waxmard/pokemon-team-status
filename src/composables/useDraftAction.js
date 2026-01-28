@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 
 const draftAction = ref(null)
+const swapMode = ref(false)
 
 export function useDraftAction() {
   // State
@@ -94,13 +95,24 @@ export function useDraftAction() {
     }
   }
 
+  function enterSwapMode() {
+    swapMode.value = true
+  }
+
+  function exitSwapMode() {
+    swapMode.value = false
+    updateReplaceTarget(null)
+  }
+
   function cancel() {
+    swapMode.value = false
     draftAction.value = null
   }
 
   return {
     draftAction,
     isActive,
+    swapMode,
     startAdd,
     startEdit,
     startEditBox,
@@ -110,6 +122,8 @@ export function useDraftAction() {
     updateBerry,
     updateMove,
     updateReplaceTarget,
+    enterSwapMode,
+    exitSwapMode,
     cancel
   }
 }
