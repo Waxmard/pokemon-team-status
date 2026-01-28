@@ -31,50 +31,55 @@ import SwapPreview from './SwapPreview.vue'
 const props = defineProps({
   remainingGyms: {
     type: Array,
-    required: true
+    required: true,
   },
   defeatedGymsList: {
     type: Array,
-    required: true
+    required: true,
   },
   draftActive: {
     type: Boolean,
-    default: false
+    default: false,
   },
   showSwapPreview: {
     type: Boolean,
-    default: false
+    default: false,
   },
   swapBoxPokemon: {
     type: Object,
-    default: null
+    default: null,
   },
   swapTeamPokemon: {
     type: Object,
-    default: null
+    default: null,
   },
   hasSwapTarget: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
 
-const emit = defineEmits(['defeatGym', 'undefeatGym', 'confirmSwap', 'cancelSwap'])
+const emit = defineEmits([
+  'defeatGym',
+  'undefeatGym',
+  'confirmSwap',
+  'cancelSwap',
+])
 
 // Create a set of defeated gym types for quick lookup
 const defeatedTypes = computed(() => {
-  return new Set(props.defeatedGymsList.map(gym => gym.type))
+  return new Set(props.defeatedGymsList.map((gym) => gym.type))
 })
 
 // Combine remaining and defeated gyms into a unified list, sorted by score (then berry tiebreaker)
 const unifiedGymsList = computed(() => {
-  const remaining = props.remainingGyms.map(gym => ({
+  const remaining = props.remainingGyms.map((gym) => ({
     ...gym,
-    defeated: false
+    defeated: false,
   }))
-  const defeated = props.defeatedGymsList.map(gym => ({
+  const defeated = props.defeatedGymsList.map((gym) => ({
     ...gym,
-    defeated: true
+    defeated: true,
   }))
   const combined = [...remaining, ...defeated]
   // Sort by score ascending, then by berry count ascending as tiebreaker

@@ -31,13 +31,15 @@ import { getSpriteUrl } from '../utils/pokemon.js'
 const props = defineProps({
   boxPokemon: { type: Object, required: true },
   teamPokemon: { type: Object, default: null },
-  hasTarget: { type: Boolean, default: false }
+  hasTarget: { type: Boolean, default: false },
 })
 
 defineEmits(['confirm', 'cancel'])
 
 const boxPokemonSprite = computed(() => getSpriteUrl(props.boxPokemon?.name))
-const teamPokemonSprite = computed(() => props.teamPokemon ? getSpriteUrl(props.teamPokemon.name) : null)
+const teamPokemonSprite = computed(() =>
+  props.teamPokemon ? getSpriteUrl(props.teamPokemon.name) : null,
+)
 </script>
 
 <style scoped>

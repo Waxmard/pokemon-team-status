@@ -26,27 +26,27 @@
 <script setup>
 import GymRow from './GymRow.vue'
 
-const props = defineProps({
+defineProps({
   title: {
     type: String,
-    required: true
+    required: true,
   },
   gyms: {
     type: Array,
-    required: true
+    required: true,
   },
   transitionName: {
     type: String,
-    default: 'slide-left'
+    default: 'slide-left',
   },
   emptyMessage: {
     type: String,
-    default: 'No gyms'
+    default: 'No gyms',
   },
   draftActive: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
 
 defineEmits(['gymClick'])

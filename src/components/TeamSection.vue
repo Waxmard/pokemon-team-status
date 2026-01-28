@@ -64,28 +64,35 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import TeamSlot from './TeamSlot.vue'
-import DraftPanel from './DraftPanel.vue'
+import { computed, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { POKEMON_DATA } from '../data/pokemon.js'
+import DraftPanel from './DraftPanel.vue'
+import TeamSlot from './TeamSlot.vue'
 
 const props = defineProps({
   team: {
     type: Array,
-    required: true
+    required: true,
   },
   box: {
     type: Array,
-    default: () => []
-  }
+    default: () => [],
+  },
 })
 
-const emit = defineEmits([
-  'confirmDraft'
-])
+defineEmits(['confirmDraft'])
 
-const { draftAction, swapMode, startAdd, startEdit, startEditBox, startAddToBox, updateReplaceTarget, cancel } = useDraftAction()
+const {
+  draftAction,
+  swapMode,
+  startAdd,
+  startEdit,
+  startEditBox,
+  startAddToBox,
+  updateReplaceTarget,
+  cancel,
+} = useDraftAction()
 
 const viewMode = ref('team')
 
@@ -97,8 +104,8 @@ watch(swapMode, (isSwapMode) => {
 })
 
 // Number of empty slots to show (max 1)
-const emptySlotCount = computed(() => props.team.length < 6 ? 1 : 0)
-const emptyBoxSlotCount = computed(() => props.box.length < 3 ? 1 : 0)
+const emptySlotCount = computed(() => (props.team.length < 6 ? 1 : 0))
+const emptyBoxSlotCount = computed(() => (props.box.length < 3 ? 1 : 0))
 
 // Track selected swap target for UI
 const selectedSwapTarget = computed(() => draftAction.value?.replaceTarget)
@@ -116,29 +123,29 @@ const showDraftPanel = computed(() => {
 })
 
 function handleEditPokemon(id) {
-  const pokemon = props.team.find(p => p.id === id)
+  const pokemon = props.team.find((p) => p.id === id)
   if (!pokemon) return
-  const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
+  const pokemonData = POKEMON_DATA.find((p) => p.name === pokemon.name)
   startEdit(id, {
     pokemonData,
     ability: pokemon.ability,
     berry: pokemon.berry || null,
     moves: pokemon.moves,
-    specialMove: pokemon.specialMove
+    specialMove: pokemon.specialMove,
   })
 }
 
 function handleEditBoxPokemon(boxPokemonId) {
-  const pokemon = props.box.find(p => p.id === boxPokemonId)
+  const pokemon = props.box.find((p) => p.id === boxPokemonId)
   if (!pokemon) return
-  const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
+  const pokemonData = POKEMON_DATA.find((p) => p.name === pokemon.name)
   startEditBox({
     id: boxPokemonId,
     pokemonData,
     ability: pokemon.ability,
     berry: pokemon.berry || null,
     moves: pokemon.moves,
-    specialMove: pokemon.specialMove
+    specialMove: pokemon.specialMove,
   })
 }
 

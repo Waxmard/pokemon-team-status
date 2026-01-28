@@ -181,29 +181,31 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { NAutoComplete } from 'naive-ui'
-import { POKEMON_DATA } from '../data/pokemon.js'
-import { ALL_TYPES, TYPE_COLORS, getTypeIcon } from '../data/types.js'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useDraftAction } from '../composables/useDraftAction.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
-import { SPECIAL_MOVES, SPECIAL_MOVE_NAMES } from '../data/specialMoves.js'
-import { getSpriteUrl, getBerrySprite } from '../utils/pokemon.js'
-import { getDefensiveMultiplier, applyAbilityDefense } from '../utils/typeCalc.js'
-import { useDraftAction } from '../composables/useDraftAction.js'
+import { POKEMON_DATA } from '../data/pokemon.js'
+import { SPECIAL_MOVE_NAMES } from '../data/specialMoves.js'
+import { ALL_TYPES, getTypeIcon, TYPE_COLORS } from '../data/types.js'
+import { getBerrySprite, getSpriteUrl } from '../utils/pokemon.js'
+import {
+  applyAbilityDefense,
+  getDefensiveMultiplier,
+} from '../utils/typeCalc.js'
 
 const props = defineProps({
   hideSearch: {
     type: Boolean,
-    default: false
+    default: false,
   },
   team: {
     type: Array,
-    default: () => []
-  }
+    default: () => [],
+  },
 })
 
-const emit = defineEmits(['confirm', 'cancel'])
+defineEmits(['confirm', 'cancel'])
 
 const {
   draftAction,
@@ -212,7 +214,7 @@ const {
   updateBerry,
   updateMoves,
   updateSpecialMove,
-  enterSwapMode
+  enterSwapMode,
 } = useDraftAction()
 
 // Wizard state
@@ -230,22 +232,29 @@ const showSpecialMoveDropdown = ref(false)
 const specialMoveQuery = ref('')
 
 // Initialize form state when draftAction changes
-watch(draftAction, (action) => {
-  if (!action) return
-  searchQuery.value = action.pokemon?.name || ''
-  localAbility.value = action.ability
-  localBerry.value = action.berry
-  localSpecialMove.value = action.specialMove
-}, { immediate: true, deep: true })
+watch(
+  draftAction,
+  (action) => {
+    if (!action) return
+    searchQuery.value = action.pokemon?.name || ''
+    localAbility.value = action.ability
+    localBerry.value = action.berry
+    localSpecialMove.value = action.specialMove
+  },
+  { immediate: true, deep: true },
+)
 
 // Auto-focus Pokemon name field on open only if empty, and handle resize
 onMounted(() => {
   nextTick(() => {
-    if (!props.hideSearch && pokemonInputRef.value && !draftAction.value?.pokemon) {
+    if (
+      !props.hideSearch &&
+      pokemonInputRef.value &&
+      !draftAction.value?.pokemon
+    ) {
       pokemonInputRef.value.focus()
     }
   })
-
 })
 
 const canConfirm = computed(() => {
@@ -257,7 +266,7 @@ const wizardStepTitle = computed(() => {
     pokemon: 'Choose Pokemon',
     ability: 'Choose Ability',
     berry: 'Choose Berry',
-    moves: 'Move Types'
+    moves: 'Move Types',
   }
   return titles[wizardStep.value]
 })
@@ -270,13 +279,12 @@ const selectedSpriteUrl = computed(() => {
 const autocompleteOptions = computed(() => {
   if (!searchQuery.value) return []
   const query = searchQuery.value.toLowerCase()
-  return POKEMON_DATA
-    .filter(p => p.name.toLowerCase().includes(query))
+  return POKEMON_DATA.filter((p) => p.name.toLowerCase().includes(query))
     .slice(0, 20)
-    .map(p => ({
+    .map((p) => ({
       label: p.name,
       value: p.name,
-      pokemon: p
+      pokemon: p,
     }))
 })
 
@@ -298,7 +306,7 @@ function handleEvolveClick() {
 }
 
 function evolveTo(name) {
-  const pokemon = POKEMON_DATA.find(p => p.name === name)
+  const pokemon = POKEMON_DATA.find((p) => p.name === name)
   if (pokemon) {
     updatePokemon(pokemon)
     searchQuery.value = pokemon.name
@@ -327,7 +335,7 @@ function getTypeBackground(type, selected = false) {
   const opacity = selected ? 0.7 : 0.1
   const opacityEnd = selected ? 0.5 : 0.05
   return {
-    background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacityEnd)} 100%)`
+    background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacityEnd)} 100%)`,
   }
 }
 
@@ -337,7 +345,7 @@ function getAbilityBackground(selected = false) {
   const opacity = selected ? 0.5 : 0.08
   const opacityEnd = selected ? 0.3 : 0.02
   return {
-    background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacityEnd)} 100%)`
+    background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacityEnd)} 100%)`,
   }
 }
 
@@ -345,16 +353,18 @@ function getAbilityBackground(selected = false) {
 const relevantBerries = computed(() => {
   if (!draftAction.value?.pokemon) return []
   const pokemon = draftAction.value.pokemon
-  const weakTypes = ALL_TYPES.filter(attackType => {
+  const weakTypes = ALL_TYPES.filter((attackType) => {
     let mult = getDefensiveMultiplier(attackType, pokemon.types)
     mult = applyAbilityDefense(mult, attackType, localAbility.value)
     return mult > 1
   })
-  return weakTypes.map(type => ({
-    label: BERRY_BY_TYPE[type],
-    value: BERRY_BY_TYPE[type],
-    type
-  })).filter(b => b.label)
+  return weakTypes
+    .map((type) => ({
+      label: BERRY_BY_TYPE[type],
+      value: BERRY_BY_TYPE[type],
+      type,
+    }))
+    .filter((b) => b.label)
 })
 
 // Move selection helpers for wizard
@@ -383,12 +393,12 @@ function toggleMoveType(type) {
 // Special move helpers
 const specialMoveOptions = computed(() => {
   if (!specialMoveQuery.value) {
-    return SPECIAL_MOVE_NAMES.map(name => ({ label: name, value: name }))
+    return SPECIAL_MOVE_NAMES.map((name) => ({ label: name, value: name }))
   }
   const query = specialMoveQuery.value.toLowerCase()
-  return SPECIAL_MOVE_NAMES
-    .filter(name => name.toLowerCase().includes(query))
-    .map(name => ({ label: name, value: name }))
+  return SPECIAL_MOVE_NAMES.filter((name) =>
+    name.toLowerCase().includes(query),
+  ).map((name) => ({ label: name, value: name }))
 })
 
 function toggleSpecialMoveDropdown() {
@@ -452,12 +462,16 @@ function toggleAbility(value) {
 }
 
 // Reset wizard step when panel opens
-watch(draftAction, () => {
-  wizardStep.value = 'pokemon'
-}, { immediate: true })
+watch(
+  draftAction,
+  () => {
+    wizardStep.value = 'pokemon'
+  },
+  { immediate: true },
+)
 
 function onSelectPokemon(value) {
-  const pokemon = POKEMON_DATA.find(p => p.name === value)
+  const pokemon = POKEMON_DATA.find((p) => p.name === value)
   if (pokemon) {
     updatePokemon(pokemon)
     searchQuery.value = pokemon.name
@@ -467,12 +481,11 @@ function onSelectPokemon(value) {
 function onSearchInput(value) {
   // Only reset if the input doesn't match a valid Pokemon name
   // This prevents resetting after selection when searchQuery is set programmatically
-  const matchesPokemon = POKEMON_DATA.some(p => p.name === value)
+  const matchesPokemon = POKEMON_DATA.some((p) => p.name === value)
   if (!matchesPokemon) {
     updatePokemon(null)
   }
 }
-
 </script>
 
 <style scoped>

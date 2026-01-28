@@ -35,36 +35,36 @@
 
 <script setup>
 import { computed } from 'vue'
-import { getBerrySprite } from '../utils/pokemon.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
 import { getTypeIcon } from '../data/types.js'
 import { getTypeBackground } from '../utils/colors.js'
+import { getBerrySprite } from '../utils/pokemon.js'
 
 const props = defineProps({
   type: {
     type: String,
-    required: true
+    required: true,
   },
   score: {
     type: Number,
-    required: true
+    required: true,
   },
   berryCount: {
     type: Number,
-    default: 0
+    default: 0,
   },
   scoreDiff: {
     type: Number,
-    default: 0
+    default: 0,
   },
   berryDiff: {
     type: Number,
-    default: 0
+    default: 0,
   },
   defeated: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
 
 defineEmits(['click'])

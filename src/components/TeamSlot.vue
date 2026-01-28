@@ -64,23 +64,23 @@
 
 <script setup>
 import { computed } from 'vue'
-import { getSpriteUrl, getBerrySprite } from '../utils/pokemon.js'
 import { ABILITIES } from '../data/abilities.js'
-import { TYPE_COLORS, getTypeIcon } from '../data/types.js'
+import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
+import { getBerrySprite, getSpriteUrl } from '../utils/pokemon.js'
 
 const props = defineProps({
   pokemon: {
     type: Object,
-    default: null
+    default: null,
   },
   swapMode: {
     type: Boolean,
-    default: false
+    default: false,
   },
   selected: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
 
 defineEmits(['edit', 'add'])
@@ -94,7 +94,7 @@ const cardBackgroundStyle = computed(() => {
   if (!props.pokemon || !props.pokemon.types?.length) return {}
 
   const opacity = 0.15
-  let types = [...props.pokemon.types]
+  const types = [...props.pokemon.types]
 
   // For Protean, include move types in the gradient
   const abilityData = ABILITIES[props.pokemon.ability]
@@ -109,7 +109,7 @@ const cardBackgroundStyle = computed(() => {
   if (types.length === 1) {
     const color = TYPE_COLORS[types[0]].bg
     return {
-      background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`
+      background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`,
     }
   } else {
     // Create gradient stops for all types
@@ -119,7 +119,7 @@ const cardBackgroundStyle = computed(() => {
       return `${hexToRgba(color, opacity)} ${percent}%`
     })
     return {
-      background: `linear-gradient(135deg, ${stops.join(', ')})`
+      background: `linear-gradient(135deg, ${stops.join(', ')})`,
     }
   }
 })
@@ -131,7 +131,6 @@ function hexToRgba(hex, alpha) {
   const b = num & 255
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
-
 </script>
 
 <style scoped>
