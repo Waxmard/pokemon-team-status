@@ -1,14 +1,21 @@
 <template>
   <div class="team-section-wrapper">
-    <!-- Mode Toggle Button -->
+    <!-- Mode Toggle Button (long-press to collapse) -->
     <button
       class="mode-toggle"
-      @click="toggleViewMode"
+      @click="handleModeClick"
+      @mousedown="startLongPress"
+      @mouseup="cancelLongPress"
+      @mouseleave="cancelLongPress"
+      @touchstart.prevent="startLongPress"
+      @touchend="handleTouchEnd"
+      @touchcancel="cancelLongPress"
     >
       <span class="mode-icon">{{ viewMode === 'team' ? '⚔️' : '📦' }}</span>
     </button>
 
-    <div class="team-section">
+    <Transition name="section-collapse">
+    <div v-show="!isCollapsed" class="team-section">
     <!-- Grid Container - handles show/hide based on draft state -->
     <Transition name="grid-fade" mode="out-in">
       <div v-if="!showDraftPanel || swapMode" :key="viewMode">
@@ -60,6 +67,7 @@
       />
     </Transition>
     </div>
+    </Transition>
   </div>
 </template>
 
@@ -95,6 +103,52 @@ const {
 } = useDraftAction()
 
 const viewMode = ref('team')
+const isCollapsed = ref(false)
+
+// Long-press handling
+let longPressTimer = null
+let longPressFired = false
+const LONG_PRESS_DURATION = 500 // ms
+
+function startLongPress() {
+  longPressFired = false
+  longPressTimer = setTimeout(() => {
+    isCollapsed.value = true
+    longPressFired = true
+    longPressTimer = null
+  }, LONG_PRESS_DURATION)
+}
+
+function cancelLongPress() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+function handleTouchEnd() {
+  // If timer is still active, this was a quick tap (not a long press)
+  if (longPressTimer) {
+    cancelLongPress()
+    handleModeClick()
+  }
+  // If timer already fired (longPressTimer is null), long press already collapsed - do nothing
+}
+
+function handleModeClick() {
+  // If long press just fired, don't also handle click
+  if (longPressFired) {
+    longPressFired = false
+    return
+  }
+  // If collapsed, expand on click
+  if (isCollapsed.value) {
+    isCollapsed.value = false
+    return
+  }
+  // Normal toggle behavior
+  toggleViewMode()
+}
 
 // Switch to team view when entering swap mode
 watch(swapMode, (isSwapMode) => {
@@ -240,5 +294,18 @@ function toggleViewMode() {
 .panel-fade-leave-to {
   opacity: 0;
   transform: scale(0.98);
+}
+
+.section-collapse-enter-active,
+.section-collapse-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  overflow: hidden;
+}
+
+.section-collapse-enter-from,
+.section-collapse-leave-to {
+  opacity: 0;
+  transform: scaleY(0.95);
+  transform-origin: top;
 }
 </style>
