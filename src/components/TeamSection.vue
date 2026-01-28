@@ -15,7 +15,7 @@
       <draggable
         v-if="viewMode === 'team'"
         v-model="localTeam"
-        :disabled="draftActive"
+        :disabled="isActive"
         item-key="id"
         ghost-class="drag-ghost"
         drag-class="drag-active"
@@ -25,7 +25,7 @@
         <template #item="{ element: pokemon }">
           <TeamSlot
             :pokemon="pokemon"
-            @edit="$emit('editPokemon', pokemon.id)"
+            @edit="handleEditPokemon(pokemon.id)"
           />
         </template>
         <template #footer>
@@ -33,7 +33,7 @@
             v-for="i in emptySlotCount"
             :key="'empty-' + i"
             :pokemon="null"
-            @add="$emit('addPokemon')"
+            @add="startAdd()"
           />
         </template>
       </draggable>
@@ -44,13 +44,13 @@
           v-for="pokemon in box"
           :key="pokemon.id"
           :pokemon="pokemon"
-          @edit="$emit('editBoxPokemon', pokemon.id)"
+          @edit="handleEditBoxPokemon(pokemon.id)"
         />
         <TeamSlot
           v-for="i in emptyBoxSlotCount"
           :key="'box-empty-' + i"
           :pokemon="null"
-          @add="$emit('addToBox')"
+          @add="startAddToBox()"
         />
       </div>
     </div>
@@ -58,15 +58,9 @@
     <Transition name="scale">
       <DraftPanel
         v-if="showDraftPanel"
-        :draftAction="draftAction"
         :team="team"
         @confirm="$emit('confirmDraft')"
-        @cancel="$emit('cancelDraft')"
-        @update:pokemon="$emit('updateDraftPokemon', $event)"
-        @update:ability="$emit('updateDraftAbility', $event)"
-        @update:berry="$emit('updateDraftBerry', $event)"
-        @update:move="$emit('updateDraftMove', $event)"
-        @update:replaceTarget="$emit('updateDraftReplaceTarget', $event)"
+        @cancel="cancel"
       />
     </Transition>
     </div>
@@ -78,6 +72,8 @@ import { ref, computed, watch } from 'vue'
 import draggable from 'vuedraggable'
 import TeamSlot from './TeamSlot.vue'
 import DraftPanel from './DraftPanel.vue'
+import { useDraftAction } from '../composables/useDraftAction.js'
+import { POKEMON_DATA } from '../data/pokemon.js'
 
 const props = defineProps({
   team: {
@@ -87,31 +83,15 @@ const props = defineProps({
   box: {
     type: Array,
     default: () => []
-  },
-  draftAction: {
-    type: Object,
-    default: null
-  },
-  draftActive: {
-    type: Boolean,
-    default: false
   }
 })
 
 const emit = defineEmits([
-  'addPokemon',
-  'editPokemon',
   'confirmDraft',
-  'cancelDraft',
-  'updateDraftPokemon',
-  'updateDraftAbility',
-  'updateDraftBerry',
-  'updateDraftMove',
-  'updateDraftReplaceTarget',
-  'reorderTeam',
-  'addToBox',
-  'editBoxPokemon'
+  'reorderTeam'
 ])
+
+const { draftAction, isActive, startAdd, startEdit, startEditBox, startAddToBox, cancel } = useDraftAction()
 
 const viewMode = ref('team')
 
@@ -129,7 +109,7 @@ const emptyBoxSlotCount = computed(() => props.box.length < 3 ? 1 : 0)
 
 // Show draft panel for add/edit modes
 const showDraftPanel = computed(() => {
-  return !!props.draftAction
+  return !!draftAction.value
 })
 
 // Emit reorder when drag ends
@@ -137,9 +117,34 @@ function onDragEnd() {
   emit('reorderTeam', localTeam.value)
 }
 
+function handleEditPokemon(id) {
+  const pokemon = props.team.find(p => p.id === id)
+  if (!pokemon) return
+  const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
+  startEdit(id, {
+    pokemonData,
+    ability: pokemon.ability,
+    berry: pokemon.berry || null,
+    moves: pokemon.moves
+  })
+}
+
+function handleEditBoxPokemon(boxPokemonId) {
+  const pokemon = props.box.find(p => p.id === boxPokemonId)
+  if (!pokemon) return
+  const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
+  startEditBox({
+    id: boxPokemonId,
+    pokemonData,
+    ability: pokemon.ability,
+    berry: pokemon.berry || null,
+    moves: pokemon.moves
+  })
+}
+
 function toggleViewMode() {
   if (showDraftPanel.value) {
-    emit('cancelDraft')
+    cancel()
   }
   viewMode.value = viewMode.value === 'team' ? 'box' : 'team'
 }

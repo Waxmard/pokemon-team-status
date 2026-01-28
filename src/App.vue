@@ -8,26 +8,14 @@
       <TeamSection
         :team="team"
         :box="box"
-        :draftAction="draftAction"
-        :draftActive="!!draftAction"
-        @addPokemon="startAddPokemon"
-        @editPokemon="startEditPokemon"
         @confirmDraft="confirmDraft"
-        @cancelDraft="cancelDraft"
-        @updateDraftPokemon="updateDraftPokemon"
-        @updateDraftAbility="updateDraftAbility"
-        @updateDraftBerry="updateDraftBerry"
-        @updateDraftMove="updateDraftMove"
-        @updateDraftReplaceTarget="updateDraftReplaceTarget"
         @reorderTeam="reorderTeam"
-        @addToBox="startAddToBox"
-        @editBoxPokemon="startEditBoxPokemon"
       />
 
       <GymColumns
         :remainingGyms="remainingGyms"
         :defeatedGymsList="defeatedGymsList"
-        :draftActive="!!draftAction"
+        :draftActive="isActive"
         @defeatGym="defeatGym"
         @undefeatGym="undefeatGym"
       />
@@ -36,14 +24,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { NConfigProvider } from 'naive-ui'
 import TeamSection from './components/TeamSection.vue'
 import GymColumns from './components/GymColumns.vue'
 import { ALL_TYPES } from './data/types.js'
-import { POKEMON_DATA } from './data/pokemon.js'
 import { calculateScore, calculateBerryTiebreaker } from './utils/typeCalc.js'
 import { useStorage } from './composables/useStorage.js'
+import { useDraftAction } from './composables/useDraftAction.js'
 import { themeOverrides } from './theme/colors.js'
 
 const {
@@ -56,7 +44,7 @@ const {
   persistBox
 } = useStorage()
 
-const draftAction = ref(null)
+const { draftAction, isActive, cancel } = useDraftAction()
 
 // Computed
 const remainingGyms = computed(() => {
@@ -131,86 +119,6 @@ function getDraftTeam() {
 }
 
 // Methods
-function startAddPokemon(pokemon = null) {
-  if (draftAction.value?.type === 'add') {
-    return cancelDraft()
-  }
-  draftAction.value = {
-    type: 'add',
-    pokemon: pokemon,
-    ability: null,
-    berry: null,
-    moves: [null, null, null, null]
-  }
-}
-
-function startEditPokemon(id) {
-  if (draftAction.value?.type === 'edit' && draftAction.value?.editId === id) {
-    return cancelDraft()
-  }
-  const pokemon = team.value.find(p => p.id === id)
-  if (!pokemon) return
-  const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
-  draftAction.value = {
-    type: 'edit',
-    editId: id,
-    isBoxPokemon: false,
-    pokemon: pokemonData,
-    ability: pokemon.ability,
-    berry: pokemon.berry || null,
-    moves: [...pokemon.moves, null, null, null, null].slice(0, 4)
-  }
-}
-
-function startEditBoxPokemon(boxPokemonId) {
-  if (draftAction.value?.type === 'edit' && draftAction.value?.boxPokemonId === boxPokemonId) {
-    return cancelDraft()
-  }
-  const pokemon = box.value.find(p => p.id === boxPokemonId)
-  if (!pokemon) return
-  const pokemonData = POKEMON_DATA.find(p => p.name === pokemon.name)
-  draftAction.value = {
-    type: 'edit',
-    isBoxPokemon: true,
-    boxPokemonId: boxPokemonId,
-    pokemon: pokemonData,
-    ability: pokemon.ability,
-    berry: pokemon.berry || null,
-    moves: [...pokemon.moves, null, null, null, null].slice(0, 4),
-    replaceTarget: null
-  }
-}
-
-function updateDraftPokemon(pokemon) {
-  if (draftAction.value) {
-    draftAction.value.pokemon = pokemon
-  }
-}
-
-function updateDraftAbility(ability) {
-  if (draftAction.value) {
-    draftAction.value.ability = ability
-  }
-}
-
-function updateDraftBerry(berry) {
-  if (draftAction.value) {
-    draftAction.value.berry = berry
-  }
-}
-
-function updateDraftMove({ index, value }) {
-  if (draftAction.value) {
-    draftAction.value.moves[index] = value
-  }
-}
-
-function updateDraftReplaceTarget(targetId) {
-  if (draftAction.value) {
-    draftAction.value.replaceTarget = targetId
-  }
-}
-
 function confirmDraft() {
   if (!draftAction.value) return
 
@@ -224,7 +132,7 @@ function confirmDraft() {
       persistBox(box.value.filter(p => p.id !== draftAction.value.boxPokemonId))
     }
     // For 'add' type with no pokemon, just cancel
-    cancelDraft()
+    cancel()
     return
   }
 
@@ -309,29 +217,11 @@ function confirmDraft() {
     }
   }
 
-  cancelDraft()
-}
-
-function cancelDraft() {
-  draftAction.value = null
+  cancel()
 }
 
 function reorderTeam(newOrder) {
   persistTeam(newOrder)
-}
-
-// Box functions
-function startAddToBox() {
-  if (draftAction.value?.type === 'addToBox') {
-    return cancelDraft()
-  }
-  draftAction.value = {
-    type: 'addToBox',
-    pokemon: null,
-    ability: null,
-    berry: null,
-    moves: [null, null, null, null]
-  }
 }
 
 function defeatGym(type) {

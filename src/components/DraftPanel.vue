@@ -27,7 +27,7 @@
               placeholder="Select ability..."
               filterable
               clearable
-              @update:value="updateAbility"
+              @update:value="handleAbilityUpdate"
             />
           </div>
 
@@ -41,7 +41,7 @@
                 placeholder="Select berry..."
                 filterable
                 clearable
-                @update:value="updateBerry"
+                @update:value="handleBerryUpdate"
               />
               <img
                 v-if="berrySpriteUrl"
@@ -136,14 +136,16 @@
         <!-- Step: Ability -->
         <div v-if="wizardStep === 'ability'" class="wizard-step">
           <h3 class="wizard-title">Choose Ability</h3>
-          <div class="wizard-options">
+          <div class="ability-list">
             <button
-              v-for="opt in abilityOptions"
-              :key="opt.value"
-              @click="selectAbilityWizard(opt.value)"
-              class="wizard-option"
+              v-for="name in ABILITY_NAMES"
+              :key="name"
+              @click="toggleAbility(name)"
+              class="ability-option"
+              :class="{ selected: localAbility === name }"
+              :style="getAbilityBackground(localAbility === name)"
             >
-              {{ opt.label }}
+              {{ name }}
             </button>
           </div>
         </div>
@@ -157,19 +159,17 @@
           <p class="wizard-hint" v-else>
             No type weaknesses - berry optional
           </p>
-          <div class="wizard-options">
-            <button @click="selectBerryWizard(null)" class="wizard-option">
-              None
-            </button>
+          <div class="berry-type-grid">
             <button
               v-for="berry in relevantBerries"
               :key="berry.value"
-              @click="selectBerryWizard(berry.value)"
-              class="wizard-option"
+              @click="toggleBerry(berry.value)"
+              class="berry-type-option"
+              :class="{ selected: localBerry === berry.value }"
+              :style="getTypeBackground(berry.type, localBerry === berry.value)"
+              :title="berry.label"
             >
-              <img :src="getBerrySprite(berry.value)" class="wizard-berry-icon" />
-              {{ berry.label }}
-              <img :src="getTypeIcon(berry.type)" :alt="berry.type" class="wizard-type-icon" />
+              <img :src="getBerrySprite(berry.value)" :alt="berry.label" class="berry-icon" />
             </button>
           </div>
         </div>
@@ -254,12 +254,9 @@ import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_NAMES, BERRY_BY_TYPE } from '../data/berries.js'
 import { getSpriteUrl, getBerrySprite } from '../utils/pokemon.js'
 import { getDefensiveMultiplier, applyAbilityDefense } from '../utils/typeCalc.js'
+import { useDraftAction } from '../composables/useDraftAction.js'
 
 const props = defineProps({
-  draftAction: {
-    type: Object,
-    required: true
-  },
   hideSearch: {
     type: Boolean,
     default: false
@@ -270,7 +267,16 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['confirm', 'cancel', 'update:pokemon', 'update:ability', 'update:berry', 'update:move', 'update:replaceTarget'])
+const emit = defineEmits(['confirm', 'cancel'])
+
+const {
+  draftAction,
+  updatePokemon,
+  updateAbility,
+  updateBerry,
+  updateMove,
+  updateReplaceTarget
+} = useDraftAction()
 
 // Mobile detection and wizard state
 const isMobile = ref(window.innerWidth < 768)
@@ -289,7 +295,8 @@ const moveQueries = ref(['', '', '', ''])
 const localReplaceTarget = ref(null)
 
 // Initialize form state when draftAction changes
-watch(() => props.draftAction, (action) => {
+watch(draftAction, (action) => {
+  if (!action) return
   searchQuery.value = action.pokemon?.name || ''
   localAbility.value = action.ability
   localBerry.value = action.berry
@@ -300,7 +307,7 @@ watch(() => props.draftAction, (action) => {
 // Auto-focus Pokemon name field on open only if empty, and handle resize
 onMounted(() => {
   nextTick(() => {
-    if (!props.hideSearch && pokemonInputRef.value && !props.draftAction.pokemon) {
+    if (!props.hideSearch && pokemonInputRef.value && !draftAction.value?.pokemon) {
       pokemonInputRef.value.focus()
     }
   })
@@ -337,12 +344,12 @@ const replaceTargetOptions = computed(() => {
 })
 
 const canConfirm = computed(() => {
-  return !!props.draftAction.pokemon
+  return !!draftAction.value?.pokemon
 })
 
 const selectedSpriteUrl = computed(() => {
-  if (!props.draftAction.pokemon) return null
-  return getSpriteUrl(props.draftAction.pokemon.name)
+  if (!draftAction.value?.pokemon) return null
+  return getSpriteUrl(draftAction.value.pokemon.name)
 })
 
 const berrySpriteUrl = computed(() => {
@@ -397,10 +404,20 @@ function getTypeBackground(type, selected = false) {
   }
 }
 
+function getAbilityBackground(selected = false) {
+  // Use a neutral purple/blue accent color for abilities
+  const color = '#8B5CF6'
+  const opacity = selected ? 0.5 : 0.08
+  const opacityEnd = selected ? 0.3 : 0.02
+  return {
+    background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacityEnd)} 100%)`
+  }
+}
+
 // Wizard-related computed properties
 const relevantBerries = computed(() => {
-  if (!props.draftAction.pokemon) return []
-  const pokemon = props.draftAction.pokemon
+  if (!draftAction.value?.pokemon) return []
+  const pokemon = draftAction.value.pokemon
   const weakTypes = ALL_TYPES.filter(attackType => {
     let mult = getDefensiveMultiplier(attackType, pokemon.types)
     mult = applyAbilityDefense(mult, attackType, localAbility.value)
@@ -415,15 +432,15 @@ const relevantBerries = computed(() => {
 
 // Move selection helpers for wizard
 const selectedMoveCount = computed(() => {
-  return props.draftAction.moves.filter(m => m).length
+  return draftAction.value?.moves.filter(m => m).length || 0
 })
 
 function isMoveSelected(type) {
-  return props.draftAction.moves.includes(type)
+  return draftAction.value?.moves.includes(type)
 }
 
 function toggleMoveType(type) {
-  const moves = [...props.draftAction.moves]
+  const moves = [...(draftAction.value?.moves || [])]
   const existingIndex = moves.indexOf(type)
 
   if (existingIndex !== -1) {
@@ -432,12 +449,12 @@ function toggleMoveType(type) {
     // Compact the array (shift nulls to end)
     const nonNull = moves.filter(m => m)
     while (nonNull.length < 4) nonNull.push(null)
-    nonNull.forEach((m, i) => emit('update:move', { index: i, value: m }))
+    nonNull.forEach((m, i) => updateMove({ index: i, value: m }))
   } else if (selectedMoveCount.value < 4) {
     // Add the move to first empty slot
     const emptyIndex = moves.findIndex(m => !m)
     if (emptyIndex !== -1) {
-      emit('update:move', { index: emptyIndex, value: type })
+      updateMove({ index: emptyIndex, value: type })
     }
   }
 }
@@ -448,7 +465,7 @@ const wizardSteps = ['pokemon', 'moves', 'berry', 'ability']
 const canGoPrevious = computed(() => wizardStep.value !== 'pokemon')
 
 const canGoNext = computed(() => {
-  if (wizardStep.value === 'pokemon') return !!props.draftAction.pokemon
+  if (wizardStep.value === 'pokemon') return !!draftAction.value?.pokemon
   if (wizardStep.value === 'ability') return false
   return true
 })
@@ -469,7 +486,7 @@ function goToPreviousStep() {
 
 function confirmWizardStep() {
   if (wizardStep.value === 'pokemon') {
-    if (!props.draftAction.pokemon) {
+    if (!draftAction.value?.pokemon) {
       // No pokemon = delete action (for edits) or cancel (for adds)
       emit('confirm')
     } else {
@@ -478,18 +495,24 @@ function confirmWizardStep() {
   }
 }
 
-function selectAbilityWizard(value) {
-  emit('update:ability', value)
-  // Last step - no auto-advance
+function toggleBerry(value) {
+  if (localBerry.value === value) {
+    updateBerry(null)
+  } else {
+    updateBerry(value)
+  }
 }
 
-function selectBerryWizard(value) {
-  emit('update:berry', value)
-  nextTick(() => { wizardStep.value = 'ability' })
+function toggleAbility(value) {
+  if (localAbility.value === value) {
+    updateAbility(null)
+  } else {
+    updateAbility(value)
+  }
 }
 
 // Reset wizard step when panel opens
-watch(() => props.draftAction, () => {
+watch(draftAction, () => {
   wizardStep.value = 'pokemon'
 }, { immediate: true })
 
@@ -505,7 +528,7 @@ function getMoveAutocompleteOptions(index) {
 function onSelectPokemon(value) {
   const pokemon = POKEMON_DATA.find(p => p.name === value)
   if (pokemon) {
-    emit('update:pokemon', pokemon)
+    updatePokemon(pokemon)
     searchQuery.value = pokemon.name
     // Auto-advance to ability field
     nextTick(() => {
@@ -521,12 +544,12 @@ function onSearchInput(value) {
   // This prevents resetting after selection when searchQuery is set programmatically
   const matchesPokemon = POKEMON_DATA.some(p => p.name === value)
   if (!matchesPokemon) {
-    emit('update:pokemon', null)
+    updatePokemon(null)
   }
 }
 
-function updateAbility(value) {
-  emit('update:ability', value)
+function handleAbilityUpdate(value) {
+  updateAbility(value)
   // Auto-advance to berry field
   nextTick(() => {
     if (berryInputRef.value) {
@@ -535,8 +558,8 @@ function updateAbility(value) {
   })
 }
 
-function updateBerry(value) {
-  emit('update:berry', value)
+function handleBerryUpdate(value) {
+  updateBerry(value)
   // Auto-advance to first move field
   nextTick(() => {
     if (moveInputRefs.value[0]) {
@@ -547,7 +570,7 @@ function updateBerry(value) {
 
 function onSelectMove(index, value) {
   moveQueries.value[index] = value
-  emit('update:move', { index, value })
+  updateMove({ index, value })
   // Auto-advance to next move field (if not last)
   if (index < 3) {
     nextTick(() => {
@@ -560,12 +583,8 @@ function onSelectMove(index, value) {
 
 function onMoveInput(index, value) {
   if (!value) {
-    emit('update:move', { index, value: null })
+    updateMove({ index, value: null })
   }
-}
-
-function updateReplaceTarget(value) {
-  emit('update:replaceTarget', value)
 }
 </script>
 
@@ -890,17 +909,78 @@ function updateReplaceTarget(value) {
   object-fit: contain;
 }
 
-.wizard-berry-icon {
-  width: 24px;
-  height: 24px;
+/* Berry grid (3 columns like move types) */
+.berry-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.berry-type-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  aspect-ratio: 1;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+}
+
+.berry-type-option:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.berry-type-option:active {
+  transform: scale(0.96);
+}
+
+.berry-type-option.selected {
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.berry-type-option .berry-icon {
+  width: 44px;
+  height: 44px;
   object-fit: contain;
 }
 
-.wizard-type-icon {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  margin-left: auto;
+/* Ability list (1 column) */
+.ability-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.ability-option {
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+}
+
+.ability-option:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.ability-option:active {
+  transform: scale(0.98);
+}
+
+.ability-option.selected {
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.02);
 }
 
 .wizard-actions {
