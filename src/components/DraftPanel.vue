@@ -168,7 +168,8 @@
               class="wizard-option"
             >
               <img :src="getBerrySprite(berry.value)" class="wizard-berry-icon" />
-              {{ berry.label }} ({{ berry.type }})
+              {{ berry.label }}
+              <img :src="getTypeIcon(berry.type)" :alt="berry.type" class="wizard-type-icon" />
             </button>
           </div>
         </div>
@@ -183,11 +184,11 @@
               @click="toggleMoveType(type)"
               class="move-type-option"
               :class="{ selected: isMoveSelected(type), disabled: !isMoveSelected(type) && selectedMoveCount >= 4 }"
+              :style="getTypeBackground(type, isMoveSelected(type))"
               :disabled="!isMoveSelected(type) && selectedMoveCount >= 4"
+              :title="capitalize(type)"
             >
-              <span class="type-dot" :style="{ background: TYPE_COLORS[type].bg }"></span>
-              <span class="type-name">{{ capitalize(type) }}</span>
-              <span v-if="isMoveSelected(type)" class="check-mark">✓</span>
+              <img :src="getTypeIcon(type)" :alt="type" class="type-icon" />
             </button>
           </div>
         </div>
@@ -248,7 +249,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { NAutoComplete, NSelect } from 'naive-ui'
 import { POKEMON_DATA } from '../data/pokemon.js'
-import { ALL_TYPES, TYPE_COLORS } from '../data/types.js'
+import { ALL_TYPES, TYPE_COLORS, getTypeIcon } from '../data/types.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_NAMES, BERRY_BY_TYPE } from '../data/berries.js'
 import { getSpriteUrl, getBerrySprite } from '../utils/pokemon.js'
@@ -377,6 +378,23 @@ const berryOptions = computed(() => {
 
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+function hexToRgba(hex, alpha) {
+  const num = parseInt(hex.replace('#', ''), 16)
+  const r = (num >> 16) & 255
+  const g = (num >> 8) & 255
+  const b = num & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+function getTypeBackground(type, selected = false) {
+  const color = TYPE_COLORS[type].bg
+  const opacity = selected ? 0.7 : 0.1
+  const opacityEnd = selected ? 0.5 : 0.05
+  return {
+    background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacityEnd)} 100%)`
+  }
 }
 
 // Wizard-related computed properties
@@ -827,70 +845,62 @@ function updateReplaceTarget(value) {
   border-style: dashed;
 }
 
-/* Moves type grid (9 rows x 2 columns) */
+/* Moves type grid (6 rows x 3 columns) */
 .moves-type-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-2);
-  max-height: 60vh;
-  overflow-y: auto;
 }
 
 .move-type-option {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  justify-content: center;
+  padding: var(--space-2);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  min-height: 40px;
-  font-size: 0.85rem;
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  aspect-ratio: 1;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
 }
 
 .move-type-option:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .move-type-option:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.96);
 }
 
 .move-type-option.selected {
-  border-color: var(--color-success);
-  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
 }
 
 .move-type-option.disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
-.move-type-option .type-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.move-type-option .type-name {
-  flex: 1;
-  text-transform: capitalize;
-  text-align: left;
-}
-
-.move-type-option .check-mark {
-  color: var(--color-success);
-  font-weight: bold;
+.move-type-option .type-icon {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
 }
 
 .wizard-berry-icon {
   width: 24px;
   height: 24px;
   object-fit: contain;
+}
+
+.wizard-type-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  margin-left: auto;
 }
 
 .wizard-actions {

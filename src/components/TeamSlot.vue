@@ -25,14 +25,14 @@
           </div>
           <div class="pokemon-info">
             <div v-if="pokemon.moves.length" class="pokemon-moves">
-              <span
+              <img
                 v-for="move in pokemon.moves"
                 :key="move"
-                class="move-badge"
-                :style="{ background: getTypeGradient(move), color: getTextColor(move) }"
-              >
-                {{ move }}
-              </span>
+                :src="getTypeIcon(move)"
+                :alt="move"
+                :title="move"
+                class="move-type-icon"
+              />
             </div>
           </div>
         </div>
@@ -53,6 +53,7 @@
 import { computed } from 'vue'
 import { getSpriteUrl, getBerrySprite } from '../utils/pokemon.js'
 import { ABILITIES } from '../data/abilities.js'
+import { TYPE_COLORS, getTypeIcon } from '../data/types.js'
 
 const props = defineProps({
   pokemon: {
@@ -85,14 +86,14 @@ const cardBackgroundStyle = computed(() => {
   }
 
   if (types.length === 1) {
-    const color = typeColors[types[0]]
+    const color = TYPE_COLORS[types[0]].bg
     return {
       background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`
     }
   } else {
     // Create gradient stops for all types
     const stops = types.map((type, i) => {
-      const color = typeColors[type]
+      const color = TYPE_COLORS[type].bg
       const percent = (i / (types.length - 1)) * 100
       return `${hexToRgba(color, opacity)} ${percent}%`
     })
@@ -110,46 +111,6 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-// Type colors for tags
-const typeColors = {
-  normal: '#A8A878',
-  fire: '#F08030',
-  water: '#6890F0',
-  electric: '#F8D030',
-  grass: '#78C850',
-  ice: '#98D8D8',
-  fighting: '#C03028',
-  poison: '#A040A0',
-  ground: '#E0C068',
-  flying: '#A890F0',
-  psychic: '#F85888',
-  bug: '#A8B820',
-  rock: '#B8A038',
-  ghost: '#705898',
-  dragon: '#7038F8',
-  dark: '#705848',
-  steel: '#B8B8D0',
-  fairy: '#EE99AC'
-}
-
-const lightTextTypes = ['electric', 'ice', 'ground', 'steel', 'fairy']
-
-function getTextColor(type) {
-  return lightTextTypes.includes(type) ? '#1a1a2e' : '#fff'
-}
-
-function getTypeGradient(type) {
-  const color = typeColors[type]
-  return `linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -20)} 100%)`
-}
-
-function adjustColor(hex, amount) {
-  const num = parseInt(hex.replace('#', ''), 16)
-  const r = Math.max(0, Math.min(255, (num >> 16) + amount))
-  const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount))
-  const b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount))
-  return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
-}
 </script>
 
 <style scoped>
@@ -262,13 +223,10 @@ function adjustColor(hex, amount) {
   align-items: center;
 }
 
-.move-badge {
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-transform: capitalize;
-  box-shadow: var(--shadow-sm);
+.move-type-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 </style>

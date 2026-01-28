@@ -47,3 +47,7 @@ export const TYPE_COLORS = {
   steel: { bg: '#B8B8D0', text: '#333' },
   fairy: { bg: '#EE99AC', text: '#333' }
 }
+
+export function getTypeIcon(type) {
+  return new URL(`../assets/types/${type}.svg`, import.meta.url).href
+}
