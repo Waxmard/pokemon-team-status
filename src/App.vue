@@ -11,6 +11,8 @@
         @confirmDraft="confirmDraft"
         @confirmSwap="confirmDraft"
         @cancelSwap="cancelSwap"
+        @deleteTeamPokemon="deleteTeamPokemon"
+        @deleteBoxPokemon="deleteBoxPokemon"
       />
 
       <GymColumns
@@ -254,6 +256,14 @@ function confirmDraft() {
   }
 
   cancel()
+}
+
+function deleteTeamPokemon(id) {
+  persistTeam(team.value.filter((p) => p.id !== id))
+}
+
+function deleteBoxPokemon(id) {
+  persistBox(box.value.filter((p) => p.id !== id))
 }
 
 function defeatGym(type) {

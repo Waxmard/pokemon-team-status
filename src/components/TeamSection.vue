@@ -29,6 +29,7 @@
             :swapMode="swapMode"
             :selected="selectedSwapTarget === pokemon.id"
             @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
+            @delete="handleDeleteTeamPokemon"
           />
           <TeamSlot
             v-for="i in emptySlotCount"
@@ -56,6 +57,7 @@
             :key="pokemon.id"
             :pokemon="pokemon"
             @edit="handleEditBoxPokemon(pokemon.id)"
+            @delete="handleDeleteBoxPokemon"
           />
           <TeamSlot
             v-for="i in emptyBoxSlotCount"
@@ -98,7 +100,13 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['confirmDraft', 'confirmSwap', 'cancelSwap'])
+const emit = defineEmits([
+  'confirmDraft',
+  'confirmSwap',
+  'cancelSwap',
+  'deleteTeamPokemon',
+  'deleteBoxPokemon',
+])
 
 const {
   draftAction,
@@ -221,6 +229,14 @@ function toggleViewMode() {
     cancel()
   }
   viewMode.value = viewMode.value === 'team' ? 'box' : 'team'
+}
+
+function handleDeleteTeamPokemon(id) {
+  emit('deleteTeamPokemon', id)
+}
+
+function handleDeleteBoxPokemon(id) {
+  emit('deleteBoxPokemon', id)
 }
 </script>
 

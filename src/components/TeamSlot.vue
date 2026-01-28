@@ -1,69 +1,89 @@
 <template>
-  <div
-    class="team-slot"
-    :class="{
-      empty: !pokemon,
-      clickable: true,
-      'swap-mode': swapMode,
-      'swap-selected': selected
-    }"
-    :style="cardBackgroundStyle"
-    @click="pokemon ? $emit('edit', pokemon.id) : $emit('add')"
+  <NPopconfirm
+    :show="showDeleteConfirm"
+    :show-icon="false"
+    @update:show="showDeleteConfirm = $event"
+    positive-text="Delete"
+    negative-text="Cancel"
+    @positive-click="confirmDelete"
+    @negative-click="cancelDelete"
   >
-    <Transition name="slot-content" mode="out-in">
-      <div v-if="pokemon" key="filled" class="slot-inner">
-        <div class="slot-content">
-          <div class="sprite-container">
-            <img
-              v-if="spriteUrl"
-              :src="spriteUrl"
-              :alt="pokemon.name"
-              class="pokemon-sprite"
-            />
-            <img
-              v-if="pokemon.berry"
-              :src="getBerrySprite(pokemon.berry)"
-              :alt="pokemon.berry"
-              :title="pokemon.berry"
-              class="berry-sprite"
-            />
-          </div>
-          <div class="pokemon-info">
-            <div v-if="pokemon.moves.length" class="pokemon-moves">
-              <img
-                v-for="move in pokemon.moves"
-                :key="move"
-                :src="getTypeIcon(move)"
-                :alt="move"
-                :title="move"
-                class="move-type-icon"
-              />
+    <template #trigger>
+      <div
+        class="team-slot"
+        :class="{
+          empty: !pokemon,
+          clickable: true,
+          'swap-mode': swapMode,
+          'swap-selected': selected
+        }"
+        :style="cardBackgroundStyle"
+        @click="pokemon ? $emit('edit', pokemon.id) : $emit('add')"
+        @mousedown="onPressStart"
+        @mouseup="onPressEnd"
+        @mouseleave="onPressCancel"
+        @touchstart.passive="onPressStart"
+        @touchend="onPressEnd"
+        @touchcancel="onPressCancel"
+      >
+        <Transition name="slot-content" mode="out-in">
+          <div v-if="pokemon" key="filled" class="slot-inner">
+            <div class="slot-content">
+              <div class="sprite-container">
+                <img
+                  v-if="spriteUrl"
+                  :src="spriteUrl"
+                  :alt="pokemon.name"
+                  class="pokemon-sprite"
+                />
+                <img
+                  v-if="pokemon.berry"
+                  :src="getBerrySprite(pokemon.berry)"
+                  :alt="pokemon.berry"
+                  :title="pokemon.berry"
+                  class="berry-sprite"
+                />
+              </div>
+              <div class="pokemon-info">
+                <div v-if="pokemon.moves.length" class="pokemon-moves">
+                  <img
+                    v-for="move in pokemon.moves"
+                    :key="move"
+                    :src="getTypeIcon(move)"
+                    :alt="move"
+                    :title="move"
+                    class="move-type-icon"
+                  />
+                </div>
+                <div class="pokemon-badges">
+                  <span v-if="pokemon.specialMove" class="special-move-badge">
+                    {{ pokemon.specialMove }}
+                  </span>
+                  <span v-if="pokemon.ability" class="ability-badge">
+                    {{ pokemon.ability }}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div class="pokemon-badges">
-              <span v-if="pokemon.specialMove" class="special-move-badge">
-                {{ pokemon.specialMove }}
-              </span>
-              <span v-if="pokemon.ability" class="ability-badge">
-                {{ pokemon.ability }}
-              </span>
-            </div>
           </div>
-        </div>
+          <div v-else key="empty" class="empty-content">
+            <svg class="empty-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="16"/>
+              <line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+            <span class="empty-text">Empty Slot</span>
+          </div>
+        </Transition>
       </div>
-      <div v-else key="empty" class="empty-content">
-        <svg class="empty-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="16"/>
-          <line x1="8" y1="12" x2="16" y2="12"/>
-        </svg>
-        <span class="empty-text">Empty Slot</span>
-      </div>
-    </Transition>
-  </div>
+    </template>
+    Delete {{ pokemon?.name }}?
+  </NPopconfirm>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { NPopconfirm } from 'naive-ui'
+import { computed, ref } from 'vue'
 import { ABILITIES } from '../data/abilities.js'
 import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { getBerrySprite, getSpriteUrl } from '../utils/pokemon.js'
@@ -83,7 +103,38 @@ const props = defineProps({
   },
 })
 
-defineEmits(['edit', 'add'])
+const emit = defineEmits(['edit', 'add', 'delete'])
+
+// Long-press state for delete confirmation
+const showDeleteConfirm = ref(false)
+let longPressTimer = null
+
+function onPressStart() {
+  if (!props.pokemon) return
+  longPressTimer = setTimeout(() => {
+    showDeleteConfirm.value = true
+  }, 500) // 500ms hold
+}
+
+function onPressEnd() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+function onPressCancel() {
+  onPressEnd()
+}
+
+function confirmDelete() {
+  emit('delete', props.pokemon.id)
+  showDeleteConfirm.value = false
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+}
 
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null
@@ -143,6 +194,9 @@ function hexToRgba(hex, alpha) {
   position: relative;
   box-shadow: var(--shadow-md);
   transition: transform var(--transition-base), box-shadow var(--transition-base);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .slot-inner {
