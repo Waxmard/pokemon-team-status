@@ -902,4 +902,25 @@ function onSearchInput(value) {
     transform: translateX(0);
   }
 }
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .wizard-container {
+    min-height: 180px;
+    max-height: 260px;
+    padding-bottom: var(--space-2);
+  }
+
+  .pokemon-preview {
+    margin: var(--space-2) 0;
+  }
+
+  .pokemon-preview .pokemon-sprite {
+    width: 96px;
+    height: 96px;
+  }
+
+  .wizard-header {
+    margin-bottom: var(--space-2);
+  }
+}
 </style>
