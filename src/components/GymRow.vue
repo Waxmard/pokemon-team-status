@@ -83,11 +83,6 @@ const berrySprite = computed(() => getBerrySprite(BERRY_BY_TYPE[props.type]))
   color: var(--color-text-primary);
 }
 
-.gym-row:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
 .gym-row:active {
   transform: scale(0.98);
 }

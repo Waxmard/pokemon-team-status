@@ -184,11 +184,6 @@ function toggleViewMode() {
   transition: all var(--transition-base);
 }
 
-.mode-toggle:hover:not(:disabled) {
-  background: var(--color-card);
-  box-shadow: var(--shadow-md);
-}
-
 .mode-toggle:disabled {
   opacity: 0.5;
   cursor: not-allowed;

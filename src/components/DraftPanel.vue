@@ -246,7 +246,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { NAutoComplete, NSelect } from 'naive-ui'
 import { POKEMON_DATA } from '../data/pokemon.js'
 import { ALL_TYPES, TYPE_COLORS, getTypeIcon } from '../data/types.js'
@@ -279,7 +279,7 @@ const {
 } = useDraftAction()
 
 // Mobile detection and wizard state
-const isMobile = ref(window.innerWidth < 768)
+const isMobile = ref(true)
 const wizardStep = ref('pokemon')
 
 // Template refs for auto-focus
@@ -312,11 +312,6 @@ onMounted(() => {
     }
   })
 
-  const handleResize = () => {
-    isMobile.value = window.innerWidth < 768
-  }
-  window.addEventListener('resize', handleResize)
-  onUnmounted(() => window.removeEventListener('resize', handleResize))
 })
 
 // Options for replace target dropdown
@@ -696,19 +691,9 @@ function onMoveInput(index, value) {
   color: white;
 }
 
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
-}
-
 .btn-success {
   background: var(--color-success);
   color: white;
-}
-
-.btn-success:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-glow-success);
 }
 
 .btn-secondary {
@@ -717,19 +702,9 @@ function onMoveInput(index, value) {
   border: 1px solid var(--color-border);
 }
 
-.btn-secondary:hover {
-  background: var(--color-card);
-  color: var(--color-text-primary);
-}
-
 .btn-danger {
   background: var(--color-danger, #dc3545);
   color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
 }
 
 @media (max-width: 480px) {
@@ -780,18 +755,9 @@ function onMoveInput(index, value) {
   transition: transform var(--transition-base), background var(--transition-base);
 }
 
-.btn-icon:hover:not(:disabled) {
-  background: var(--color-card);
-}
-
 .btn-icon:disabled {
   opacity: 0.3;
   cursor: not-allowed;
-}
-
-.btn-icon-cancel:hover:not(:disabled) {
-  background: var(--color-surface-light);
-  border-color: var(--color-text-muted);
 }
 
 .btn-icon-success {
@@ -800,20 +766,10 @@ function onMoveInput(index, value) {
   color: white;
 }
 
-.btn-icon-success:hover:not(:disabled) {
-  background: var(--color-success);
-  box-shadow: var(--shadow-glow-success);
-}
-
 .btn-icon-danger {
   background: var(--color-danger, #dc3545);
   border-color: var(--color-danger, #dc3545);
   color: white;
-}
-
-.btn-icon-danger:hover:not(:disabled) {
-  background: var(--color-danger, #dc3545);
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
 }
 
 .wizard-step {
@@ -883,12 +839,6 @@ function onMoveInput(index, value) {
   transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
 }
 
-.move-type-option:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
 .move-type-option:active:not(:disabled) {
   transform: scale(0.96);
 }
@@ -928,12 +878,6 @@ function onMoveInput(index, value) {
   transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
 }
 
-.berry-type-option:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
 .berry-type-option:active {
   transform: scale(0.96);
 }
@@ -966,12 +910,6 @@ function onMoveInput(index, value) {
   cursor: pointer;
   font-size: 0.95rem;
   transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
-}
-
-.ability-option:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .ability-option:active {

@@ -144,11 +144,6 @@ function hexToRgba(hex, alpha) {
   transform: scale(0.95);
 }
 
-.team-slot:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
 .team-slot.clickable {
   cursor: pointer;
 }
@@ -160,11 +155,6 @@ function hexToRgba(hex, alpha) {
   border: 2px dashed var(--color-border);
   background: var(--color-surface-light);
   box-shadow: none;
-}
-
-.team-slot.empty:hover {
-  transform: none;
-  border-color: var(--color-text-muted);
 }
 
 .empty-content {
