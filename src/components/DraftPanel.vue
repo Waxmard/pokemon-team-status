@@ -12,6 +12,34 @@
           >
             ⇄
           </button>
+
+          <!-- Moves step: inline special move UI -->
+          <template v-if="wizardStep === 'moves'">
+            <!-- Selected special move badge (when not editing) -->
+            <span v-if="localSpecialMove && !showSpecialMoveDropdown" class="special-move-badge-inline">
+              {{ localSpecialMove }}
+              <button class="clear-special-move-inline" @click="clearSpecialMove">✕</button>
+            </span>
+            <!-- Autocomplete input (when editing) -->
+            <n-auto-complete
+              v-if="showSpecialMoveDropdown"
+              v-model:value="specialMoveQuery"
+              :options="specialMoveOptions"
+              placeholder="Special move..."
+              @select="onSelectSpecialMove"
+              class="special-move-input-inline"
+              size="small"
+            />
+            <!-- Star button (bare icon like evolve) -->
+            <button
+              class="special-move-btn"
+              :class="{ active: showSpecialMoveDropdown || localSpecialMove }"
+              @click="toggleSpecialMoveDropdown"
+              aria-label="Special moves"
+            >
+              ✦
+            </button>
+          </template>
         </div>
 
         <!-- Step: Pokemon -->
@@ -33,6 +61,21 @@
               :alt="draftAction.pokemon.name"
               class="pokemon-sprite"
             />
+            <!-- Evolve button positioned inside preview -->
+            <button v-if="canEvolve" class="evolve-btn" @click="handleEvolveClick">
+              ⬆
+            </button>
+            <!-- Evolution options positioned under the button -->
+            <div v-if="canEvolve && showEvolveOptions" class="evolve-options">
+              <button
+                v-for="evoName in evolutionOptions"
+                :key="evoName"
+                class="evolve-option-pill"
+                @click="evolveTo(evoName)"
+              >
+                <img :src="getSpriteUrl(evoName)" :alt="evoName" class="evolve-sprite" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -77,9 +120,8 @@
               :key="type"
               @click="toggleMoveType(type)"
               class="move-type-option"
-              :class="{ selected: isMoveSelected(type), disabled: !isMoveSelected(type) && selectedMoveCount >= 4 }"
+              :class="{ selected: isMoveSelected(type) }"
               :style="getTypeBackground(type, isMoveSelected(type))"
-              :disabled="!isMoveSelected(type) && selectedMoveCount >= 4"
               :title="capitalize(type)"
             >
               <img :src="getTypeIcon(type)" :alt="type" class="type-icon" />
@@ -145,6 +187,7 @@ import { POKEMON_DATA } from '../data/pokemon.js'
 import { ALL_TYPES, TYPE_COLORS, getTypeIcon } from '../data/types.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
+import { SPECIAL_MOVES, SPECIAL_MOVE_NAMES } from '../data/specialMoves.js'
 import { getSpriteUrl, getBerrySprite } from '../utils/pokemon.js'
 import { getDefensiveMultiplier, applyAbilityDefense } from '../utils/typeCalc.js'
 import { useDraftAction } from '../composables/useDraftAction.js'
@@ -167,7 +210,8 @@ const {
   updatePokemon,
   updateAbility,
   updateBerry,
-  updateMove,
+  updateMoves,
+  updateSpecialMove,
   enterSwapMode
 } = useDraftAction()
 
@@ -180,6 +224,10 @@ const pokemonInputRef = ref(null)
 const searchQuery = ref('')
 const localAbility = ref(null)
 const localBerry = ref(null)
+const localSpecialMove = ref(null)
+const showEvolveOptions = ref(false)
+const showSpecialMoveDropdown = ref(false)
+const specialMoveQuery = ref('')
 
 // Initialize form state when draftAction changes
 watch(draftAction, (action) => {
@@ -187,6 +235,7 @@ watch(draftAction, (action) => {
   searchQuery.value = action.pokemon?.name || ''
   localAbility.value = action.ability
   localBerry.value = action.berry
+  localSpecialMove.value = action.specialMove
 }, { immediate: true, deep: true })
 
 // Auto-focus Pokemon name field on open only if empty, and handle resize
@@ -230,6 +279,32 @@ const autocompleteOptions = computed(() => {
       pokemon: p
     }))
 })
+
+const canEvolve = computed(() => !!draftAction.value?.pokemon?.evolvesTo)
+
+const evolutionOptions = computed(() => {
+  const evo = draftAction.value?.pokemon?.evolvesTo
+  if (!evo) return []
+  return Array.isArray(evo) ? evo : [evo]
+})
+
+function handleEvolveClick() {
+  const options = evolutionOptions.value
+  if (options.length === 1) {
+    evolveTo(options[0])
+  } else {
+    showEvolveOptions.value = !showEvolveOptions.value
+  }
+}
+
+function evolveTo(name) {
+  const pokemon = POKEMON_DATA.find(p => p.name === name)
+  if (pokemon) {
+    updatePokemon(pokemon)
+    searchQuery.value = pokemon.name
+    showEvolveOptions.value = false
+  }
+}
 
 function onEnterSwapMode() {
   enterSwapMode()
@@ -284,11 +359,11 @@ const relevantBerries = computed(() => {
 
 // Move selection helpers for wizard
 const selectedMoveCount = computed(() => {
-  return draftAction.value?.moves.filter(m => m).length || 0
+  return draftAction.value?.moves?.length || 0
 })
 
 function isMoveSelected(type) {
-  return draftAction.value?.moves.includes(type)
+  return draftAction.value?.moves?.includes(type)
 }
 
 function toggleMoveType(type) {
@@ -297,18 +372,42 @@ function toggleMoveType(type) {
 
   if (existingIndex !== -1) {
     // Remove the move
-    moves[existingIndex] = null
-    // Compact the array (shift nulls to end)
-    const nonNull = moves.filter(m => m)
-    while (nonNull.length < 4) nonNull.push(null)
-    nonNull.forEach((m, i) => updateMove({ index: i, value: m }))
-  } else if (selectedMoveCount.value < 4) {
-    // Add the move to first empty slot
-    const emptyIndex = moves.findIndex(m => !m)
-    if (emptyIndex !== -1) {
-      updateMove({ index: emptyIndex, value: type })
-    }
+    moves.splice(existingIndex, 1)
+  } else {
+    // Add the move (no limit)
+    moves.push(type)
   }
+  updateMoves(moves)
+}
+
+// Special move helpers
+const specialMoveOptions = computed(() => {
+  if (!specialMoveQuery.value) {
+    return SPECIAL_MOVE_NAMES.map(name => ({ label: name, value: name }))
+  }
+  const query = specialMoveQuery.value.toLowerCase()
+  return SPECIAL_MOVE_NAMES
+    .filter(name => name.toLowerCase().includes(query))
+    .map(name => ({ label: name, value: name }))
+})
+
+function toggleSpecialMoveDropdown() {
+  showSpecialMoveDropdown.value = !showSpecialMoveDropdown.value
+  if (showSpecialMoveDropdown.value) {
+    specialMoveQuery.value = ''
+  }
+}
+
+function onSelectSpecialMove(value) {
+  localSpecialMove.value = value
+  updateSpecialMove(value)
+  showSpecialMoveDropdown.value = false
+  specialMoveQuery.value = ''
+}
+
+function clearSpecialMove() {
+  localSpecialMove.value = null
+  updateSpecialMove(null)
 }
 
 // Wizard navigation functions
@@ -503,6 +602,51 @@ function onSearchInput(value) {
   transform: scale(0.95);
 }
 
+.special-move-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: color var(--transition-base);
+}
+
+.special-move-btn:hover,
+.special-move-btn.active {
+  color: rgba(139, 92, 246, 1);
+}
+
+.special-move-badge-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.clear-special-move-inline {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.clear-special-move-inline:hover {
+  color: var(--color-text);
+}
+
+.special-move-input-inline {
+  flex: 1;
+  max-width: 140px;
+}
+
 .wizard-options {
   display: flex;
   flex-direction: column;
@@ -560,11 +704,6 @@ function onSearchInput(value) {
 .move-type-option.selected {
   border-color: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
-}
-
-.move-type-option.disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
 }
 
 .move-type-option .type-icon {
@@ -640,6 +779,7 @@ function onSearchInput(value) {
 }
 
 .pokemon-preview {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -649,6 +789,55 @@ function onSearchInput(value) {
 .pokemon-preview .pokemon-sprite {
   width: 144px;
   height: 144px;
+  object-fit: contain;
+}
+
+.evolve-btn {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  background: transparent;
+  border: none;
+  color: var(--color-success);
+  font-size: 1.25rem;
+  font-weight: 900;
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.evolve-btn:active {
+  transform: scale(0.95);
+}
+
+.evolve-options {
+  position: absolute;
+  top: calc(var(--space-2) + 2.5rem);
+  right: var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-1);
+  z-index: 10;
+}
+
+.evolve-option-pill {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: all var(--transition-base);
+}
+
+.evolve-option-pill:active {
+  transform: scale(0.95);
+}
+
+.evolve-sprite {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
