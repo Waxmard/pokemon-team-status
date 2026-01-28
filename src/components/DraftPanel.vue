@@ -468,6 +468,7 @@ function onSearchInput(value) {
 .wizard-step {
   animation: fadeSlideIn 0.2s ease;
   flex: 1;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
