@@ -724,6 +724,7 @@ function onMoveInput(index, value) {
   flex-direction: column;
   flex: 1;
   min-height: 300px;
+  max-height: 400px;
   padding-bottom: var(--space-4);
 }
 
@@ -774,6 +775,8 @@ function onMoveInput(index, value) {
 
 .wizard-step {
   animation: fadeSlideIn 0.2s ease;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .wizard-title {
@@ -898,8 +901,6 @@ function onMoveInput(index, value) {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-height: 50vh;
-  overflow-y: auto;
 }
 
 .ability-option {
