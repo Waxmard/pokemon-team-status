@@ -475,6 +475,7 @@ function onSelectPokemon(value) {
   if (pokemon) {
     updatePokemon(pokemon)
     searchQuery.value = pokemon.name
+    pokemonInputRef.value?.blur()
   }
 }
 
