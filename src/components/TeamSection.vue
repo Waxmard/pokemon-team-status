@@ -12,35 +12,24 @@
     <!-- Grid Container - handles show/hide based on draft state -->
     <div v-show="!showDraftPanel || swapMode">
       <!-- Team Grid -->
-      <draggable
-        v-if="viewMode === 'team'"
-        v-model="localTeam"
-        :disabled="isActive"
-        item-key="id"
-        ghost-class="drag-ghost"
-        drag-class="drag-active"
-        class="team-grid"
-        @end="onDragEnd"
-      >
-        <template #item="{ element: pokemon }">
-          <TeamSlot
-            :pokemon="pokemon"
-            :swapMode="swapMode"
-            :selected="selectedSwapTarget === pokemon.id"
-            @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
-          />
-        </template>
-        <template #footer>
-          <TeamSlot
-            v-for="i in emptySlotCount"
-            :key="'empty-' + i"
-            :pokemon="null"
-            :swapMode="swapMode"
-            :selected="selectedSwapTarget === `empty-${i}`"
-            @add="swapMode ? handleSwapSelect(`empty-${i}`) : startAdd()"
-          />
-        </template>
-      </draggable>
+      <div v-if="viewMode === 'team'" class="team-grid">
+        <TeamSlot
+          v-for="pokemon in team"
+          :key="pokemon.id"
+          :pokemon="pokemon"
+          :swapMode="swapMode"
+          :selected="selectedSwapTarget === pokemon.id"
+          @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
+        />
+        <TeamSlot
+          v-for="i in emptySlotCount"
+          :key="'empty-' + i"
+          :pokemon="null"
+          :swapMode="swapMode"
+          :selected="selectedSwapTarget === `empty-${i}`"
+          @add="swapMode ? handleSwapSelect(`empty-${i}`) : startAdd()"
+        />
+      </div>
 
       <!-- Box Grid -->
       <div v-else class="box-grid">
@@ -73,7 +62,6 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import draggable from 'vuedraggable'
 import TeamSlot from './TeamSlot.vue'
 import DraftPanel from './DraftPanel.vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
@@ -91,21 +79,12 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
-  'confirmDraft',
-  'reorderTeam'
+  'confirmDraft'
 ])
 
-const { draftAction, isActive, swapMode, startAdd, startEdit, startEditBox, startAddToBox, updateReplaceTarget, cancel } = useDraftAction()
+const { draftAction, swapMode, startAdd, startEdit, startEditBox, startAddToBox, updateReplaceTarget, cancel } = useDraftAction()
 
 const viewMode = ref('team')
-
-// Local copy for draggable (only actual Pokemon, no nulls)
-const localTeam = ref([...props.team])
-
-// Sync when props change
-watch(() => props.team, (newTeam) => {
-  localTeam.value = [...newTeam]
-}, { deep: true })
 
 // Switch to team view when entering swap mode
 watch(swapMode, (isSwapMode) => {
@@ -132,11 +111,6 @@ function handleSwapSelect(targetId) {
 const showDraftPanel = computed(() => {
   return !!draftAction.value && !swapMode.value
 })
-
-// Emit reorder when drag ends
-function onDragEnd() {
-  emit('reorderTeam', localTeam.value)
-}
 
 function handleEditPokemon(id) {
   const pokemon = props.team.find(p => p.id === id)
@@ -230,17 +204,5 @@ function toggleViewMode() {
   grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
-}
-
-.drag-ghost {
-  opacity: 0.5;
-}
-
-.drag-active {
-  cursor: grabbing;
-}
-
-.team-slot:not(.empty) {
-  cursor: grab;
 }
 </style>

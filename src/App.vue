@@ -9,7 +9,6 @@
         :team="team"
         :box="box"
         @confirmDraft="confirmDraft"
-        @reorderTeam="reorderTeam"
       />
 
       <GymColumns
@@ -244,10 +243,6 @@ function confirmDraft() {
   }
 
   cancel()
-}
-
-function reorderTeam(newOrder) {
-  persistTeam(newOrder)
 }
 
 function defeatGym(type) {
