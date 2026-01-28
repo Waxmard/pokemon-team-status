@@ -14,6 +14,7 @@
       <GymColumns
         :remainingGyms="remainingGyms"
         :defeatedGymsList="defeatedGymsList"
+        :draftActive="hasDraft"
         :showSwapPreview="showSwapPreview"
         :swapBoxPokemon="swapBoxPokemon"
         :swapTeamPokemon="swapTeamPokemon"
@@ -50,14 +51,64 @@ const {
 
 const { draftAction, swapMode, exitSwapMode, cancel } = useDraftAction()
 
+// Helper to construct the hypothetical draft team
+function getDraftTeam() {
+  if (!draftAction.value?.pokemon) return team.value
+
+  const draft = {
+    name: draftAction.value.pokemon.name,
+    types: draftAction.value.pokemon.types,
+    ability: draftAction.value.ability,
+    berry: draftAction.value.berry,
+    moves: draftAction.value.moves.filter(m => m)
+  }
+
+  if (draftAction.value.type === 'add') {
+    return [...team.value, draft]
+  } else if (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) {
+    // Editing a team Pokemon
+    return team.value.map(p => p.id === draftAction.value.editId ? draft : p)
+  } else if (draftAction.value.isBoxPokemon && draftAction.value.replaceTarget) {
+    // Box Pokemon swapping with team slot
+    if (draftAction.value.replaceTarget.startsWith('empty-')) {
+      // Adding to empty slot
+      return [...team.value, draft]
+    } else {
+      // Replacing existing team member
+      return team.value.map(p => p.id === draftAction.value.replaceTarget ? draft : p)
+    }
+  }
+  return team.value
+}
+
 // Computed
+const hasDraft = computed(() => {
+  return draftAction.value?.pokemon && (
+    draftAction.value.type === 'add' ||
+    (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) ||
+    (draftAction.value.isBoxPokemon && draftAction.value.replaceTarget)
+  )
+})
+
 const remainingGyms = computed(() => {
+  const draftTeam = getDraftTeam()
+
   return ALL_TYPES
     .filter(type => !defeatedGyms.value.includes(type))
     .map(type => {
       const score = calculateScore(type, team.value)
       const berryCount = calculateBerryTiebreaker(type, team.value)
-      return { type, score, berryCount }
+
+      let scoreDiff = 0
+      let berryDiff = 0
+      if (hasDraft.value) {
+        const newScore = calculateScore(type, draftTeam)
+        const newBerryCount = calculateBerryTiebreaker(type, draftTeam)
+        scoreDiff = newScore - score
+        berryDiff = newBerryCount - berryCount
+      }
+
+      return { type, score, berryCount, scoreDiff, berryDiff }
     })
     .sort((a, b) => {
       if (a.score !== b.score) return a.score - b.score
@@ -66,12 +117,24 @@ const remainingGyms = computed(() => {
 })
 
 const defeatedGymsList = computed(() => {
+  const draftTeam = getDraftTeam()
+
   return ALL_TYPES
     .filter(type => defeatedGyms.value.includes(type))
     .map(type => {
       const score = calculateScore(type, team.value)
       const berryCount = calculateBerryTiebreaker(type, team.value)
-      return { type, score, berryCount }
+
+      let scoreDiff = 0
+      let berryDiff = 0
+      if (hasDraft.value) {
+        const newScore = calculateScore(type, draftTeam)
+        const newBerryCount = calculateBerryTiebreaker(type, draftTeam)
+        scoreDiff = newScore - score
+        berryDiff = newBerryCount - berryCount
+      }
+
+      return { type, score, berryCount, scoreDiff, berryDiff }
     })
     .sort((a, b) => {
       if (a.score !== b.score) return a.score - b.score
