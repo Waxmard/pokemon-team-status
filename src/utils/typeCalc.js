@@ -101,6 +101,17 @@ export function calculateScore(gymType, team) {
       }
     }
 
+    // Mega evolution: extra types = resistances only (like Protean)
+    if (member.megaTypes?.length) {
+      for (const megaType of member.megaTypes) {
+        if (member.types.includes(megaType)) continue
+        const megaMultiplier = getTypeEffectiveness(gymType, megaType)
+        if (megaMultiplier === 0)
+          score += 2 // immunity
+        else if (megaMultiplier === 0.5) score += 1 // resist
+      }
+    }
+
     // Check offensive coverage
     if (hasEffectiveMove(member.moves, gymType, member.specialMove)) score += 1
   }

@@ -55,11 +55,12 @@
             clearable
           />
           <div v-if="draftAction.pokemon" class="pokemon-preview">
-            <img
+            <SpriteImg
               v-if="selectedSpriteUrl"
               :src="selectedSpriteUrl"
               :alt="draftAction.pokemon.name"
-              class="pokemon-sprite"
+              :width="144"
+              :height="144"
             />
             <!-- Evolve button positioned inside preview -->
             <button v-if="canEvolve" class="evolve-btn" @click="handleEvolveClick">
@@ -68,12 +69,13 @@
             <!-- Evolution options positioned under the button -->
             <div v-if="canEvolve && showEvolveOptions" class="evolve-options">
               <button
-                v-for="evoName in evolutionOptions"
-                :key="evoName"
+                v-for="option in evolutionOptions"
+                :key="option.isMega ? option.name : option"
                 class="evolve-option-pill"
-                @click="evolveTo(evoName)"
+                :class="{ 'mega-selected': isCurrentMega(option) }"
+                @click="evolveTo(option)"
               >
-                <img :src="getSpriteUrl(evoName)" :alt="evoName" class="evolve-sprite" />
+                <SpriteImg :src="getEvoSpriteUrl(option)" :alt="option.isMega ? option.name : option" :width="40" :height="40" />
               </button>
             </div>
           </div>
@@ -107,7 +109,7 @@
               :style="getTypeBackground(berry.type, localBerry === berry.value)"
               :title="berry.label"
             >
-              <img :src="getBerrySprite(berry.value)" :alt="berry.label" class="berry-icon" />
+              <SpriteImg :src="getBerrySprite(berry.value)" :alt="berry.label" :width="44" :height="44" />
             </button>
           </div>
         </div>
@@ -185,6 +187,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
+import { getMegaOptions } from '../data/megaEvolutions.js'
 import { POKEMON_DATA } from '../data/pokemon.js'
 import { SPECIAL_MOVE_NAMES } from '../data/specialMoves.js'
 import { ALL_TYPES, getTypeIcon, TYPE_COLORS } from '../data/types.js'
@@ -193,6 +196,7 @@ import {
   applyAbilityDefense,
   getDefensiveMultiplier,
 } from '../utils/typeCalc.js'
+import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
   hideSearch: {
@@ -214,6 +218,7 @@ const {
   updateBerry,
   updateMoves,
   updateSpecialMove,
+  updateMegaForm,
   enterSwapMode,
 } = useDraftAction()
 
@@ -299,6 +304,10 @@ const wizardStepTitle = computed(() => {
 
 const selectedSpriteUrl = computed(() => {
   if (!draftAction.value?.pokemon) return null
+  // Use mega sprite if mega form is active
+  if (draftAction.value.megaSpriteId) {
+    return getMegaSpriteUrl(draftAction.value.megaSpriteId)
+  }
   return getSpriteUrl(draftAction.value.pokemon.name)
 })
 
@@ -314,12 +323,28 @@ const autocompleteOptions = computed(() => {
     }))
 })
 
-const canEvolve = computed(() => !!draftAction.value?.pokemon?.evolvesTo)
+const megaOptions = computed(() => {
+  if (!draftAction.value?.pokemon) return []
+  return getMegaOptions(draftAction.value.pokemon.name)
+})
+
+const canEvolve = computed(() => {
+  return !!draftAction.value?.pokemon?.evolvesTo || megaOptions.value.length > 0
+})
 
 const evolutionOptions = computed(() => {
   const evo = draftAction.value?.pokemon?.evolvesTo
-  if (!evo) return []
-  return Array.isArray(evo) ? evo : [evo]
+  const evoList = evo ? (Array.isArray(evo) ? evo : [evo]) : []
+  // Add mega options as special entries
+  const megas = megaOptions.value.map((mega) => ({
+    isMega: true,
+    form: mega.form,
+    types: mega.types,
+    spriteId: mega.spriteId,
+    ability: mega.ability,
+    name: `${draftAction.value.pokemon.name}-${mega.form}`,
+  }))
+  return [...evoList, ...megas]
 })
 
 function handleEvolveClick() {
@@ -331,11 +356,51 @@ function handleEvolveClick() {
   }
 }
 
-function evolveTo(name) {
-  const pokemon = POKEMON_DATA.find((p) => p.name === name)
+function getMegaSpriteUrl(spriteId) {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${spriteId}.png`
+}
+
+function getEvoSpriteUrl(option) {
+  if (option.isMega) {
+    return getMegaSpriteUrl(option.spriteId)
+  }
+  return getSpriteUrl(option)
+}
+
+function isCurrentMega(option) {
+  return option.isMega && draftAction.value?.megaForm === option.form
+}
+
+function evolveTo(option) {
+  // Handle mega evolution option
+  if (option.isMega) {
+    // Toggle mega: if already selected, deselect
+    if (draftAction.value?.megaForm === option.form) {
+      updateMegaForm(null, null, null)
+      // Clear ability if it was set by the mega
+      if (option.ability && localAbility.value === option.ability) {
+        updateAbility(null)
+        localAbility.value = null
+      }
+    } else {
+      updateMegaForm(option.form, option.types, option.spriteId)
+      // Auto-apply ability if the mega has one
+      if (option.ability) {
+        updateAbility(option.ability)
+        localAbility.value = option.ability
+      }
+    }
+    showEvolveOptions.value = false
+    return
+  }
+
+  // Handle regular evolution (option is just a string name)
+  const pokemon = POKEMON_DATA.find((p) => p.name === option)
   if (pokemon) {
     updatePokemon(pokemon)
     searchQuery.value = pokemon.name
+    // Clear mega form when evolving to a different Pokemon
+    updateMegaForm(null, null, null)
     showEvolveOptions.value = false
   }
 }
@@ -348,6 +413,7 @@ function clearSelections() {
   updateBerry(null)
   updateMoves([])
   updateSpecialMove(null)
+  updateMegaForm(null, null, null)
 }
 
 function onEnterSwapMode() {
@@ -791,12 +857,6 @@ function onSearchInput(value) {
   transform: scale(1.05);
 }
 
-.berry-type-option .berry-icon {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-}
-
 /* Ability list (1 column) */
 .ability-list {
   display: flex;
@@ -835,12 +895,6 @@ function onSearchInput(value) {
   align-items: center;
   justify-content: center;
   margin: var(--space-4) 0;
-}
-
-.pokemon-preview .pokemon-sprite {
-  width: 144px;
-  height: 144px;
-  object-fit: contain;
 }
 
 .evolve-btn {
@@ -886,10 +940,9 @@ function onSearchInput(value) {
   transform: scale(0.95);
 }
 
-.evolve-sprite {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.evolve-option-pill.mega-selected {
+  border-color: var(--color-success);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
 }
 
 @keyframes fadeSlideIn {
@@ -900,6 +953,29 @@ function onSearchInput(value) {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .wizard-container {
+    min-height: 180px;
+    max-height: 260px;
+    padding-bottom: var(--space-2);
+  }
+
+  .pokemon-preview {
+    margin: var(--space-2) 0;
+  }
+
+  .wizard-header {
+    margin-bottom: var(--space-2);
+  }
+}
+
+@media (orientation: portrait) {
+  .wizard-container {
+    min-height: 220px;
+    max-height: 390px;
   }
 }
 </style>

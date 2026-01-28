@@ -30,18 +30,20 @@
           <div v-if="pokemon" key="filled" class="slot-inner">
             <div class="slot-content">
               <div class="sprite-container">
-                <img
+                <SpriteImg
                   v-if="spriteUrl"
                   :src="spriteUrl"
                   :alt="pokemon.name"
-                  class="pokemon-sprite"
+                  :width="80"
+                  :height="80"
                 />
-                <img
+                <SpriteImg
                   v-if="pokemon.berry"
                   :src="getBerrySprite(pokemon.berry)"
                   :alt="pokemon.berry"
                   :title="pokemon.berry"
-                  class="berry-sprite"
+                  :width="24"
+                  :height="24"
                 />
               </div>
               <div class="pokemon-info">
@@ -87,6 +89,7 @@ import { computed, ref } from 'vue'
 import { ABILITIES } from '../data/abilities.js'
 import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { getBerrySprite, getSpriteUrl } from '../utils/pokemon.js'
+import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
   pokemon: {
@@ -136,8 +139,16 @@ function cancelDelete() {
   showDeleteConfirm.value = false
 }
 
+function getMegaSpriteUrl(spriteId) {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${spriteId}.png`
+}
+
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null
+  // Use mega sprite if mega form is active
+  if (props.pokemon.megaSpriteId) {
+    return getMegaSpriteUrl(props.pokemon.megaSpriteId)
+  }
   return getSpriteUrl(props.pokemon.name)
 })
 
@@ -153,6 +164,15 @@ const cardBackgroundStyle = computed(() => {
     for (const moveType of props.pokemon.moves) {
       if (moveType && !types.includes(moveType)) {
         types.push(moveType)
+      }
+    }
+  }
+
+  // Include mega types in the gradient
+  if (props.pokemon.megaTypes?.length) {
+    for (const megaType of props.pokemon.megaTypes) {
+      if (!types.includes(megaType)) {
+        types.push(megaType)
       }
     }
   }
@@ -261,17 +281,6 @@ function hexToRgba(hex, alpha) {
   flex-shrink: 0;
 }
 
-.pokemon-sprite {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
-}
-
-.berry-sprite {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
 
 .pokemon-info {
   flex: 1;

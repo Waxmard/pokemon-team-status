@@ -1,23 +1,36 @@
 <template>
   <div
     class="gym-card touchable"
-    :class="{ defeated: defeated }"
+    :class="{ defeated: defeated, pinned: pinned }"
     :style="rowBackgroundStyle"
     @click="$emit('click', type)"
   >
-    <img :src="getTypeIcon(type)" :alt="type" class="type-icon" />
+    <!-- Drag handle for pin -->
+    <span
+      class="drag-handle"
+      draggable="true"
+      @dragstart.stop="onHandleDragStart"
+      @touchstart.stop="onHandleTouchStart"
+    >
+      ⋮⋮
+    </span>
+
+    <span v-if="pinned" class="pin-indicator">📌</span>
+    <img :src="getTypeIcon(type)" :alt="type" class="type-icon" draggable="false" />
 
     <span
       v-if="berryCount > 0"
       class="berry-corner"
       :title="`${berryCount} ${BERRY_BY_TYPE[type]}${berryCount > 1 ? 's' : ''}`"
     >
-      <img
+      <SpriteImg
         v-for="i in berryCount"
         :key="i"
         :src="berrySprite"
-        class="berry-sprite"
         :alt="BERRY_BY_TYPE[type]"
+        :width="22"
+        :height="22"
+        class="berry-sprite"
       />
     </span>
 
@@ -30,9 +43,10 @@
 <script setup>
 import { computed } from 'vue'
 import { BERRY_BY_TYPE } from '../data/berries.js'
-import { getTypeIcon } from '../data/types.js'
-import { getTypeBackground } from '../utils/colors.js'
+import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
+import { getTypeBackground, hexToRgba } from '../utils/colors.js'
 import { getBerrySprite } from '../utils/pokemon.js'
+import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
   type: {
@@ -51,14 +65,35 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  pinned: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-defineEmits(['click'])
+const emit = defineEmits(['click', 'dragstart', 'touchdragstart'])
 
 const berrySprite = computed(() => getBerrySprite(BERRY_BY_TYPE[props.type]))
 
+function onHandleDragStart(event) {
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', props.type)
+  }
+  emit('dragstart', event)
+}
+
+function onHandleTouchStart() {
+  emit('touchdragstart')
+}
+
 const rowBackgroundStyle = computed(() => {
-  return getTypeBackground(props.type, 0.2)
+  const baseStyle = getTypeBackground(props.type, 0.35)
+  const borderColor = TYPE_COLORS[props.type].bg
+  return {
+    ...baseStyle,
+    borderColor: hexToRgba(borderColor, 0.5),
+  }
 })
 </script>
 
@@ -73,8 +108,10 @@ const rowBackgroundStyle = computed(() => {
   cursor: pointer;
   transition: transform var(--transition-base), box-shadow var(--transition-base), opacity var(--transition-base);
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: element;
   user-select: none;
-  border: 1px solid var(--color-border);
+  border: 2px solid; /* color set via inline style */
   color: var(--color-text-primary);
 }
 
@@ -90,6 +127,9 @@ const rowBackgroundStyle = computed(() => {
   width: 48px;
   height: 48px;
   object-fit: contain;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  pointer-events: none;
 }
 
 .berry-corner {
@@ -101,9 +141,6 @@ const rowBackgroundStyle = computed(() => {
 }
 
 .berry-sprite {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
   margin-left: -6px;
 }
 
@@ -129,5 +166,48 @@ const rowBackgroundStyle = computed(() => {
 
 .score-corner.negative {
   color: var(--color-danger);
+}
+
+.gym-card.pinned {
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.pin-indicator {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 0.75rem;
+}
+
+.drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  cursor: grab;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  opacity: 0.6;
+  transition: opacity var(--transition-base);
+}
+
+.drag-handle:hover {
+  opacity: 1;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Move pin indicator when drag handle is present */
+.gym-card .pin-indicator {
+  left: 28px;
 }
 </style>

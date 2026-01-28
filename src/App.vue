@@ -59,6 +59,7 @@ function getDraftTeam() {
     berry: draftAction.value.berry,
     moves: draftAction.value.moves.filter((m) => m),
     specialMove: draftAction.value.specialMove,
+    megaTypes: draftAction.value.megaTypes,
   }
 
   if (draftAction.value.type === 'add') {
@@ -164,6 +165,9 @@ function confirmDraft() {
     berry: draftAction.value.berry,
     moves: draftAction.value.moves.filter((m) => m),
     specialMove: draftAction.value.specialMove,
+    megaForm: draftAction.value.megaForm,
+    megaTypes: draftAction.value.megaTypes,
+    megaSpriteId: draftAction.value.megaSpriteId,
   }
 
   if (draftAction.value.type === 'add') {
@@ -188,6 +192,9 @@ function confirmDraft() {
         berry: draftAction.value.berry,
         moves: draftAction.value.moves.filter((m) => m),
         specialMove: draftAction.value.specialMove,
+        megaForm: draftAction.value.megaForm,
+        megaTypes: draftAction.value.megaTypes,
+        megaSpriteId: draftAction.value.megaSpriteId,
       }
 
       if (draftAction.value.replaceTarget) {
@@ -219,6 +226,9 @@ function confirmDraft() {
               berry: replacedPokemon.berry,
               moves: replacedPokemon.moves,
               specialMove: replacedPokemon.specialMove,
+              megaForm: replacedPokemon.megaForm,
+              megaTypes: replacedPokemon.megaTypes,
+              megaSpriteId: replacedPokemon.megaSpriteId,
             }
             // Replace team Pokemon with box Pokemon
             persistTeam(

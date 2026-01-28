@@ -19,6 +19,9 @@ export function useDraftAction() {
       berry: null,
       moves: [],
       specialMove: null,
+      megaForm: null,
+      megaTypes: null,
+      megaSpriteId: null,
     }
   }
 
@@ -38,6 +41,9 @@ export function useDraftAction() {
       berry: member.berry,
       moves: [...(member.moves || [])],
       specialMove: member.specialMove || null,
+      megaForm: member.megaForm || null,
+      megaTypes: member.megaTypes || null,
+      megaSpriteId: member.megaSpriteId || null,
     }
   }
 
@@ -58,6 +64,9 @@ export function useDraftAction() {
       moves: [...(boxMember.moves || [])],
       specialMove: boxMember.specialMove || null,
       replaceTarget: null,
+      megaForm: boxMember.megaForm || null,
+      megaTypes: boxMember.megaTypes || null,
+      megaSpriteId: boxMember.megaSpriteId || null,
     }
   }
 
@@ -72,6 +81,9 @@ export function useDraftAction() {
       berry: null,
       moves: [],
       specialMove: null,
+      megaForm: null,
+      megaTypes: null,
+      megaSpriteId: null,
     }
   }
 
@@ -102,6 +114,14 @@ export function useDraftAction() {
   function updateSpecialMove(specialMove) {
     if (draftAction.value) {
       draftAction.value.specialMove = specialMove
+    }
+  }
+
+  function updateMegaForm(form, types, spriteId) {
+    if (draftAction.value) {
+      draftAction.value.megaForm = form
+      draftAction.value.megaTypes = types
+      draftAction.value.megaSpriteId = spriteId
     }
   }
 
@@ -138,6 +158,7 @@ export function useDraftAction() {
     updateBerry,
     updateMoves,
     updateSpecialMove,
+    updateMegaForm,
     updateReplaceTarget,
     enterSwapMode,
     exitSwapMode,
