@@ -32,8 +32,8 @@
 <script setup>
 import { computed } from 'vue'
 import { BERRY_BY_TYPE } from '../data/berries.js'
-import { getTypeIcon } from '../data/types.js'
-import { getTypeBackground } from '../utils/colors.js'
+import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
+import { getTypeBackground, hexToRgba } from '../utils/colors.js'
 import { getBerrySprite } from '../utils/pokemon.js'
 import SpriteImg from './SpriteImg.vue'
 
@@ -61,7 +61,12 @@ defineEmits(['click'])
 const berrySprite = computed(() => getBerrySprite(BERRY_BY_TYPE[props.type]))
 
 const rowBackgroundStyle = computed(() => {
-  return getTypeBackground(props.type, 0.2)
+  const baseStyle = getTypeBackground(props.type, 0.35)
+  const borderColor = TYPE_COLORS[props.type].bg
+  return {
+    ...baseStyle,
+    borderColor: hexToRgba(borderColor, 0.5),
+  }
 })
 </script>
 
@@ -77,7 +82,7 @@ const rowBackgroundStyle = computed(() => {
   transition: transform var(--transition-base), box-shadow var(--transition-base), opacity var(--transition-base);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  border: 1px solid var(--color-border);
+  border: 2px solid; /* color set via inline style */
   color: var(--color-text-primary);
 }
 
