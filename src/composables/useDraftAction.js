@@ -107,7 +107,7 @@ export function useDraftAction() {
 
   function updateReplaceTarget(target) {
     if (draftAction.value) {
-      draftAction.value.replaceTarget = target
+      draftAction.value = { ...draftAction.value, replaceTarget: target }
     }
   }
 

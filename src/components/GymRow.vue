@@ -8,7 +8,7 @@
     <img :src="getTypeIcon(type)" :alt="type" class="type-icon" />
 
     <span
-      v-if="berryCount > 0 || berryDiff !== 0"
+      v-if="berryCount > 0"
       class="berry-corner"
       :title="`${berryCount} ${BERRY_BY_TYPE[type]}${berryCount > 1 ? 's' : ''}`"
     >
@@ -19,16 +19,10 @@
         class="berry-sprite"
         :alt="BERRY_BY_TYPE[type]"
       />
-      <span v-if="berryDiff !== 0" class="berry-diff" :class="{ positive: berryDiff > 0, negative: berryDiff < 0 }">
-        {{ berryDiff > 0 ? '+' : '' }}{{ berryDiff }}
-      </span>
     </span>
 
     <span class="score-corner" :class="{ positive: score > 0, negative: score < 0 }">
       {{ score > 0 ? '+' : '' }}{{ score }}
-      <span v-if="scoreDiff !== 0" class="score-diff" :class="{ positive: scoreDiff < 0, negative: scoreDiff > 0 }">
-        {{ scoreDiff > 0 ? '+' : '' }}{{ scoreDiff }}
-      </span>
     </span>
   </div>
 </template>
@@ -50,14 +44,6 @@ const props = defineProps({
     required: true,
   },
   berryCount: {
-    type: Number,
-    default: 0,
-  },
-  scoreDiff: {
-    type: Number,
-    default: 0,
-  },
-  berryDiff: {
     type: Number,
     default: 0,
   },
@@ -143,26 +129,5 @@ const rowBackgroundStyle = computed(() => {
 
 .score-corner.negative {
   color: var(--color-danger);
-}
-
-.score-diff, .berry-diff {
-  font-size: 0.75rem;
-  margin-left: 4px;
-  padding: 1px 4px;
-  border-radius: var(--radius-sm);
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.score-diff.positive, .berry-diff.positive {
-  color: var(--color-success);
-}
-
-.score-diff.negative, .berry-diff.negative {
-  color: var(--color-danger);
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
 }
 </style>

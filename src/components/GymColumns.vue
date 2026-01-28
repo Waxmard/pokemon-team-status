@@ -1,15 +1,5 @@
 <template>
   <div class="gym-section-wrapper">
-    <!-- Swap Preview -->
-    <SwapPreview
-      v-if="showSwapPreview"
-      :boxPokemon="swapBoxPokemon"
-      :teamPokemon="swapTeamPokemon"
-      :hasTarget="hasSwapTarget"
-      @confirm="$emit('confirmSwap')"
-      @cancel="$emit('cancelSwap')"
-    />
-
     <div class="gym-section">
       <GymColumn
         title="Gyms"
@@ -26,7 +16,6 @@
 <script setup>
 import { computed } from 'vue'
 import GymColumn from './GymColumn.vue'
-import SwapPreview from './SwapPreview.vue'
 
 const props = defineProps({
   remainingGyms: {
@@ -41,30 +30,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  showSwapPreview: {
-    type: Boolean,
-    default: false,
-  },
-  swapBoxPokemon: {
-    type: Object,
-    default: null,
-  },
-  swapTeamPokemon: {
-    type: Object,
-    default: null,
-  },
-  hasSwapTarget: {
-    type: Boolean,
-    default: false,
-  },
 })
 
-const emit = defineEmits([
-  'defeatGym',
-  'undefeatGym',
-  'confirmSwap',
-  'cancelSwap',
-])
+const emit = defineEmits(['defeatGym', 'undefeatGym'])
 
 // Create a set of defeated gym types for quick lookup
 const defeatedTypes = computed(() => {

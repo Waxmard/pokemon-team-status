@@ -9,20 +9,16 @@
         :team="team"
         :box="box"
         @confirmDraft="confirmDraft"
+        @confirmSwap="confirmDraft"
+        @cancelSwap="cancelSwap"
       />
 
       <GymColumns
         :remainingGyms="remainingGyms"
         :defeatedGymsList="defeatedGymsList"
         :draftActive="hasDraft"
-        :showSwapPreview="showSwapPreview"
-        :swapBoxPokemon="swapBoxPokemon"
-        :swapTeamPokemon="swapTeamPokemon"
-        :hasSwapTarget="hasSwapTarget"
         @defeatGym="defeatGym"
         @undefeatGym="undefeatGym"
-        @confirmSwap="confirmDraft"
-        @cancelSwap="cancelSwap"
       />
     </div>
   </n-config-provider>
@@ -48,7 +44,7 @@ const {
   persistBox,
 } = useStorage()
 
-const { draftAction, swapMode, exitSwapMode, cancel } = useDraftAction()
+const { draftAction, exitSwapMode, cancel } = useDraftAction()
 
 // Helper to construct the hypothetical draft team
 function getDraftTeam() {
@@ -102,23 +98,13 @@ const hasDraft = computed(() => {
 })
 
 const remainingGyms = computed(() => {
-  const draftTeam = getDraftTeam()
+  const effectiveTeam = hasDraft.value ? getDraftTeam() : team.value
 
   return ALL_TYPES.filter((type) => !defeatedGyms.value.includes(type))
     .map((type) => {
-      const score = calculateScore(type, team.value)
-      const berryCount = calculateBerryTiebreaker(type, team.value)
-
-      let scoreDiff = 0
-      let berryDiff = 0
-      if (hasDraft.value) {
-        const newScore = calculateScore(type, draftTeam)
-        const newBerryCount = calculateBerryTiebreaker(type, draftTeam)
-        scoreDiff = newScore - score
-        berryDiff = newBerryCount - berryCount
-      }
-
-      return { type, score, berryCount, scoreDiff, berryDiff }
+      const score = calculateScore(type, effectiveTeam)
+      const berryCount = calculateBerryTiebreaker(type, effectiveTeam)
+      return { type, score, berryCount }
     })
     .sort((a, b) => {
       if (a.score !== b.score) return a.score - b.score
@@ -127,45 +113,19 @@ const remainingGyms = computed(() => {
 })
 
 const defeatedGymsList = computed(() => {
-  const draftTeam = getDraftTeam()
+  const effectiveTeam = hasDraft.value ? getDraftTeam() : team.value
 
   return ALL_TYPES.filter((type) => defeatedGyms.value.includes(type))
     .map((type) => {
-      const score = calculateScore(type, team.value)
-      const berryCount = calculateBerryTiebreaker(type, team.value)
-
-      let scoreDiff = 0
-      let berryDiff = 0
-      if (hasDraft.value) {
-        const newScore = calculateScore(type, draftTeam)
-        const newBerryCount = calculateBerryTiebreaker(type, draftTeam)
-        scoreDiff = newScore - score
-        berryDiff = newBerryCount - berryCount
-      }
-
-      return { type, score, berryCount, scoreDiff, berryDiff }
+      const score = calculateScore(type, effectiveTeam)
+      const berryCount = calculateBerryTiebreaker(type, effectiveTeam)
+      return { type, score, berryCount }
     })
     .sort((a, b) => {
       if (a.score !== b.score) return a.score - b.score
       return a.berryCount - b.berryCount
     })
 })
-
-// Computed for swap preview
-const showSwapPreview = computed(() => swapMode.value)
-
-const swapBoxPokemon = computed(() => {
-  if (!swapMode.value || !draftAction.value?.isBoxPokemon) return null
-  return draftAction.value.pokemon
-})
-
-const swapTeamPokemon = computed(() => {
-  if (!swapMode.value || !draftAction.value?.replaceTarget) return null
-  if (draftAction.value.replaceTarget.startsWith('empty-')) return null
-  return team.value.find((p) => p.id === draftAction.value.replaceTarget)
-})
-
-const hasSwapTarget = computed(() => !!draftAction.value?.replaceTarget)
 
 function cancelSwap() {
   exitSwapMode()

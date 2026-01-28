@@ -37,6 +37,15 @@
             :selected="selectedSwapTarget === `empty-${i}`"
             @add="swapMode ? handleSwapSelect(`empty-${i}`) : startAdd()"
           />
+          <!-- Swap mode actions -->
+          <div v-if="swapMode" class="swap-actions">
+            <button class="btn btn-cancel" @click="emit('cancelSwap')">✕ Cancel</button>
+            <button
+              class="btn btn-confirm"
+              :disabled="!hasSwapTarget"
+              @click="emit('confirmSwap')"
+            >✓ Confirm</button>
+          </div>
         </div>
 
         <!-- Box Grid -->
@@ -89,7 +98,7 @@ const props = defineProps({
   },
 })
 
-defineEmits(['confirmDraft'])
+const emit = defineEmits(['confirmDraft', 'confirmSwap', 'cancelSwap'])
 
 const {
   draftAction,
@@ -99,8 +108,12 @@ const {
   startEditBox,
   startAddToBox,
   updateReplaceTarget,
+  exitSwapMode,
   cancel,
 } = useDraftAction()
+
+// Whether a swap target has been selected
+const hasSwapTarget = computed(() => !!draftAction.value?.replaceTarget)
 
 const viewMode = ref('team')
 const isCollapsed = ref(false)
@@ -307,5 +320,38 @@ function toggleViewMode() {
   opacity: 0;
   transform: scaleY(0.95);
   transform-origin: top;
+}
+
+/* Swap actions */
+.swap-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  padding-top: var(--space-3);
+}
+
+.swap-actions .btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.swap-actions .btn-cancel {
+  background: var(--color-surface-light);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.swap-actions .btn-confirm {
+  background: var(--color-success);
+  border: 1px solid var(--color-success);
+  color: white;
+}
+
+.swap-actions .btn-confirm:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 </style>
