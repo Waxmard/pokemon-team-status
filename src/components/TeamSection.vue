@@ -16,9 +16,10 @@
 
     <Transition name="section-collapse">
     <div v-show="!isCollapsed" class="team-section">
-    <!-- Grid Container - handles show/hide based on draft state -->
-    <Transition name="grid-fade" mode="out-in">
-      <div v-if="!showDraftPanel || swapMode" :key="viewMode">
+    <!-- Single transition for grid/panel switching -->
+    <Transition name="content-fade" mode="out-in">
+      <!-- Grid view -->
+      <div v-if="!showDraftPanel || swapMode" :key="'grid-' + viewMode">
         <!-- Team Grid -->
         <div v-if="viewMode === 'team'" class="team-grid">
           <TeamSlot
@@ -64,11 +65,10 @@
           />
         </div>
       </div>
-    </Transition>
 
-    <Transition name="panel-fade" mode="out-in">
+      <!-- Draft Panel -->
       <DraftPanel
-        v-if="showDraftPanel"
+        v-else
         key="panel"
         :team="team"
         @confirm="$emit('confirmDraft')"
@@ -285,26 +285,14 @@ function toggleViewMode() {
   margin-bottom: var(--space-4);
 }
 
-/* Grid fade out/in */
-.grid-fade-enter-active,
-.grid-fade-leave-active {
+/* Content fade out/in (grid and panel transitions) */
+.content-fade-enter-active,
+.content-fade-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.grid-fade-enter-from,
-.grid-fade-leave-to {
-  opacity: 0;
-  transform: scale(0.98);
-}
-
-/* Panel fade out/in */
-.panel-fade-enter-active,
-.panel-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.panel-fade-enter-from,
-.panel-fade-leave-to {
+.content-fade-enter-from,
+.content-fade-leave-to {
   opacity: 0;
   transform: scale(0.98);
 }
