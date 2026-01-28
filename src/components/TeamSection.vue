@@ -138,6 +138,9 @@ function onDragEnd() {
 }
 
 function toggleViewMode() {
+  if (showDraftPanel.value) {
+    emit('cancelDraft')
+  }
   viewMode.value = viewMode.value === 'team' ? 'box' : 'team'
 }
 </script>
