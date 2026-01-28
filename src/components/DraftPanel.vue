@@ -1,20 +1,21 @@
 <template>
   <div class="draft-panel wizard-mode">
       <div class="wizard-container">
+        <!-- Shared header with dynamic title -->
+        <div class="wizard-header">
+          <h3 class="wizard-title">{{ wizardStepTitle }}</h3>
+          <button
+            v-if="wizardStep === 'pokemon' && draftAction.isBoxPokemon"
+            class="swap-mode-btn"
+            @click="onEnterSwapMode"
+            aria-label="Swap with team"
+          >
+            ⇄
+          </button>
+        </div>
+
         <!-- Step: Pokemon -->
         <div v-if="wizardStep === 'pokemon'" class="wizard-step">
-          <div class="wizard-header">
-            <h3 class="wizard-title">Choose Pokemon</h3>
-            <button
-              v-if="draftAction.isBoxPokemon"
-              class="swap-mode-btn"
-              @click="onEnterSwapMode"
-              aria-label="Swap with team"
-            >
-              ⇄
-            </button>
-          </div>
-
           <n-auto-complete
             ref="pokemonInputRef"
             v-model:value="searchQuery"
@@ -37,7 +38,6 @@
 
         <!-- Step: Ability -->
         <div v-if="wizardStep === 'ability'" class="wizard-step">
-          <h3 class="wizard-title">Choose Ability</h3>
           <div class="ability-list">
             <button
               v-for="name in ABILITY_NAMES"
@@ -54,13 +54,6 @@
 
         <!-- Step: Berry -->
         <div v-if="wizardStep === 'berry'" class="wizard-step">
-          <h3 class="wizard-title">Choose Berry</h3>
-          <p class="wizard-hint" v-if="relevantBerries.length">
-            Berries that help against your weaknesses:
-          </p>
-          <p class="wizard-hint" v-else>
-            No type weaknesses - berry optional
-          </p>
           <div class="berry-type-grid">
             <button
               v-for="berry in relevantBerries"
@@ -78,7 +71,6 @@
 
         <!-- Step: Moves -->
         <div v-if="wizardStep === 'moves'" class="wizard-step">
-          <h3 class="wizard-title">Move Types</h3>
           <div class="moves-type-grid">
             <button
               v-for="type in ALL_TYPES"
@@ -209,6 +201,16 @@ onMounted(() => {
 
 const canConfirm = computed(() => {
   return !!draftAction.value?.pokemon
+})
+
+const wizardStepTitle = computed(() => {
+  const titles = {
+    pokemon: 'Choose Pokemon',
+    ability: 'Choose Ability',
+    berry: 'Choose Berry',
+    moves: 'Move Types'
+  }
+  return titles[wizardStep.value]
 })
 
 const selectedSpriteUrl = computed(() => {
@@ -476,14 +478,10 @@ function onSearchInput(value) {
   margin-bottom: var(--space-4);
 }
 
-.wizard-header .wizard-title {
-  margin-bottom: 0;
-}
-
 .wizard-title {
   font-size: 1.1rem;
-  margin-bottom: var(--space-4);
-  text-align: center;
+  margin-bottom: 0;
+  text-align: left;
 }
 
 .swap-mode-btn {
@@ -502,13 +500,6 @@ function onSearchInput(value) {
 
 .swap-mode-btn:active {
   transform: scale(0.95);
-}
-
-.wizard-hint {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  text-align: center;
-  margin-bottom: var(--space-3);
 }
 
 .wizard-options {
