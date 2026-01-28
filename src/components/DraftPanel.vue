@@ -130,7 +130,6 @@
               :alt="draftAction.pokemon.name"
               class="pokemon-sprite"
             />
-            <span class="pokemon-name">{{ draftAction.pokemon.name }}</span>
           </div>
         </div>
 
@@ -174,21 +173,21 @@
           </div>
         </div>
 
-        <!-- Step: Moves 1-4 -->
-        <div v-if="wizardStep.startsWith('move')" class="wizard-step">
-          <h3 class="wizard-title">Move {{ currentMoveIndex + 1 }} Type</h3>
-          <div class="wizard-options">
-            <button @click="selectMoveWizard(null)" class="wizard-option wizard-done">
-              {{ currentMoveIndex === 0 ? 'No Moves' : 'Done' }}
-            </button>
+        <!-- Step: Moves -->
+        <div v-if="wizardStep === 'moves'" class="wizard-step">
+          <h3 class="wizard-title">Move Types</h3>
+          <div class="moves-type-grid">
             <button
-              v-for="type in availableMoveTypes"
+              v-for="type in ALL_TYPES"
               :key="type"
-              @click="selectMoveWizard(type)"
-              class="wizard-option"
-              :style="{ background: TYPE_COLORS[type].bg, color: TYPE_COLORS[type].text }"
+              @click="toggleMoveType(type)"
+              class="move-type-option"
+              :class="{ selected: isMoveSelected(type), disabled: !isMoveSelected(type) && selectedMoveCount >= 4 }"
+              :disabled="!isMoveSelected(type) && selectedMoveCount >= 4"
             >
-              {{ capitalize(type) }}
+              <span class="type-dot" :style="{ background: TYPE_COLORS[type].bg }"></span>
+              <span class="type-name">{{ capitalize(type) }}</span>
+              <span v-if="isMoveSelected(type)" class="check-mark">✓</span>
             </button>
           </div>
         </div>
@@ -396,39 +395,57 @@ const relevantBerries = computed(() => {
   })).filter(b => b.label)
 })
 
-const currentMoveIndex = computed(() => {
-  const step = wizardStep.value
-  if (step.startsWith('move')) return parseInt(step.replace('move', '')) - 1
-  return -1
+// Move selection helpers for wizard
+const selectedMoveCount = computed(() => {
+  return props.draftAction.moves.filter(m => m).length
 })
 
-const availableMoveTypes = computed(() => {
-  const selected = props.draftAction.moves.filter(m => m)
-  return ALL_TYPES.filter(t => !selected.includes(t))
-})
+function isMoveSelected(type) {
+  return props.draftAction.moves.includes(type)
+}
+
+function toggleMoveType(type) {
+  const moves = [...props.draftAction.moves]
+  const existingIndex = moves.indexOf(type)
+
+  if (existingIndex !== -1) {
+    // Remove the move
+    moves[existingIndex] = null
+    // Compact the array (shift nulls to end)
+    const nonNull = moves.filter(m => m)
+    while (nonNull.length < 4) nonNull.push(null)
+    nonNull.forEach((m, i) => emit('update:move', { index: i, value: m }))
+  } else if (selectedMoveCount.value < 4) {
+    // Add the move to first empty slot
+    const emptyIndex = moves.findIndex(m => !m)
+    if (emptyIndex !== -1) {
+      emit('update:move', { index: emptyIndex, value: type })
+    }
+  }
+}
 
 // Wizard navigation functions
+const wizardSteps = ['pokemon', 'moves', 'berry', 'ability']
+
 const canGoPrevious = computed(() => wizardStep.value !== 'pokemon')
 
 const canGoNext = computed(() => {
   if (wizardStep.value === 'pokemon') return !!props.draftAction.pokemon
-  if (wizardStep.value === 'move4') return false
+  if (wizardStep.value === 'ability') return false
   return true
 })
 
 function goToNextStep() {
-  const steps = ['pokemon', 'ability', 'berry', 'move1', 'move2', 'move3', 'move4']
-  const currentIndex = steps.indexOf(wizardStep.value)
-  if (currentIndex < steps.length - 1) {
-    wizardStep.value = steps[currentIndex + 1]
+  const currentIndex = wizardSteps.indexOf(wizardStep.value)
+  if (currentIndex < wizardSteps.length - 1) {
+    wizardStep.value = wizardSteps[currentIndex + 1]
   }
 }
 
 function goToPreviousStep() {
-  const steps = ['pokemon', 'ability', 'berry', 'move1', 'move2', 'move3', 'move4']
-  const currentIndex = steps.indexOf(wizardStep.value)
+  const currentIndex = wizardSteps.indexOf(wizardStep.value)
   if (currentIndex > 0) {
-    wizardStep.value = steps[currentIndex - 1]
+    wizardStep.value = wizardSteps[currentIndex - 1]
   }
 }
 
@@ -438,35 +455,19 @@ function confirmWizardStep() {
       // No pokemon = delete action (for edits) or cancel (for adds)
       emit('confirm')
     } else {
-      wizardStep.value = 'ability'
+      wizardStep.value = 'moves'
     }
   }
 }
 
 function selectAbilityWizard(value) {
   emit('update:ability', value)
-  nextTick(() => { wizardStep.value = 'berry' })
+  // Last step - no auto-advance
 }
 
 function selectBerryWizard(value) {
   emit('update:berry', value)
-  nextTick(() => { wizardStep.value = 'move1' })
-}
-
-function selectMoveWizard(value) {
-  const index = currentMoveIndex.value
-  if (value === null) {
-    // Done with moves
-    emit('confirm')
-  } else {
-    emit('update:move', { index, value })
-    if (index < 3) {
-      nextTick(() => { wizardStep.value = `move${index + 2}` })
-    } else {
-      // Last move, auto-confirm
-      nextTick(() => emit('confirm'))
-    }
-  }
+  nextTick(() => { wizardStep.value = 'ability' })
 }
 
 // Reset wizard step when panel opens
@@ -711,6 +712,7 @@ function updateReplaceTarget(value) {
   flex-direction: column;
   flex: 1;
   min-height: 300px;
+  padding-bottom: var(--space-4);
 }
 
 .wizard-actions-fixed {
@@ -719,8 +721,6 @@ function updateReplaceTarget(value) {
   align-items: center;
   gap: var(--space-3);
   margin-top: auto;
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border);
 }
 
 .wizard-nav-buttons {
@@ -827,6 +827,66 @@ function updateReplaceTarget(value) {
   border-style: dashed;
 }
 
+/* Moves type grid (9 rows x 2 columns) */
+.moves-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.move-type-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  min-height: 40px;
+  font-size: 0.85rem;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.move-type-option:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.move-type-option:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.move-type-option.selected {
+  border-color: var(--color-success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.move-type-option.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.move-type-option .type-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.move-type-option .type-name {
+  flex: 1;
+  text-transform: capitalize;
+  text-align: left;
+}
+
+.move-type-option .check-mark {
+  color: var(--color-success);
+  font-weight: bold;
+}
+
 .wizard-berry-icon {
   width: 24px;
   height: 24px;
@@ -841,20 +901,15 @@ function updateReplaceTarget(value) {
 
 .pokemon-preview {
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
   margin: var(--space-4) 0;
 }
 
 .pokemon-preview .pokemon-sprite {
-  width: 96px;
-  height: 96px;
+  width: 144px;
+  height: 144px;
   object-fit: contain;
-}
-
-.pokemon-preview .pokemon-name {
-  font-weight: 600;
-  margin-top: var(--space-2);
 }
 
 @keyframes fadeSlideIn {
