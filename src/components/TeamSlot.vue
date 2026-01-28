@@ -245,6 +245,7 @@ function hexToRgba(hex, alpha) {
   flex-wrap: wrap;
   gap: var(--space-1);
   margin-top: var(--space-1);
+  margin-left: auto;
 }
 
 .special-move-badge,
@@ -256,9 +257,6 @@ function hexToRgba(hex, alpha) {
   white-space: nowrap;
 }
 
-.ability-badge {
-  background: rgba(139, 92, 246, 0.2);
-}
 
 .team-slot.swap-mode {
   opacity: 0.4;
