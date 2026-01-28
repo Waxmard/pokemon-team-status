@@ -243,8 +243,8 @@ function toggleViewMode() {
 
 .mode-toggle {
   position: absolute;
-  top: calc(-1 * var(--space-8) - var(--space-8));
-  right: var(--space-4);
+  top: calc(-1 * var(--space-8) - var(--space-2));
+  left: var(--space-4);
   z-index: 1;
   display: flex;
   align-items: center;
@@ -353,5 +353,12 @@ function toggleViewMode() {
 .swap-actions .btn-confirm:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+@media (orientation: portrait) {
+  .mode-toggle {
+    left: auto;
+    right: var(--space-4);
+  }
 }
 </style>

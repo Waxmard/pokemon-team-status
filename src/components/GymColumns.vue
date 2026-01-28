@@ -1,8 +1,9 @@
 <template>
   <div class="gym-section-wrapper">
+    <span class="gyms-label">{{ draftActive ? 'Gyms Preview' : 'Gyms' }}</span>
     <div class="gym-section">
       <GymColumn
-        title="Gyms"
+        :title="draftActive ? 'Gyms Preview' : 'Gyms'"
         :gyms="unifiedGymsList"
         :draftActive="draftActive"
         transitionName="slide-right"
@@ -69,13 +70,37 @@ function handleGymClick(type) {
 
 <style scoped>
 .gym-section-wrapper {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  overflow: hidden;
 }
 
 .gym-section {
   display: block;
+}
+
+.gyms-label {
+  position: absolute;
+  top: calc(-1 * var(--space-8) - var(--space-2));
+  right: var(--space-4);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+@media (orientation: portrait) {
+  .gyms-label {
+    display: none;
+  }
 }
 </style>

@@ -293,4 +293,29 @@ onMounted(() => {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .app-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    max-width: 100%;
+  }
+
+  .app-title {
+    flex: 0 0 100%;
+    margin-bottom: var(--space-2);
+  }
+
+  .app-container > :nth-child(2) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .app-container > :nth-child(3) {
+    flex: 1;
+    min-width: 0;
+  }
+}
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="gym-column">
     <div class="column-header">
-      <h3 class="column-title">{{ title }}{{ draftActive ? ' (Draft)' : '' }}</h3>
+      <h3 class="column-title">{{ title }}</h3>
     </div>
     <TransitionGroup :name="transitionName" tag="div" class="gym-list">
       <GymRow
@@ -62,22 +62,6 @@ defineEmits(['gymClick'])
   min-width: 0;
 }
 
-.column-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-3);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.column-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0;
-}
-
 .gym-list {
   position: relative;
   display: grid;
@@ -95,5 +79,26 @@ defineEmits(['gymClick'])
 .empty-message {
   color: var(--color-text-muted);
   font-size: 0.9rem;
+}
+
+.column-header {
+  display: none; /* hidden by default (landscape) */
+}
+
+@media (orientation: portrait) {
+  .column-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .column-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+  }
 }
 </style>
