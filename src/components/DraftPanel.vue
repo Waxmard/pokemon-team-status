@@ -33,6 +33,21 @@
               :alt="draftAction.pokemon.name"
               class="pokemon-sprite"
             />
+            <!-- Evolve button positioned inside preview -->
+            <button v-if="canEvolve" class="evolve-btn" @click="handleEvolveClick">
+              ⬆
+            </button>
+            <!-- Evolution options positioned under the button -->
+            <div v-if="canEvolve && showEvolveOptions" class="evolve-options">
+              <button
+                v-for="evoName in evolutionOptions"
+                :key="evoName"
+                class="evolve-option-pill"
+                @click="evolveTo(evoName)"
+              >
+                <img :src="getSpriteUrl(evoName)" :alt="evoName" class="evolve-sprite" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -180,6 +195,7 @@ const pokemonInputRef = ref(null)
 const searchQuery = ref('')
 const localAbility = ref(null)
 const localBerry = ref(null)
+const showEvolveOptions = ref(false)
 
 // Initialize form state when draftAction changes
 watch(draftAction, (action) => {
@@ -230,6 +246,32 @@ const autocompleteOptions = computed(() => {
       pokemon: p
     }))
 })
+
+const canEvolve = computed(() => !!draftAction.value?.pokemon?.evolvesTo)
+
+const evolutionOptions = computed(() => {
+  const evo = draftAction.value?.pokemon?.evolvesTo
+  if (!evo) return []
+  return Array.isArray(evo) ? evo : [evo]
+})
+
+function handleEvolveClick() {
+  const options = evolutionOptions.value
+  if (options.length === 1) {
+    evolveTo(options[0])
+  } else {
+    showEvolveOptions.value = !showEvolveOptions.value
+  }
+}
+
+function evolveTo(name) {
+  const pokemon = POKEMON_DATA.find(p => p.name === name)
+  if (pokemon) {
+    updatePokemon(pokemon)
+    searchQuery.value = pokemon.name
+    showEvolveOptions.value = false
+  }
+}
 
 function onEnterSwapMode() {
   enterSwapMode()
@@ -640,6 +682,7 @@ function onSearchInput(value) {
 }
 
 .pokemon-preview {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -649,6 +692,55 @@ function onSearchInput(value) {
 .pokemon-preview .pokemon-sprite {
   width: 144px;
   height: 144px;
+  object-fit: contain;
+}
+
+.evolve-btn {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  background: transparent;
+  border: none;
+  color: var(--color-success);
+  font-size: 1.25rem;
+  font-weight: 900;
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.evolve-btn:active {
+  transform: scale(0.95);
+}
+
+.evolve-options {
+  position: absolute;
+  top: calc(var(--space-2) + 2.5rem);
+  right: var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-1);
+  z-index: 10;
+}
+
+.evolve-option-pill {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: all var(--transition-base);
+}
+
+.evolve-option-pill:active {
+  transform: scale(0.95);
+}
+
+.evolve-sprite {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
