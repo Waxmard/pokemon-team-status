@@ -30,18 +30,20 @@
           <div v-if="pokemon" key="filled" class="slot-inner">
             <div class="slot-content">
               <div class="sprite-container">
-                <img
+                <SpriteImg
                   v-if="spriteUrl"
                   :src="spriteUrl"
                   :alt="pokemon.name"
-                  class="pokemon-sprite"
+                  :width="80"
+                  :height="80"
                 />
-                <img
+                <SpriteImg
                   v-if="pokemon.berry"
                   :src="getBerrySprite(pokemon.berry)"
                   :alt="pokemon.berry"
                   :title="pokemon.berry"
-                  class="berry-sprite"
+                  :width="24"
+                  :height="24"
                 />
               </div>
               <div class="pokemon-info">
@@ -87,6 +89,7 @@ import { computed, ref } from 'vue'
 import { ABILITIES } from '../data/abilities.js'
 import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { getBerrySprite, getSpriteUrl } from '../utils/pokemon.js'
+import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
   pokemon: {
@@ -261,17 +264,6 @@ function hexToRgba(hex, alpha) {
   flex-shrink: 0;
 }
 
-.pokemon-sprite {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
-}
-
-.berry-sprite {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
 
 .pokemon-info {
   flex: 1;

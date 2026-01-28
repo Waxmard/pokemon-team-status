@@ -55,11 +55,12 @@
             clearable
           />
           <div v-if="draftAction.pokemon" class="pokemon-preview">
-            <img
+            <SpriteImg
               v-if="selectedSpriteUrl"
               :src="selectedSpriteUrl"
               :alt="draftAction.pokemon.name"
-              class="pokemon-sprite"
+              :width="144"
+              :height="144"
             />
             <!-- Evolve button positioned inside preview -->
             <button v-if="canEvolve" class="evolve-btn" @click="handleEvolveClick">
@@ -73,7 +74,7 @@
                 class="evolve-option-pill"
                 @click="evolveTo(evoName)"
               >
-                <img :src="getSpriteUrl(evoName)" :alt="evoName" class="evolve-sprite" />
+                <SpriteImg :src="getSpriteUrl(evoName)" :alt="evoName" :width="40" :height="40" />
               </button>
             </div>
           </div>
@@ -107,7 +108,7 @@
               :style="getTypeBackground(berry.type, localBerry === berry.value)"
               :title="berry.label"
             >
-              <img :src="getBerrySprite(berry.value)" :alt="berry.label" class="berry-icon" />
+              <SpriteImg :src="getBerrySprite(berry.value)" :alt="berry.label" :width="44" :height="44" />
             </button>
           </div>
         </div>
@@ -193,6 +194,7 @@ import {
   applyAbilityDefense,
   getDefensiveMultiplier,
 } from '../utils/typeCalc.js'
+import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
   hideSearch: {
@@ -791,12 +793,6 @@ function onSearchInput(value) {
   transform: scale(1.05);
 }
 
-.berry-type-option .berry-icon {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-}
-
 /* Ability list (1 column) */
 .ability-list {
   display: flex;
@@ -835,12 +831,6 @@ function onSearchInput(value) {
   align-items: center;
   justify-content: center;
   margin: var(--space-4) 0;
-}
-
-.pokemon-preview .pokemon-sprite {
-  width: 144px;
-  height: 144px;
-  object-fit: contain;
 }
 
 .evolve-btn {
@@ -886,12 +876,6 @@ function onSearchInput(value) {
   transform: scale(0.95);
 }
 
-.evolve-sprite {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
@@ -912,11 +896,6 @@ function onSearchInput(value) {
 
   .pokemon-preview {
     margin: var(--space-2) 0;
-  }
-
-  .pokemon-preview .pokemon-sprite {
-    width: 96px;
-    height: 96px;
   }
 
   .wizard-header {

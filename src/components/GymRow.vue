@@ -12,12 +12,14 @@
       class="berry-corner"
       :title="`${berryCount} ${BERRY_BY_TYPE[type]}${berryCount > 1 ? 's' : ''}`"
     >
-      <img
+      <SpriteImg
         v-for="i in berryCount"
         :key="i"
         :src="berrySprite"
-        class="berry-sprite"
         :alt="BERRY_BY_TYPE[type]"
+        :width="22"
+        :height="22"
+        class="berry-sprite"
       />
     </span>
 
@@ -33,6 +35,7 @@ import { BERRY_BY_TYPE } from '../data/berries.js'
 import { getTypeIcon } from '../data/types.js'
 import { getTypeBackground } from '../utils/colors.js'
 import { getBerrySprite } from '../utils/pokemon.js'
+import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
   type: {
@@ -101,9 +104,6 @@ const rowBackgroundStyle = computed(() => {
 }
 
 .berry-sprite {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
   margin-left: -6px;
 }
 
