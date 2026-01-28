@@ -6,9 +6,11 @@
         :title="draftActive ? 'Gyms Preview' : 'Gyms'"
         :gyms="unifiedGymsList"
         :draftActive="draftActive"
+        :pinnedType="pinnedGym"
         transitionName="slide-right"
         emptyMessage="No gyms"
         @gymClick="handleGymClick"
+        @pin="handlePin"
       />
     </div>
   </div>
@@ -16,7 +18,10 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useStorage } from '../composables/useStorage.js'
 import GymColumn from './GymColumn.vue'
+
+const { pinnedGym, persistPinnedGym } = useStorage()
 
 const props = defineProps({
   remainingGyms: {
@@ -52,18 +57,42 @@ const unifiedGymsList = computed(() => {
   }))
   const combined = [...remaining, ...defeated]
   // Sort by score ascending, then by berry count ascending as tiebreaker
-  return combined.sort((a, b) => {
+  combined.sort((a, b) => {
     if (a.score !== b.score) return a.score - b.score
     return (a.berryCount || 0) - (b.berryCount || 0)
   })
+  // Move pinned gym to first position if it exists
+  if (pinnedGym.value) {
+    const pinnedIndex = combined.findIndex(
+      (gym) => gym.type === pinnedGym.value,
+    )
+    if (pinnedIndex > 0) {
+      const [pinned] = combined.splice(pinnedIndex, 1)
+      combined.unshift(pinned)
+    }
+  }
+  return combined
 })
 
 // Handle gym click - toggle between defeated and remaining
+// Also unpin if the clicked gym was pinned
 function handleGymClick(type) {
+  if (pinnedGym.value === type) {
+    persistPinnedGym(null)
+  }
   if (defeatedTypes.value.has(type)) {
     emit('undefeatGym', type)
   } else {
     emit('defeatGym', type)
+  }
+}
+
+// Handle pin - toggle pinned state
+function handlePin(type) {
+  if (pinnedGym.value === type) {
+    persistPinnedGym(null)
+  } else {
+    persistPinnedGym(type)
   }
 }
 </script>

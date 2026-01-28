@@ -111,10 +111,35 @@ async function loadBox() {
   })
 }
 
+async function savePinnedGym(gymType) {
+  const db = await openDB()
+  const tx = db.transaction('settings', 'readwrite')
+  const store = tx.objectStore('settings')
+  store.put({ name: 'pinnedGym', value: gymType })
+
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
+async function loadPinnedGym() {
+  const db = await openDB()
+  const tx = db.transaction('settings', 'readonly')
+  const store = tx.objectStore('settings')
+  const request = store.get('pinnedGym')
+
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result?.value || null)
+    request.onerror = () => reject(request.error)
+  })
+}
+
 // Singleton state - shared across all calls
 const team = ref([])
 const defeatedGyms = ref([])
 const box = ref([])
+const pinnedGym = ref(null)
 const isLoading = ref(true)
 
 export function useStorage() {
@@ -124,6 +149,7 @@ export function useStorage() {
       team.value = await loadTeam()
       defeatedGyms.value = await loadDefeatedGyms()
       box.value = await loadBox()
+      pinnedGym.value = await loadPinnedGym()
     } catch (e) {
       console.error('Failed to load data:', e)
     } finally {
@@ -146,14 +172,21 @@ export function useStorage() {
     await saveBox(newBox)
   }
 
+  async function persistPinnedGym(gymType) {
+    pinnedGym.value = gymType
+    await savePinnedGym(gymType)
+  }
+
   return {
     team,
     defeatedGyms,
     box,
+    pinnedGym,
     isLoading,
     loadData,
     persistTeam,
     persistDefeatedGyms,
     persistBox,
+    persistPinnedGym,
   }
 }

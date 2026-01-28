@@ -1,11 +1,22 @@
 <template>
   <div
     class="gym-card touchable"
-    :class="{ defeated: defeated }"
+    :class="{ defeated: defeated, pinned: pinned }"
     :style="rowBackgroundStyle"
     @click="$emit('click', type)"
   >
-    <img :src="getTypeIcon(type)" :alt="type" class="type-icon" />
+    <!-- Drag handle for pin -->
+    <span
+      class="drag-handle"
+      draggable="true"
+      @dragstart.stop="onHandleDragStart"
+      @touchstart.stop="onHandleTouchStart"
+    >
+      ⋮⋮
+    </span>
+
+    <span v-if="pinned" class="pin-indicator">📌</span>
+    <img :src="getTypeIcon(type)" :alt="type" class="type-icon" draggable="false" />
 
     <span
       v-if="berryCount > 0"
@@ -54,11 +65,27 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  pinned: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-defineEmits(['click'])
+const emit = defineEmits(['click', 'dragstart', 'touchdragstart'])
 
 const berrySprite = computed(() => getBerrySprite(BERRY_BY_TYPE[props.type]))
+
+function onHandleDragStart(event) {
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', props.type)
+  }
+  emit('dragstart', event)
+}
+
+function onHandleTouchStart() {
+  emit('touchdragstart')
+}
 
 const rowBackgroundStyle = computed(() => {
   const baseStyle = getTypeBackground(props.type, 0.35)
@@ -81,6 +108,8 @@ const rowBackgroundStyle = computed(() => {
   cursor: pointer;
   transition: transform var(--transition-base), box-shadow var(--transition-base), opacity var(--transition-base);
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: element;
   user-select: none;
   border: 2px solid; /* color set via inline style */
   color: var(--color-text-primary);
@@ -98,6 +127,9 @@ const rowBackgroundStyle = computed(() => {
   width: 48px;
   height: 48px;
   object-fit: contain;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  pointer-events: none;
 }
 
 .berry-corner {
@@ -134,5 +166,48 @@ const rowBackgroundStyle = computed(() => {
 
 .score-corner.negative {
   color: var(--color-danger);
+}
+
+.gym-card.pinned {
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.pin-indicator {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 0.75rem;
+}
+
+.drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  cursor: grab;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  opacity: 0.6;
+  transition: opacity var(--transition-base);
+}
+
+.drag-handle:hover {
+  opacity: 1;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Move pin indicator when drag handle is present */
+.gym-card .pin-indicator {
+  left: 28px;
 }
 </style>
