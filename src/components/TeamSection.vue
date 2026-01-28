@@ -169,18 +169,20 @@ function toggleViewMode() {
 
 .mode-toggle {
   position: absolute;
-  top: calc(-1 * var(--space-6));
+  top: calc(-1 * var(--space-8) - var(--space-8));
   right: var(--space-4);
   z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2);
+  width: 48px;
+  height: 48px;
+  padding: var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--color-surface);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   transition: all var(--transition-base);
 }
 
@@ -190,7 +192,7 @@ function toggleViewMode() {
 }
 
 .mode-icon {
-  font-size: 1.1rem;
+  font-size: 1.5rem;
   line-height: 1;
 }
 
