@@ -11,7 +11,7 @@
     <div class="team-section">
     <!-- Grid Container - handles show/hide based on draft state -->
     <Transition name="grid-fade" mode="out-in">
-      <div v-if="!showDraftPanel || swapMode" key="grid">
+      <div v-if="!showDraftPanel || swapMode" :key="viewMode">
         <!-- Team Grid -->
         <div v-if="viewMode === 'team'" class="team-grid">
           <TeamSlot
@@ -200,6 +200,8 @@ function toggleViewMode() {
   grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
+  max-height: calc(3 * 110px + 2 * var(--space-3));
+  overflow-y: auto;
 }
 
 .box-grid {
