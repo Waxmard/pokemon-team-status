@@ -302,7 +302,7 @@ watch(draftAction, (action) => {
   localBerry.value = action.berry
   moveQueries.value = (action.moves || []).map(m => m || '')
   localReplaceTarget.value = action.replaceTarget || null
-}, { immediate: true })
+}, { immediate: true, deep: true })
 
 // Auto-focus Pokemon name field on open only if empty, and handle resize
 onMounted(() => {
