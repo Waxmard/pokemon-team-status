@@ -223,6 +223,23 @@ const wizardStep = ref('pokemon')
 // Template refs for auto-focus
 const pokemonInputRef = ref(null)
 
+function focusPokemonInput() {
+  if (props.hideSearch || !pokemonInputRef.value) return
+
+  // Skip auto-focus on touch devices (iOS blocks async programmatic focus)
+  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return
+
+  const focusInput = () => {
+    const inputEl = pokemonInputRef.value?.$el?.querySelector('input')
+    if (inputEl) {
+      inputEl.focus()
+    }
+  }
+
+  // Wait for scaleIn animation to complete (300ms + buffer)
+  setTimeout(focusInput, 320)
+}
+
 const searchQuery = ref('')
 const localAbility = ref(null)
 const localBerry = ref(null)
@@ -244,18 +261,27 @@ watch(
   { immediate: true, deep: true },
 )
 
-// Auto-focus Pokemon name field on open only if empty, and handle resize
+// Auto-focus Pokemon name field on open only if empty
 onMounted(() => {
   nextTick(() => {
-    if (
-      !props.hideSearch &&
-      pokemonInputRef.value &&
-      !draftAction.value?.pokemon
-    ) {
-      pokemonInputRef.value.focus()
+    if (!draftAction.value?.pokemon) {
+      focusPokemonInput()
     }
   })
 })
+
+// Focus Pokemon input when starting a new add action
+watch(
+  () => draftAction.value?.pokemon,
+  (newPokemon, oldPokemon) => {
+    // Focus when transitioning to no pokemon (new add action)
+    if (!newPokemon && oldPokemon !== newPokemon) {
+      nextTick(() => {
+        focusPokemonInput()
+      })
+    }
+  },
+)
 
 const canConfirm = computed(() => {
   return !!draftAction.value?.pokemon
