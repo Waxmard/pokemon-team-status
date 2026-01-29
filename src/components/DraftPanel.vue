@@ -283,6 +283,10 @@ watch(
 // Auto-focus Pokemon name field on open only if empty
 onMounted(() => {
   nextTick(() => {
+    // Scroll page to top
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+
+    // Existing focus logic
     if (!draftAction.value?.pokemon) {
       focusPokemonInput()
     }
