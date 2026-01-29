@@ -10,6 +10,16 @@ export function getSpriteUrl(pokemonName) {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`
 }
 
+export function getSmallSpriteUrl(pokemonName) {
+  const index = POKEMON_DATA.findIndex((p) => p.name === pokemonName)
+  if (index === -1) return null
+
+  const pokemon = POKEMON_DATA[index]
+  const id = pokemon.spriteId ?? index + 1
+  // Small 96x96 sprites (~2-5KB each)
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`
+}
+
 export function getBerrySprite(berryName) {
   if (!berryName) return null
   // "Occa Berry" → "occa-berry"
