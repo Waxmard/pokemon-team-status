@@ -1,5 +1,25 @@
 <template>
   <div class="team-section-wrapper">
+    <!-- Swap Action Buttons (cancel/confirm) - shown only in swap mode -->
+    <div v-if="swapMode" class="swap-action-buttons">
+      <button class="swap-action-btn cancel" @click="handleCancelSwap">
+        <span class="action-icon">✕</span>
+      </button>
+      <button class="swap-action-btn confirm" @click="handleConfirmSwap">
+        <span class="action-icon">✓</span>
+      </button>
+    </div>
+
+    <!-- Add Button (when not editing) -->
+    <button v-if="!swapMode && !showDraftPanel" class="add-button" @click="handleAddClick">
+      <span class="add-icon">+</span>
+    </button>
+
+    <!-- Delete Button (when editing a Pokemon) -->
+    <button v-if="isEditing && showDraftPanel" class="add-button delete-mode" @click="handleDeleteClick">
+      <span class="add-icon">🗑</span>
+    </button>
+
     <!-- Mode Toggle Button (long-press to collapse) -->
     <button
       class="mode-toggle"
@@ -8,10 +28,14 @@
       @mouseup="cancelLongPress"
       @mouseleave="cancelLongPress"
       @touchstart.prevent="startLongPress"
-      @touchend="handleTouchEnd"
+      @touchend="onTouchEnd"
       @touchcancel="cancelLongPress"
     >
-      <span class="mode-icon">{{ viewMode === 'team' ? '⚔️' : '📦' }}</span>
+      <template v-if="swapMode && swapPokemonSpriteUrl">
+        <SpriteImg :src="swapPokemonSpriteUrl" :width="32" :height="32" alt="Swap" />
+      </template>
+      <span v-else-if="isEditingForSwap" class="mode-icon">⇄</span>
+      <span v-else class="mode-icon">{{ viewMode === 'team' ? '⚔️' : '📦' }}</span>
     </button>
 
     <Transition name="section-collapse">
@@ -26,28 +50,16 @@
             v-for="pokemon in team"
             :key="pokemon.id"
             :pokemon="pokemon"
-            :swapMode="swapMode"
-            :selected="selectedSwapTarget === pokemon.id"
             @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
             @delete="handleDeleteTeamPokemon"
           />
+          <!-- Empty slots for swap mode -->
           <TeamSlot
-            v-for="i in emptySlotCount"
-            :key="'empty-' + i"
+            v-for="i in emptyTeamSlotCount"
+            :key="'team-empty-' + i"
             :pokemon="null"
-            :swapMode="swapMode"
-            :selected="selectedSwapTarget === `empty-${i}`"
-            @add="swapMode ? handleSwapSelect(`empty-${i}`) : startAdd()"
+            @add="handleSwapSelect(null)"
           />
-          <!-- Swap mode actions -->
-          <div v-if="swapMode" class="swap-actions">
-            <button class="btn btn-cancel" @click="emit('cancelSwap')">✕ Cancel</button>
-            <button
-              class="btn btn-confirm"
-              :disabled="!hasSwapTarget"
-              @click="emit('confirmSwap')"
-            >✓ Confirm</button>
-          </div>
         </div>
 
         <!-- Box Grid -->
@@ -56,14 +68,14 @@
             v-for="pokemon in box"
             :key="pokemon.id"
             :pokemon="pokemon"
-            @edit="handleEditBoxPokemon(pokemon.id)"
+            @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditBoxPokemon(pokemon.id)"
             @delete="handleDeleteBoxPokemon"
           />
           <TeamSlot
             v-for="i in emptyBoxSlotCount"
             :key="'box-empty-' + i"
             :pokemon="null"
-            @add="startAddToBox()"
+            @add="swapMode ? handleSwapSelect(null) : startAddToBox()"
           />
         </div>
       </div>
@@ -85,8 +97,11 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
+import { useLongPress } from '../composables/useLongPress.js'
 import { POKEMON_DATA } from '../data/pokemon.js'
+import { getSpriteUrl } from '../utils/pokemon.js'
 import DraftPanel from './DraftPanel.vue'
+import SpriteImg from './SpriteImg.vue'
 import TeamSlot from './TeamSlot.vue'
 
 const props = defineProps({
@@ -102,10 +117,11 @@ const props = defineProps({
 
 const emit = defineEmits([
   'confirmDraft',
-  'confirmSwap',
-  'cancelSwap',
+  'immediateSwap',
   'deleteTeamPokemon',
   'deleteBoxPokemon',
+  'cancelSwap',
+  'deletePokemon',
 ])
 
 const {
@@ -115,51 +131,37 @@ const {
   startEdit,
   startEditBox,
   startAddToBox,
-  updateReplaceTarget,
+  enterSwapMode,
   exitSwapMode,
   cancel,
 } = useDraftAction()
 
-// Whether a swap target has been selected
-const hasSwapTarget = computed(() => !!draftAction.value?.replaceTarget)
+// Sprite URL for the pokemon "in hand" during swap mode
+const swapPokemonSpriteUrl = computed(() => {
+  if (!swapMode.value || !draftAction.value?.pokemon) return null
+  if (draftAction.value.megaSpriteId) {
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${draftAction.value.megaSpriteId}.png`
+  }
+  return getSpriteUrl(draftAction.value.pokemon.name)
+})
 
 const viewMode = ref('team')
 const isCollapsed = ref(false)
 
-// Long-press handling
-let longPressTimer = null
-let longPressFired = false
-const LONG_PRESS_DURATION = 500 // ms
-
-function startLongPress() {
-  longPressFired = false
-  longPressTimer = setTimeout(() => {
+// Long-press handling for collapse
+const { longPressFired, startLongPress, cancelLongPress, handleTouchEnd } =
+  useLongPress(() => {
     isCollapsed.value = true
-    longPressFired = true
-    longPressTimer = null
-  }, LONG_PRESS_DURATION)
-}
+  })
 
-function cancelLongPress() {
-  if (longPressTimer) {
-    clearTimeout(longPressTimer)
-    longPressTimer = null
-  }
-}
-
-function handleTouchEnd() {
-  // If timer is still active, this was a quick tap (not a long press)
-  if (longPressTimer) {
-    cancelLongPress()
-    handleModeClick()
-  }
-  // If timer already fired (longPressTimer is null), long press already collapsed - do nothing
+function onTouchEnd() {
+  handleTouchEnd(handleModeClick)
 }
 
 function handleModeClick() {
   // If long press just fired, don't also handle click
-  if (longPressFired) {
-    longPressFired = false
+  if (longPressFired.value) {
+    longPressFired.value = false
     return
   }
   // If collapsed, expand on click
@@ -167,34 +169,79 @@ function handleModeClick() {
     isCollapsed.value = false
     return
   }
+  // If in swap mode, clicking toggle cancels swap
+  if (swapMode.value) {
+    emit('cancelSwap')
+    viewMode.value = 'team'
+    return
+  }
+  // If editing a team or box Pokemon, start swap mode
+  if (isEditingForSwap.value) {
+    enterSwapMode()
+    return
+  }
   // Normal toggle behavior
   toggleViewMode()
 }
 
-// Switch to team view when entering swap mode
+function handleCancelSwap() {
+  emit('cancelSwap')
+  viewMode.value = 'team'
+}
+
+function handleConfirmSwap() {
+  exitSwapMode()
+  viewMode.value = 'team'
+}
+
+// Switch to opposite view when entering swap mode, reset to team view when exiting
 watch(swapMode, (isSwapMode) => {
   if (isSwapMode) {
+    // Show opposite view: editing team → show box, editing box → show team
+    viewMode.value = draftAction.value?.isTeamPokemon ? 'box' : 'team'
+  } else {
+    // Always return to team view when swap mode ends (any exit path)
     viewMode.value = 'team'
   }
 })
 
-// Number of empty slots to show (max 1)
-const emptySlotCount = computed(() => (props.team.length < 6 ? 1 : 0))
-const emptyBoxSlotCount = computed(() => (props.box.length < 3 ? 1 : 0))
+// Number of empty box slots to show in swap mode (when editing a team Pokemon)
+const emptyBoxSlotCount = computed(() => {
+  // Only show when in swap mode and editing a team pokemon (to move team → box)
+  if (!swapMode.value) return 0
+  if (viewMode.value !== 'box') return 0
+  return draftAction.value?.isTeamPokemon ? 1 : 0
+})
 
-// Track selected swap target for UI
-const selectedSwapTarget = computed(() => draftAction.value?.replaceTarget)
+// Number of empty team slots to show in swap mode (max 1)
+const emptyTeamSlotCount = computed(() => {
+  if (!swapMode.value || viewMode.value !== 'team') return 0
+  return props.team.length < 6 ? 1 : 0
+})
 
-// Handle clicking a team Pokémon in swap mode
+// Handle clicking a team slot in swap mode - perform immediate swap
 function handleSwapSelect(targetId) {
   if (swapMode.value) {
-    updateReplaceTarget(targetId)
+    emit('immediateSwap', targetId)
   }
 }
 
 // Show draft panel for add/edit modes (but not in swap mode)
 const showDraftPanel = computed(() => {
   return !!draftAction.value && !swapMode.value
+})
+
+// Detect when editing a team or box Pokemon (for showing swap icon in mode toggle)
+const isEditingForSwap = computed(() => {
+  return (
+    showDraftPanel.value &&
+    (draftAction.value?.isBoxPokemon || draftAction.value?.isTeamPokemon)
+  )
+})
+
+// Detect when editing (for showing delete button)
+const isEditing = computed(() => {
+  return draftAction.value?.type === 'edit' && !swapMode.value
 })
 
 function handleEditPokemon(id) {
@@ -231,6 +278,14 @@ function toggleViewMode() {
   viewMode.value = viewMode.value === 'team' ? 'box' : 'team'
 }
 
+function handleAddClick() {
+  startAdd()
+}
+
+function handleDeleteClick() {
+  emit('deletePokemon')
+}
+
 function handleDeleteTeamPokemon(id) {
   emit('deleteTeamPokemon', id)
 }
@@ -243,6 +298,7 @@ function handleDeleteBoxPokemon(id) {
 <style scoped>
 .team-section-wrapper {
   position: relative;
+  overflow: visible;
 }
 
 .team-section {
@@ -255,6 +311,34 @@ function handleDeleteBoxPokemon(id) {
   box-shadow: var(--shadow-lg);
   overflow-x: hidden;
   max-width: 100vw;
+}
+
+.add-button {
+  position: absolute;
+  bottom: calc(-1 * var(--space-2));
+  right: var(--space-4);
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+}
+
+.add-icon {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-danger);
+}
+
+.add-button.delete-mode .add-icon {
+  font-size: 1rem;
 }
 
 .mode-toggle {
@@ -326,43 +410,72 @@ function handleDeleteBoxPokemon(id) {
   transform-origin: top;
 }
 
-/* Swap actions */
-.swap-actions {
+
+.swap-action-buttons {
+  position: absolute;
+  top: calc(-1 * var(--space-8) + var(--space-1));
+  left: calc(var(--space-4) + 48px + var(--space-2));
+  z-index: 1;
   display: flex;
-  gap: var(--space-3);
-  justify-content: center;
-  padding-top: var(--space-3);
+  gap: var(--space-2);
 }
 
-.swap-actions .btn {
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
+.swap-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: var(--space-2);
+  border-radius: var(--radius-xl);
+  background: transparent;
   cursor: pointer;
+  box-shadow: none;
   transition: all var(--transition-base);
 }
 
-.swap-actions .btn-cancel {
-  background: var(--color-surface-light);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
+.swap-action-btn.cancel {
+  border: none;
+  color: var(--color-danger);
 }
 
-.swap-actions .btn-confirm {
-  background: var(--color-success);
-  border: 1px solid var(--color-success);
-  color: white;
+.swap-action-btn.confirm {
+  border: none;
+  color: var(--color-success);
+  margin-right: var(--space-1);
 }
 
-.swap-actions .btn-confirm:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
+.action-icon {
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  -webkit-text-stroke: 1.5px currentColor;
+}
+
+.swap-action-btn.confirm .action-icon {
+  -webkit-text-stroke: 0.5px currentColor;
 }
 
 @media (orientation: portrait) {
   .mode-toggle {
     left: auto;
     right: var(--space-4);
+  }
+
+  .swap-action-buttons {
+    left: auto;
+    right: calc(var(--space-4) + 48px + var(--space-2));
+  }
+}
+
+@media (orientation: landscape) {
+  .team-section-wrapper {
+    align-self: flex-start;
+  }
+
+  .add-button {
+    bottom: var(--space-2);
   }
 }
 </style>

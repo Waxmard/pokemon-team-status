@@ -50,6 +50,23 @@ export function getSpecialMoveEffectiveness(moveName, defenderType) {
   return getTypeEffectiveness(move.types[0], defenderType)
 }
 
+// Convert defensive multiplier to score points (full conversion)
+function multiplierToPoints(multiplier) {
+  if (multiplier === 0) return 2 // immunity
+  if (multiplier === 0.25) return 2 // double resist
+  if (multiplier === 0.5) return 1 // resist
+  if (multiplier === 2) return -1 // weakness
+  if (multiplier === 4) return -2 // double weakness
+  return 0
+}
+
+// Convert defensive multiplier to score points (resistances only, for optional type coverage)
+function resistanceOnlyPoints(multiplier) {
+  if (multiplier === 0) return 2 // immunity
+  if (multiplier === 0.5) return 1 // resist
+  return 0
+}
+
 export function hasEffectiveMove(moves, gymType, specialMove = null) {
   // Check special move first
   if (specialMove) {
@@ -75,17 +92,7 @@ export function calculateScore(gymType, team) {
     // Calculate defensive multiplier
     let multiplier = getDefensiveMultiplier(gymType, member.types)
     multiplier = applyAbilityDefense(multiplier, gymType, member.ability)
-
-    // Convert multiplier to points
-    if (multiplier === 0)
-      score += 2 // immunity
-    else if (multiplier === 0.25)
-      score += 2 // double resist
-    else if (multiplier === 0.5)
-      score += 1 // resist
-    else if (multiplier === 2)
-      score -= 1 // weakness
-    else if (multiplier === 4) score -= 2 // double weakness
+    score += multiplierToPoints(multiplier)
 
     // Protean: move types act as additional defensive types (resistances only)
     const abilityData = ABILITIES[member.ability]
@@ -95,9 +102,7 @@ export function calculateScore(gymType, team) {
         if (!moveType || member.types.includes(moveType)) continue
         const moveMultiplier = getTypeEffectiveness(gymType, moveType)
         // Only count resistances, not weaknesses - user can choose not to use that move
-        if (moveMultiplier === 0)
-          score += 2 // immunity
-        else if (moveMultiplier === 0.5) score += 1 // resist
+        score += resistanceOnlyPoints(moveMultiplier)
       }
     }
 
@@ -106,9 +111,7 @@ export function calculateScore(gymType, team) {
       for (const megaType of member.megaTypes) {
         if (member.types.includes(megaType)) continue
         const megaMultiplier = getTypeEffectiveness(gymType, megaType)
-        if (megaMultiplier === 0)
-          score += 2 // immunity
-        else if (megaMultiplier === 0.5) score += 1 // resist
+        score += resistanceOnlyPoints(megaMultiplier)
       }
     }
 

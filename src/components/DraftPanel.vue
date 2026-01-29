@@ -4,20 +4,12 @@
         <!-- Shared header with dynamic title -->
         <div class="wizard-header">
           <h3 class="wizard-title">{{ wizardStepTitle }}</h3>
-          <button
-            v-if="wizardStep === 'pokemon' && draftAction.isBoxPokemon"
-            class="swap-mode-btn"
-            @click="onEnterSwapMode"
-            aria-label="Swap with team"
-          >
-            ⇄
-          </button>
 
           <!-- Moves step: inline special move UI -->
           <template v-if="wizardStep === 'moves'">
             <!-- Selected special move badge (when not editing) -->
-            <span v-if="localSpecialMove && !showSpecialMoveDropdown" class="special-move-badge-inline">
-              {{ localSpecialMove }}
+            <span v-if="draftAction.specialMove && !showSpecialMoveDropdown" class="special-move-badge-inline">
+              {{ draftAction.specialMove }}
               <button class="clear-special-move-inline" @click="clearSpecialMove">✕</button>
             </span>
             <!-- Autocomplete input (when editing) -->
@@ -33,7 +25,7 @@
             <!-- Star button (bare icon like evolve) -->
             <button
               class="special-move-btn"
-              :class="{ active: showSpecialMoveDropdown || localSpecialMove }"
+              :class="{ active: showSpecialMoveDropdown || draftAction.specialMove }"
               @click="toggleSpecialMoveDropdown"
               aria-label="Special moves"
             >
@@ -117,8 +109,8 @@
               :key="berry.value"
               @click="toggleBerry(berry.value)"
               class="berry-type-option"
-              :class="{ selected: localBerry === berry.value }"
-              :style="getTypeBackground(berry.type, localBerry === berry.value)"
+              :class="{ selected: draftAction.berry === berry.value }"
+              :style="getTypeBackground(berry.type, draftAction.berry === berry.value)"
               :title="berry.label"
             >
               <SpriteImg :src="getBerrySprite(berry.value)" :alt="berry.label" :width="44" :height="44" />
@@ -174,15 +166,6 @@
         </div>
 
         <button
-          v-if="wizardStep === 'pokemon' && !draftAction.pokemon && draftAction.type === 'edit'"
-          class="btn btn-icon btn-icon-danger"
-          @click="$emit('confirm')"
-          aria-label="Delete"
-        >
-          🗑
-        </button>
-        <button
-          v-else
           class="btn btn-icon btn-icon-success"
           @click="$emit('confirm')"
           :disabled="!canConfirm"
@@ -203,7 +186,12 @@ import { getMegaOptions } from '../data/megaEvolutions.js'
 import { POKEMON_DATA } from '../data/pokemon.js'
 import { SPECIAL_MOVE_NAMES } from '../data/specialMoves.js'
 import { ALL_TYPES, getTypeIcon, TYPE_COLORS } from '../data/types.js'
-import { getBerrySprite, getSpriteUrl } from '../utils/pokemon.js'
+import { hexToRgba } from '../utils/colors.js'
+import {
+  getBerrySprite,
+  getMegaSpriteUrl,
+  getSpriteUrl,
+} from '../utils/pokemon.js'
 import {
   applyAbilityDefense,
   getDefensiveMultiplier,
@@ -231,7 +219,6 @@ const {
   updateMoves,
   updateSpecialMove,
   updateMegaForm,
-  enterSwapMode,
 } = useDraftAction()
 
 // Wizard state
@@ -258,9 +245,6 @@ function focusPokemonInput() {
 }
 
 const searchQuery = ref('')
-const localAbility = ref(null)
-const localBerry = ref(null)
-const localSpecialMove = ref(null)
 const showEvolveOptions = ref(false)
 const showSpecialMoveDropdown = ref(false)
 const specialMoveQuery = ref('')
@@ -272,9 +256,6 @@ watch(
   (action) => {
     if (!action) return
     searchQuery.value = action.pokemon?.name || ''
-    localAbility.value = action.ability
-    localBerry.value = action.berry
-    localSpecialMove.value = action.specialMove
     abilityQuery.value = action.ability || ''
   },
   { immediate: true, deep: true },
@@ -374,10 +355,6 @@ function handleEvolveClick() {
   }
 }
 
-function getMegaSpriteUrl(spriteId) {
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${spriteId}.png`
-}
-
 function getEvoSpriteUrl(option) {
   if (option.isMega) {
     return getMegaSpriteUrl(option.spriteId)
@@ -396,16 +373,14 @@ function evolveTo(option) {
     if (draftAction.value?.megaForm === option.form) {
       updateMegaForm(null, null, null)
       // Clear ability if it was set by the mega
-      if (option.ability && localAbility.value === option.ability) {
+      if (option.ability && draftAction.value?.ability === option.ability) {
         updateAbility(null)
-        localAbility.value = null
       }
     } else {
       updateMegaForm(option.form, option.types, option.spriteId)
       // Auto-apply ability if the mega has one
       if (option.ability) {
         updateAbility(option.ability)
-        localAbility.value = option.ability
       }
     }
     showEvolveOptions.value = false
@@ -424,9 +399,6 @@ function evolveTo(option) {
 }
 
 function clearSelections() {
-  localAbility.value = null
-  localBerry.value = null
-  localSpecialMove.value = null
   updateAbility(null)
   updateBerry(null)
   updateMoves([])
@@ -434,20 +406,8 @@ function clearSelections() {
   updateMegaForm(null, null, null)
 }
 
-function onEnterSwapMode() {
-  enterSwapMode()
-}
-
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1)
-}
-
-function hexToRgba(hex, alpha) {
-  const num = parseInt(hex.replace('#', ''), 16)
-  const r = (num >> 16) & 255
-  const g = (num >> 8) & 255
-  const b = num & 255
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
 function getTypeBackground(type, selected = false) {
@@ -465,7 +425,7 @@ const relevantBerries = computed(() => {
   const pokemon = draftAction.value.pokemon
   const weakTypes = ALL_TYPES.filter((attackType) => {
     let mult = getDefensiveMultiplier(attackType, pokemon.types)
-    mult = applyAbilityDefense(mult, attackType, localAbility.value)
+    mult = applyAbilityDefense(mult, attackType, draftAction.value.ability)
     return mult > 1
   })
   return weakTypes
@@ -523,13 +483,11 @@ const abilityAutocompleteOptions = computed(() => {
 })
 
 function onSelectAbility(value) {
-  if (localAbility.value === value) {
+  if (draftAction.value?.ability === value) {
     updateAbility(null)
-    localAbility.value = null
     abilityQuery.value = ''
   } else {
     updateAbility(value)
-    localAbility.value = value
     abilityQuery.value = value
   }
 }
@@ -538,7 +496,6 @@ function onAbilityInput(value) {
   const matchesAbility = ABILITY_NAMES.includes(value)
   if (!matchesAbility) {
     updateAbility(null)
-    localAbility.value = null
   }
 }
 
@@ -550,14 +507,12 @@ function toggleSpecialMoveDropdown() {
 }
 
 function onSelectSpecialMove(value) {
-  localSpecialMove.value = value
   updateSpecialMove(value)
   showSpecialMoveDropdown.value = false
   specialMoveQuery.value = ''
 }
 
 function clearSpecialMove() {
-  localSpecialMove.value = null
   updateSpecialMove(null)
 }
 
@@ -587,7 +542,7 @@ function goToPreviousStep() {
 }
 
 function toggleBerry(value) {
-  if (localBerry.value === value) {
+  if (draftAction.value?.berry === value) {
     updateBerry(null)
   } else {
     updateBerry(value)
@@ -730,24 +685,6 @@ function onSearchInput(value) {
   font-size: 1.1rem;
   margin-bottom: 0;
   text-align: left;
-}
-
-.swap-mode-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-light);
-  font-size: 1.2rem;
-  cursor: pointer;
-  transition: transform var(--transition-base);
-}
-
-.swap-mode-btn:active {
-  transform: scale(0.95);
 }
 
 .special-move-btn {

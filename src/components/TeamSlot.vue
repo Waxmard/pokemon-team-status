@@ -4,8 +4,6 @@
     :class="{
       empty: !pokemon,
       clickable: true,
-      'swap-mode': swapMode,
-      'swap-selected': selected
     }"
     :style="cardBackgroundStyle"
     @click="pokemon ? $emit('edit', pokemon.id) : $emit('add')"
@@ -68,7 +66,12 @@
 import { computed } from 'vue'
 import { ABILITIES } from '../data/abilities.js'
 import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
-import { getBerrySprite, getSpriteUrl } from '../utils/pokemon.js'
+import { hexToRgba } from '../utils/colors.js'
+import {
+  getBerrySprite,
+  getMegaSpriteUrl,
+  getSpriteUrl,
+} from '../utils/pokemon.js'
 import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
@@ -76,21 +79,9 @@ const props = defineProps({
     type: Object,
     default: null,
   },
-  swapMode: {
-    type: Boolean,
-    default: false,
-  },
-  selected: {
-    type: Boolean,
-    default: false,
-  },
 })
 
 defineEmits(['edit', 'add'])
-
-function getMegaSpriteUrl(spriteId) {
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${spriteId}.png`
-}
 
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null
@@ -143,14 +134,6 @@ const cardBackgroundStyle = computed(() => {
     }
   }
 })
-
-function hexToRgba(hex, alpha) {
-  const num = parseInt(hex.replace('#', ''), 16)
-  const r = (num >> 16) & 255
-  const g = (num >> 8) & 255
-  const b = num & 255
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
 </script>
 
 <style scoped>
@@ -269,14 +252,4 @@ function hexToRgba(hex, alpha) {
 }
 
 
-.team-slot.swap-mode {
-  opacity: 0.4;
-  transition: opacity var(--transition-base), transform var(--transition-base);
-}
-
-.team-slot.swap-mode.swap-selected {
-  opacity: 1;
-  border-color: var(--color-success);
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
-}
 </style>

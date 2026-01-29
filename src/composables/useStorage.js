@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { prefetchAllSprites } from '../utils/spriteCache.js'
 
 const DB_NAME = 'pokemon-team-calculator'
 const DB_VERSION = 2
@@ -25,17 +26,16 @@ function openDB() {
   })
 }
 
-async function saveTeam(team) {
+// Generic helper to save an array of items to a store (clears and replaces all)
+async function saveArrayToStore(storeName, items) {
   const db = await openDB()
-  const tx = db.transaction('team', 'readwrite')
-  const store = tx.objectStore('team')
+  const tx = db.transaction(storeName, 'readwrite')
+  const store = tx.objectStore(storeName)
 
-  // Clear existing and add all
   store.clear()
-  // Convert to plain objects to strip Vue reactivity
-  const plainTeam = JSON.parse(JSON.stringify(team))
-  for (const member of plainTeam) {
-    store.add(member)
+  const plainItems = JSON.parse(JSON.stringify(items))
+  for (const item of plainItems) {
+    store.add(item)
   }
 
   return new Promise((resolve, reject) => {
@@ -44,10 +44,11 @@ async function saveTeam(team) {
   })
 }
 
-async function loadTeam() {
+// Generic helper to load all items from a store
+async function loadArrayFromStore(storeName) {
   const db = await openDB()
-  const tx = db.transaction('team', 'readonly')
-  const store = tx.objectStore('team')
+  const tx = db.transaction(storeName, 'readonly')
+  const store = tx.objectStore(storeName)
   const request = store.getAll()
 
   return new Promise((resolve, reject) => {
@@ -56,13 +57,13 @@ async function loadTeam() {
   })
 }
 
-async function saveDefeatedGyms(gyms) {
+// Generic helper to save a single setting value
+async function saveSetting(name, value) {
   const db = await openDB()
   const tx = db.transaction('settings', 'readwrite')
   const store = tx.objectStore('settings')
-  // Convert to plain array to strip Vue reactivity
-  const plainGyms = JSON.parse(JSON.stringify(gyms))
-  store.put({ name: 'defeatedGyms', value: plainGyms })
+  const plainValue = JSON.parse(JSON.stringify(value))
+  store.put({ name, value: plainValue })
 
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve()
@@ -70,67 +71,15 @@ async function saveDefeatedGyms(gyms) {
   })
 }
 
-async function loadDefeatedGyms() {
+// Generic helper to load a single setting value
+async function loadSetting(name, defaultValue = null) {
   const db = await openDB()
   const tx = db.transaction('settings', 'readonly')
   const store = tx.objectStore('settings')
-  const request = store.get('defeatedGyms')
+  const request = store.get(name)
 
   return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result?.value || [])
-    request.onerror = () => reject(request.error)
-  })
-}
-
-async function saveBox(boxData) {
-  const db = await openDB()
-  const tx = db.transaction('box', 'readwrite')
-  const store = tx.objectStore('box')
-
-  store.clear()
-  const plainBox = JSON.parse(JSON.stringify(boxData))
-  for (const member of plainBox) {
-    store.add(member)
-  }
-
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
-}
-
-async function loadBox() {
-  const db = await openDB()
-  const tx = db.transaction('box', 'readonly')
-  const store = tx.objectStore('box')
-  const request = store.getAll()
-
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result || [])
-    request.onerror = () => reject(request.error)
-  })
-}
-
-async function savePinnedGym(gymType) {
-  const db = await openDB()
-  const tx = db.transaction('settings', 'readwrite')
-  const store = tx.objectStore('settings')
-  store.put({ name: 'pinnedGym', value: gymType })
-
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
-}
-
-async function loadPinnedGym() {
-  const db = await openDB()
-  const tx = db.transaction('settings', 'readonly')
-  const store = tx.objectStore('settings')
-  const request = store.get('pinnedGym')
-
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result?.value || null)
+    request.onsuccess = () => resolve(request.result?.value ?? defaultValue)
     request.onerror = () => reject(request.error)
   })
 }
@@ -140,41 +89,40 @@ const team = ref([])
 const defeatedGyms = ref([])
 const box = ref([])
 const pinnedGym = ref(null)
-const isLoading = ref(true)
 
 export function useStorage() {
   async function loadData() {
     try {
-      isLoading.value = true
-      team.value = await loadTeam()
-      defeatedGyms.value = await loadDefeatedGyms()
-      box.value = await loadBox()
-      pinnedGym.value = await loadPinnedGym()
+      team.value = await loadArrayFromStore('team')
+      defeatedGyms.value = await loadSetting('defeatedGyms', [])
+      box.value = await loadArrayFromStore('box')
+      pinnedGym.value = await loadSetting('pinnedGym', null)
+
+      // Pre-cache all small sprites (fire-and-forget, ~2.5MB)
+      prefetchAllSprites()
     } catch (e) {
       console.error('Failed to load data:', e)
-    } finally {
-      isLoading.value = false
     }
   }
 
   async function persistTeam(newTeam) {
     team.value = newTeam
-    await saveTeam(newTeam)
+    await saveArrayToStore('team', newTeam)
   }
 
   async function persistDefeatedGyms(newGyms) {
     defeatedGyms.value = newGyms
-    await saveDefeatedGyms(newGyms)
+    await saveSetting('defeatedGyms', newGyms)
   }
 
   async function persistBox(newBox) {
     box.value = newBox
-    await saveBox(newBox)
+    await saveArrayToStore('box', newBox)
   }
 
   async function persistPinnedGym(gymType) {
     pinnedGym.value = gymType
-    await savePinnedGym(gymType)
+    await saveSetting('pinnedGym', gymType)
   }
 
   return {
@@ -182,7 +130,6 @@ export function useStorage() {
     defeatedGyms,
     box,
     pinnedGym,
-    isLoading,
     loadData,
     persistTeam,
     persistDefeatedGyms,
