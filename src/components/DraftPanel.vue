@@ -83,17 +83,29 @@
 
         <!-- Step: Ability -->
         <div v-if="wizardStep === 'ability'" class="wizard-step">
-          <div class="ability-list">
-            <button
-              v-for="name in ABILITY_NAMES"
-              :key="name"
-              @click="toggleAbility(name)"
-              class="ability-option"
-              :class="{ selected: localAbility === name }"
-              :style="getAbilityBackground(localAbility === name)"
-            >
-              {{ name }}
-            </button>
+          <n-auto-complete
+            v-model:value="abilityQuery"
+            :options="abilityAutocompleteOptions"
+            placeholder="Search ability..."
+            @select="onSelectAbility"
+            @update:value="onAbilityInput"
+            clearable
+          />
+          <div class="pokemon-preview">
+            <SpriteImg
+              v-if="selectedSpriteUrl"
+              :src="selectedSpriteUrl"
+              :alt="draftAction.pokemon?.name"
+              :width="144"
+              :height="144"
+            />
+            <!-- Selection overlays (top-left) -->
+            <div class="selection-overlays">
+              <div v-if="draftAction.moves?.length" class="move-icons-overlay">
+                <img v-for="type in draftAction.moves" :key="type" :src="getTypeIcon(type)" class="overlay-type-icon" />
+              </div>
+              <SpriteImg v-if="draftAction.berry" :src="getBerrySprite(draftAction.berry)" class="overlay-berry" :width="24" :height="24" />
+            </div>
           </div>
         </div>
 
@@ -252,6 +264,7 @@ const localSpecialMove = ref(null)
 const showEvolveOptions = ref(false)
 const showSpecialMoveDropdown = ref(false)
 const specialMoveQuery = ref('')
+const abilityQuery = ref('')
 
 // Initialize form state when draftAction changes
 watch(
@@ -262,6 +275,7 @@ watch(
     localAbility.value = action.ability
     localBerry.value = action.berry
     localSpecialMove.value = action.specialMove
+    abilityQuery.value = action.ability || ''
   },
   { immediate: true, deep: true },
 )
@@ -441,16 +455,6 @@ function getTypeBackground(type, selected = false) {
   }
 }
 
-function getAbilityBackground(selected = false) {
-  // Use a neutral purple/blue accent color for abilities
-  const color = '#8B5CF6'
-  const opacity = selected ? 0.5 : 0.08
-  const opacityEnd = selected ? 0.3 : 0.02
-  return {
-    background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacityEnd)} 100%)`,
-  }
-}
-
 // Wizard-related computed properties
 const relevantBerries = computed(() => {
   if (!draftAction.value?.pokemon) return []
@@ -503,6 +507,37 @@ const specialMoveOptions = computed(() => {
   ).map((name) => ({ label: name, value: name }))
 })
 
+// Ability autocomplete helpers
+const abilityAutocompleteOptions = computed(() => {
+  if (!abilityQuery.value) {
+    return ABILITY_NAMES.map((name) => ({ label: name, value: name }))
+  }
+  const query = abilityQuery.value.toLowerCase()
+  return ABILITY_NAMES.filter((name) => name.toLowerCase().includes(query)).map(
+    (name) => ({ label: name, value: name }),
+  )
+})
+
+function onSelectAbility(value) {
+  if (localAbility.value === value) {
+    updateAbility(null)
+    localAbility.value = null
+    abilityQuery.value = ''
+  } else {
+    updateAbility(value)
+    localAbility.value = value
+    abilityQuery.value = value
+  }
+}
+
+function onAbilityInput(value) {
+  const matchesAbility = ABILITY_NAMES.includes(value)
+  if (!matchesAbility) {
+    updateAbility(null)
+    localAbility.value = null
+  }
+}
+
 function toggleSpecialMoveDropdown() {
   showSpecialMoveDropdown.value = !showSpecialMoveDropdown.value
   if (showSpecialMoveDropdown.value) {
@@ -552,14 +587,6 @@ function toggleBerry(value) {
     updateBerry(null)
   } else {
     updateBerry(value)
-  }
-}
-
-function toggleAbility(value) {
-  if (localAbility.value === value) {
-    updateAbility(null)
-  } else {
-    updateAbility(value)
   }
 }
 
@@ -857,30 +884,31 @@ function onSearchInput(value) {
   transform: scale(1.05);
 }
 
-/* Ability list (1 column) */
-.ability-list {
+/* Selection overlays positioned top-left of sprite */
+.selection-overlays {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
-.ability-option {
-  padding: var(--space-3) var(--space-4);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-md);
-  text-align: left;
-  cursor: pointer;
-  font-size: 0.95rem;
-  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+.move-icons-overlay {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  max-width: 80px;
 }
 
-.ability-option:active {
-  transform: scale(0.98);
+.overlay-type-icon {
+  width: 20px;
+  height: 20px;
 }
 
-.ability-option.selected {
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: scale(1.02);
+.overlay-berry {
+  width: 24px;
+  height: 24px;
 }
 
 .wizard-actions {
