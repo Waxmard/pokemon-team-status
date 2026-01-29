@@ -4,8 +4,6 @@
     :class="{
       empty: !pokemon,
       clickable: true,
-      'swap-mode': swapMode,
-      'swap-selected': selected
     }"
     :style="cardBackgroundStyle"
     @click="pokemon ? $emit('edit', pokemon.id) : $emit('add')"
@@ -75,14 +73,6 @@ const props = defineProps({
   pokemon: {
     type: Object,
     default: null,
-  },
-  swapMode: {
-    type: Boolean,
-    default: false,
-  },
-  selected: {
-    type: Boolean,
-    default: false,
   },
 })
 
@@ -269,14 +259,4 @@ function hexToRgba(hex, alpha) {
 }
 
 
-.team-slot.swap-mode {
-  opacity: 0.4;
-  transition: opacity var(--transition-base), transform var(--transition-base);
-}
-
-.team-slot.swap-mode.swap-selected {
-  opacity: 1;
-  border-color: var(--color-success);
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
-}
 </style>

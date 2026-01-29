@@ -137,7 +137,32 @@ export function useDraftAction() {
 
   function exitSwapMode() {
     swapMode.value = false
-    updateReplaceTarget(null)
+    draftAction.value = null
+  }
+
+  function updateInHandPokemon(
+    pokemonData,
+    ability,
+    berry,
+    moves,
+    specialMove,
+    megaForm,
+    megaTypes,
+    megaSpriteId,
+  ) {
+    if (draftAction.value) {
+      draftAction.value = {
+        ...draftAction.value,
+        pokemon: pokemonData,
+        ability,
+        berry,
+        moves: [...(moves || [])],
+        specialMove,
+        megaForm,
+        megaTypes,
+        megaSpriteId,
+      }
+    }
   }
 
   function cancel() {
@@ -160,6 +185,7 @@ export function useDraftAction() {
     updateSpecialMove,
     updateMegaForm,
     updateReplaceTarget,
+    updateInHandPokemon,
     enterSwapMode,
     exitSwapMode,
     cancel,

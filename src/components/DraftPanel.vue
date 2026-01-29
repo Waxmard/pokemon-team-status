@@ -4,14 +4,6 @@
         <!-- Shared header with dynamic title -->
         <div class="wizard-header">
           <h3 class="wizard-title">{{ wizardStepTitle }}</h3>
-          <button
-            v-if="wizardStep === 'pokemon' && draftAction.isBoxPokemon"
-            class="swap-mode-btn"
-            @click="onEnterSwapMode"
-            aria-label="Swap with team"
-          >
-            ⇄
-          </button>
 
           <!-- Moves step: inline special move UI -->
           <template v-if="wizardStep === 'moves'">
@@ -231,7 +223,6 @@ const {
   updateMoves,
   updateSpecialMove,
   updateMegaForm,
-  enterSwapMode,
 } = useDraftAction()
 
 // Wizard state
@@ -432,10 +423,6 @@ function clearSelections() {
   updateMoves([])
   updateSpecialMove(null)
   updateMegaForm(null, null, null)
-}
-
-function onEnterSwapMode() {
-  enterSwapMode()
 }
 
 function capitalize(str) {
@@ -730,24 +717,6 @@ function onSearchInput(value) {
   font-size: 1.1rem;
   margin-bottom: 0;
   text-align: left;
-}
-
-.swap-mode-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-light);
-  font-size: 1.2rem;
-  cursor: pointer;
-  transition: transform var(--transition-base);
-}
-
-.swap-mode-btn:active {
-  transform: scale(0.95);
 }
 
 .special-move-btn {
