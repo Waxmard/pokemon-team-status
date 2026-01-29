@@ -4,13 +4,12 @@ A PWA for calculating team weaknesses against gym types. Built with Vue 3 + Vite
 
 ## Features
 
-- Build a team of up to 6 Pokemon (Gen 1-7)
+- Build a team of up to 6 Pokemon with 3 reserve slots (Gen 1-7)
+- Mega evolution support
 - See weakness/resistance scores against all 18 types
 - Track defeated gyms
-- Searchable Pokemon autocomplete with type filtering
-- Ability and move type selection for accurate calculations
+- Ability, berry, and move type selection for accurate calculations
 - Works offline (PWA)
-- Optimized for iPhone home screen with safe area support
 
 ## Getting Started
 

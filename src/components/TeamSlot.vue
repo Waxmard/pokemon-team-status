@@ -1,31 +1,15 @@
 <template>
-  <NPopconfirm
-    :show="showDeleteConfirm"
-    :show-icon="false"
-    @update:show="showDeleteConfirm = $event"
-    positive-text="Delete"
-    negative-text="Cancel"
-    @positive-click="confirmDelete"
-    @negative-click="cancelDelete"
+  <div
+    class="team-slot"
+    :class="{
+      empty: !pokemon,
+      clickable: true,
+      'swap-mode': swapMode,
+      'swap-selected': selected
+    }"
+    :style="cardBackgroundStyle"
+    @click="pokemon ? $emit('edit', pokemon.id) : $emit('add')"
   >
-    <template #trigger>
-      <div
-        class="team-slot"
-        :class="{
-          empty: !pokemon,
-          clickable: true,
-          'swap-mode': swapMode,
-          'swap-selected': selected
-        }"
-        :style="cardBackgroundStyle"
-        @click="pokemon ? $emit('edit', pokemon.id) : $emit('add')"
-        @mousedown="onPressStart"
-        @mouseup="onPressEnd"
-        @mouseleave="onPressCancel"
-        @touchstart.passive="onPressStart"
-        @touchend="onPressEnd"
-        @touchcancel="onPressCancel"
-      >
         <Transition name="slot-content" mode="out-in">
           <div v-if="pokemon" key="filled" class="slot-inner">
             <div class="slot-content">
@@ -77,15 +61,11 @@
             <span class="empty-text">Empty Slot</span>
           </div>
         </Transition>
-      </div>
-    </template>
-    Delete {{ pokemon?.name }}?
-  </NPopconfirm>
+  </div>
 </template>
 
 <script setup>
-import { NPopconfirm } from 'naive-ui'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { ABILITIES } from '../data/abilities.js'
 import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { getBerrySprite, getSpriteUrl } from '../utils/pokemon.js'
@@ -106,38 +86,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['edit', 'add', 'delete'])
-
-// Long-press state for delete confirmation
-const showDeleteConfirm = ref(false)
-let longPressTimer = null
-
-function onPressStart() {
-  if (!props.pokemon) return
-  longPressTimer = setTimeout(() => {
-    showDeleteConfirm.value = true
-  }, 500) // 500ms hold
-}
-
-function onPressEnd() {
-  if (longPressTimer) {
-    clearTimeout(longPressTimer)
-    longPressTimer = null
-  }
-}
-
-function onPressCancel() {
-  onPressEnd()
-}
-
-function confirmDelete() {
-  emit('delete', props.pokemon.id)
-  showDeleteConfirm.value = false
-}
-
-function cancelDelete() {
-  showDeleteConfirm.value = false
-}
+defineEmits(['edit', 'add'])
 
 function getMegaSpriteUrl(spriteId) {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${spriteId}.png`
