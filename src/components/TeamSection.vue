@@ -10,9 +10,14 @@
       </button>
     </div>
 
-    <!-- Add Button (always visible when not in swap mode or draft panel) -->
+    <!-- Add Button (when not editing) -->
     <button v-if="!swapMode && !showDraftPanel" class="add-button" @click="handleAddClick">
       <span class="add-icon">+</span>
+    </button>
+
+    <!-- Delete Button (when editing a Pokemon) -->
+    <button v-if="isEditing && showDraftPanel" class="add-button delete-mode" @click="handleDeleteClick">
+      <span class="add-icon">🗑</span>
     </button>
 
     <!-- Mode Toggle Button (long-press to collapse) -->
@@ -108,6 +113,7 @@ const emit = defineEmits([
   'deleteTeamPokemon',
   'deleteBoxPokemon',
   'cancelSwap',
+  'deletePokemon',
 ])
 
 const {
@@ -234,6 +240,11 @@ const isEditingForSwap = computed(() => {
   )
 })
 
+// Detect when editing (for showing delete button)
+const isEditing = computed(() => {
+  return draftAction.value?.type === 'edit' && !swapMode.value
+})
+
 function handleEditPokemon(id) {
   const pokemon = props.team.find((p) => p.id === id)
   if (!pokemon) return
@@ -270,6 +281,10 @@ function toggleViewMode() {
 
 function handleAddClick() {
   startAdd()
+}
+
+function handleDeleteClick() {
+  emit('deletePokemon')
 }
 
 function handleDeleteTeamPokemon(id) {
@@ -320,6 +335,10 @@ function handleDeleteBoxPokemon(id) {
   font-weight: 600;
   line-height: 1;
   color: var(--color-danger);
+}
+
+.add-button.delete-mode .add-icon {
+  font-size: 1rem;
 }
 
 .mode-toggle {

@@ -13,6 +13,7 @@
         @deleteTeamPokemon="deleteTeamPokemon"
         @deleteBoxPokemon="deleteBoxPokemon"
         @cancelSwap="handleCancelSwap"
+        @deletePokemon="handleDeleteFromDraft"
       />
 
       <GymColumns
@@ -451,6 +452,17 @@ function deleteTeamPokemon(id) {
 
 function deleteBoxPokemon(id) {
   persistBox(box.value.filter((p) => p.id !== id))
+}
+
+function handleDeleteFromDraft() {
+  if (!draftAction.value) return
+
+  if (draftAction.value.isBoxPokemon) {
+    deleteBoxPokemon(draftAction.value.boxPokemonId)
+  } else if (draftAction.value.editId) {
+    deleteTeamPokemon(draftAction.value.editId)
+  }
+  cancel()
 }
 
 function defeatGym(type) {

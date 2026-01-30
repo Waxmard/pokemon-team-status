@@ -166,15 +166,6 @@
         </div>
 
         <button
-          v-if="wizardStep === 'pokemon' && !draftAction.pokemon && draftAction.type === 'edit'"
-          class="btn btn-icon btn-icon-danger"
-          @click="$emit('confirm')"
-          aria-label="Delete"
-        >
-          🗑
-        </button>
-        <button
-          v-else
           class="btn btn-icon btn-icon-success"
           @click="$emit('confirm')"
           :disabled="!canConfirm"
