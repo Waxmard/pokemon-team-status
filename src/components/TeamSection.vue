@@ -10,6 +10,11 @@
       </button>
     </div>
 
+    <!-- Add Button (always visible when not in swap mode or draft panel) -->
+    <button v-if="!swapMode && !showDraftPanel" class="add-button" @click="handleAddClick">
+      <span class="add-icon">+</span>
+    </button>
+
     <!-- Mode Toggle Button (long-press to collapse) -->
     <button
       class="mode-toggle"
@@ -42,12 +47,6 @@
             :pokemon="pokemon"
             @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
             @delete="handleDeleteTeamPokemon"
-          />
-          <TeamSlot
-            v-for="i in emptySlotCount"
-            :key="'empty-' + i"
-            :pokemon="null"
-            @add="swapMode ? handleSwapSelect(`empty-${i}`) : startAdd()"
           />
         </div>
 
@@ -176,10 +175,13 @@ function handleModeClick() {
     isCollapsed.value = false
     return
   }
-  // If in swap mode, clicking toggle cancels swap and switches to box view
+  // If in swap mode, clicking toggle cancels swap
+  // Only switch to box view if swap was initiated from box edit (not from add-replace)
   if (swapMode.value) {
     emit('cancelSwap')
-    viewMode.value = 'box'
+    if (!draftAction.value?.isAddReplace) {
+      viewMode.value = 'box'
+    }
     return
   }
   // If editing a box Pokemon, start swap mode
@@ -208,8 +210,7 @@ watch(swapMode, (isSwapMode) => {
   }
 })
 
-// Number of empty slots to show (max 1)
-const emptySlotCount = computed(() => (props.team.length < 6 ? 1 : 0))
+// Number of empty slots to show (max 1) - only for box
 const emptyBoxSlotCount = computed(() => (props.box.length < 3 ? 1 : 0))
 
 // Handle clicking a team slot in swap mode - perform immediate swap
@@ -263,6 +264,10 @@ function toggleViewMode() {
   viewMode.value = viewMode.value === 'team' ? 'box' : 'team'
 }
 
+function handleAddClick() {
+  startAdd()
+}
+
 function handleDeleteTeamPokemon(id) {
   emit('deleteTeamPokemon', id)
 }
@@ -287,6 +292,30 @@ function handleDeleteBoxPokemon(id) {
   box-shadow: var(--shadow-lg);
   overflow-x: hidden;
   max-width: 100vw;
+}
+
+.add-button {
+  position: absolute;
+  bottom: calc(-1 * var(--space-2));
+  right: var(--space-4);
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+}
+
+.add-icon {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-danger);
 }
 
 .mode-toggle {

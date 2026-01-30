@@ -47,8 +47,14 @@ const {
   persistBox,
 } = useStorage()
 
-const { draftAction, swapMode, exitSwapMode, updateInHandPokemon, cancel } =
-  useDraftAction()
+const {
+  draftAction,
+  swapMode,
+  enterSwapMode,
+  exitSwapMode,
+  updateInHandPokemon,
+  cancel,
+} = useDraftAction()
 
 // Store original state when swap mode starts
 const swapOriginalState = ref(null)
@@ -172,64 +178,49 @@ function handleImmediateSwap(targetId) {
   }
   const boxPokemonId = draftAction.value.boxPokemonId
 
-  if (targetId.startsWith('empty-')) {
-    // Empty slot: place pokemon and exit swap mode
-    if (team.value.length < 6) {
-      persistTeam([
-        ...team.value,
-        { ...inHandPokemon, id: Date.now().toString() },
-      ])
-      persistBox(box.value.filter((p) => p.id !== boxPokemonId))
-    }
-    exitSwapMode()
-  } else {
-    // Occupied slot: swap and continue chain
-    const targetPokemon = team.value.find((p) => p.id === targetId)
-    if (!targetPokemon) return
+  // Swap with occupied slot and continue chain
+  const targetPokemon = team.value.find((p) => p.id === targetId)
+  if (!targetPokemon) return
 
-    // Find pokemon data for the replaced team pokemon
-    const replacedPokemonData = POKEMON_DATA.find(
-      (p) => p.name === targetPokemon.name,
-    )
+  // Find pokemon data for the replaced team pokemon
+  const replacedPokemonData = POKEMON_DATA.find(
+    (p) => p.name === targetPokemon.name,
+  )
 
-    // Place in-hand pokemon in team slot
-    const newTeam = team.value.map((p) =>
-      p.id === targetId ? { ...inHandPokemon, id: Date.now().toString() } : p,
-    )
-    persistTeam(newTeam)
+  // Place in-hand pokemon in team slot
+  const newTeam = team.value.map((p) =>
+    p.id === targetId ? { ...inHandPokemon, id: Date.now().toString() } : p,
+  )
+  persistTeam(newTeam)
 
-    // Remove old box pokemon, add replaced team pokemon to box
-    const newBoxMember = {
-      id: `${Date.now().toString()}-box`,
-      name: targetPokemon.name,
-      types: targetPokemon.types,
-      ability: targetPokemon.ability,
-      berry: targetPokemon.berry,
-      moves: targetPokemon.moves,
-      specialMove: targetPokemon.specialMove,
-      megaForm: targetPokemon.megaForm,
-      megaTypes: targetPokemon.megaTypes,
-      megaSpriteId: targetPokemon.megaSpriteId,
-    }
-    persistBox([
-      ...box.value.filter((p) => p.id !== boxPokemonId),
-      newBoxMember,
-    ])
-
-    // Update "in hand" to be the replaced pokemon for chain swapping
-    updateInHandPokemon(
-      replacedPokemonData,
-      targetPokemon.ability,
-      targetPokemon.berry,
-      targetPokemon.moves,
-      targetPokemon.specialMove,
-      targetPokemon.megaForm,
-      targetPokemon.megaTypes,
-      targetPokemon.megaSpriteId,
-    )
-    // Update boxPokemonId to the new box member
-    draftAction.value.boxPokemonId = newBoxMember.id
+  // Remove old box pokemon, add replaced team pokemon to box
+  const newBoxMember = {
+    id: `${Date.now().toString()}-box`,
+    name: targetPokemon.name,
+    types: targetPokemon.types,
+    ability: targetPokemon.ability,
+    berry: targetPokemon.berry,
+    moves: targetPokemon.moves,
+    specialMove: targetPokemon.specialMove,
+    megaForm: targetPokemon.megaForm,
+    megaTypes: targetPokemon.megaTypes,
+    megaSpriteId: targetPokemon.megaSpriteId,
   }
+  persistBox([...box.value.filter((p) => p.id !== boxPokemonId), newBoxMember])
+
+  // Update "in hand" to be the replaced pokemon for chain swapping
+  updateInHandPokemon(
+    replacedPokemonData,
+    targetPokemon.ability,
+    targetPokemon.berry,
+    targetPokemon.moves,
+    targetPokemon.specialMove,
+    targetPokemon.megaForm,
+    targetPokemon.megaTypes,
+    targetPokemon.megaSpriteId,
+  )
+  // Update boxPokemonId to the new box member
+  draftAction.value.boxPokemonId = newBoxMember.id
 }
 
 // Methods
@@ -270,7 +261,29 @@ function confirmDraft() {
 
   if (draftAction.value.type === 'add') {
     if (team.value.length < 6) {
+      // Normal add - team has room
       persistTeam([...team.value, newMember])
+    } else {
+      // Team is full - enter replace mode
+      // 1. Add new Pokemon to box temporarily
+      const tempBoxMember = {
+        ...newMember,
+        id: `${Date.now().toString()}-temp`,
+      }
+      persistBox([...box.value, tempBoxMember])
+
+      // 2. Set up draftAction for swap mode with this Pokemon "in hand"
+      draftAction.value = {
+        ...draftAction.value,
+        type: 'edit',
+        isBoxPokemon: true,
+        isAddReplace: true, // Flag for cancel behavior
+        boxPokemonId: tempBoxMember.id,
+      }
+
+      // 3. Enter swap mode
+      enterSwapMode()
+      return // Don't call cancel() - stay in swap mode
     }
   } else if (draftAction.value.type === 'addToBox') {
     if (box.value.length < 3) {
