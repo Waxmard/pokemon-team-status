@@ -218,7 +218,7 @@ watch(swapMode, (isSwapMode) => {
 })
 
 // Number of empty slots to show (max 1) - only for box
-const emptyBoxSlotCount = computed(() => (props.box.length < 3 ? 1 : 0))
+const emptyBoxSlotCount = computed(() => 1)
 
 // Handle clicking a team slot in swap mode - perform immediate swap
 function handleSwapSelect(targetId) {

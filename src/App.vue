@@ -353,9 +353,7 @@ function confirmDraft() {
       return // Don't call cancel() - stay in swap mode
     }
   } else if (draftAction.value.type === 'addToBox') {
-    if (box.value.length < 3) {
-      persistBox([...box.value, newMember])
-    }
+    persistBox([...box.value, newMember])
   } else if (draftAction.value.type === 'edit') {
     if (draftAction.value.isBoxPokemon) {
       // Editing a box Pokemon
