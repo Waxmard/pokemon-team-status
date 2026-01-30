@@ -29,7 +29,7 @@
       <template v-if="swapMode && swapPokemonSpriteUrl">
         <SpriteImg :src="swapPokemonSpriteUrl" :width="32" :height="32" alt="Swap" />
       </template>
-      <span v-else-if="isEditingBoxPokemon" class="mode-icon">⇄</span>
+      <span v-else-if="isEditingForSwap" class="mode-icon">⇄</span>
       <span v-else class="mode-icon">{{ viewMode === 'team' ? '⚔️' : '📦' }}</span>
     </button>
 
@@ -56,14 +56,14 @@
             v-for="pokemon in box"
             :key="pokemon.id"
             :pokemon="pokemon"
-            @edit="handleEditBoxPokemon(pokemon.id)"
+            @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditBoxPokemon(pokemon.id)"
             @delete="handleDeleteBoxPokemon"
           />
           <TeamSlot
             v-for="i in emptyBoxSlotCount"
             :key="'box-empty-' + i"
             :pokemon="null"
-            @add="startAddToBox()"
+            @add="swapMode ? handleSwapSelect(null) : startAddToBox()"
           />
         </div>
       </div>
@@ -176,16 +176,16 @@ function handleModeClick() {
     return
   }
   // If in swap mode, clicking toggle cancels swap
-  // Only switch to box view if swap was initiated from box edit (not from add-replace)
+  // Switch to appropriate view based on what was being edited
   if (swapMode.value) {
     emit('cancelSwap')
     if (!draftAction.value?.isAddReplace) {
-      viewMode.value = 'box'
+      viewMode.value = draftAction.value?.isTeamPokemon ? 'team' : 'box'
     }
     return
   }
-  // If editing a box Pokemon, start swap mode
-  if (isEditingBoxPokemon.value) {
+  // If editing a team or box Pokemon, start swap mode
+  if (isEditingForSwap.value) {
     enterSwapMode()
     return
   }
@@ -203,10 +203,11 @@ function handleConfirmSwap() {
   // Stay on team view
 }
 
-// Switch to team view when entering swap mode
+// Switch to opposite view when entering swap mode
 watch(swapMode, (isSwapMode) => {
   if (isSwapMode) {
-    viewMode.value = 'team'
+    // Show opposite view: editing team → show box, editing box → show team
+    viewMode.value = draftAction.value?.isTeamPokemon ? 'box' : 'team'
   }
 })
 
@@ -225,9 +226,12 @@ const showDraftPanel = computed(() => {
   return !!draftAction.value && !swapMode.value
 })
 
-// Detect when editing a box Pokemon (for showing swap icon in mode toggle)
-const isEditingBoxPokemon = computed(() => {
-  return showDraftPanel.value && draftAction.value?.isBoxPokemon
+// Detect when editing a team or box Pokemon (for showing swap icon in mode toggle)
+const isEditingForSwap = computed(() => {
+  return (
+    showDraftPanel.value &&
+    (draftAction.value?.isBoxPokemon || draftAction.value?.isTeamPokemon)
+  )
 })
 
 function handleEditPokemon(id) {

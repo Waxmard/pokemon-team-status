@@ -36,6 +36,7 @@ export function useDraftAction() {
       type: 'edit',
       editId: id,
       isBoxPokemon: false,
+      isTeamPokemon: true,
       pokemon: member.pokemonData,
       ability: member.ability,
       berry: member.berry,

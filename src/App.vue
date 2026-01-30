@@ -161,9 +161,9 @@ const defeatedGymsList = computed(() => {
     })
 })
 
-// Handle immediate swap when clicking a team slot in swap mode
+// Handle immediate swap when clicking a slot in swap mode
 function handleImmediateSwap(targetId) {
-  if (!draftAction.value?.pokemon || !draftAction.value?.isBoxPokemon) return
+  if (!draftAction.value?.pokemon) return
 
   const inHandPokemon = {
     name: draftAction.value.pokemon.name,
@@ -176,51 +176,117 @@ function handleImmediateSwap(targetId) {
     megaTypes: draftAction.value.megaTypes,
     megaSpriteId: draftAction.value.megaSpriteId,
   }
-  const boxPokemonId = draftAction.value.boxPokemonId
 
-  // Swap with occupied slot and continue chain
-  const targetPokemon = team.value.find((p) => p.id === targetId)
-  if (!targetPokemon) return
+  if (draftAction.value.isBoxPokemon) {
+    // Box → Team swap (existing logic)
+    const boxPokemonId = draftAction.value.boxPokemonId
 
-  // Find pokemon data for the replaced team pokemon
-  const replacedPokemonData = POKEMON_DATA.find(
-    (p) => p.name === targetPokemon.name,
-  )
+    const targetPokemon = team.value.find((p) => p.id === targetId)
+    if (!targetPokemon) return
 
-  // Place in-hand pokemon in team slot
-  const newTeam = team.value.map((p) =>
-    p.id === targetId ? { ...inHandPokemon, id: Date.now().toString() } : p,
-  )
-  persistTeam(newTeam)
+    const replacedPokemonData = POKEMON_DATA.find(
+      (p) => p.name === targetPokemon.name,
+    )
 
-  // Remove old box pokemon, add replaced team pokemon to box
-  const newBoxMember = {
-    id: `${Date.now().toString()}-box`,
-    name: targetPokemon.name,
-    types: targetPokemon.types,
-    ability: targetPokemon.ability,
-    berry: targetPokemon.berry,
-    moves: targetPokemon.moves,
-    specialMove: targetPokemon.specialMove,
-    megaForm: targetPokemon.megaForm,
-    megaTypes: targetPokemon.megaTypes,
-    megaSpriteId: targetPokemon.megaSpriteId,
+    // Place in-hand pokemon in team slot
+    const newTeam = team.value.map((p) =>
+      p.id === targetId ? { ...inHandPokemon, id: Date.now().toString() } : p,
+    )
+    persistTeam(newTeam)
+
+    // Remove old box pokemon, add replaced team pokemon to box
+    const newBoxMember = {
+      id: `${Date.now().toString()}-box`,
+      name: targetPokemon.name,
+      types: targetPokemon.types,
+      ability: targetPokemon.ability,
+      berry: targetPokemon.berry,
+      moves: targetPokemon.moves,
+      specialMove: targetPokemon.specialMove,
+      megaForm: targetPokemon.megaForm,
+      megaTypes: targetPokemon.megaTypes,
+      megaSpriteId: targetPokemon.megaSpriteId,
+    }
+    persistBox([
+      ...box.value.filter((p) => p.id !== boxPokemonId),
+      newBoxMember,
+    ])
+
+    // Update "in hand" to be the replaced pokemon for chain swapping
+    updateInHandPokemon(
+      replacedPokemonData,
+      targetPokemon.ability,
+      targetPokemon.berry,
+      targetPokemon.moves,
+      targetPokemon.specialMove,
+      targetPokemon.megaForm,
+      targetPokemon.megaTypes,
+      targetPokemon.megaSpriteId,
+    )
+    draftAction.value.boxPokemonId = newBoxMember.id
+  } else if (draftAction.value.isTeamPokemon) {
+    // Team → Box swap (new logic)
+    const teamPokemonId = draftAction.value.editId
+
+    if (targetId === null) {
+      // Moving to empty box slot - remove from team, add to box
+      const newBoxMember = {
+        id: `${Date.now().toString()}-box`,
+        ...inHandPokemon,
+      }
+      persistBox([...box.value, newBoxMember])
+      persistTeam(team.value.filter((p) => p.id !== teamPokemonId))
+
+      // Exit swap mode - no chain swap possible when moving to empty slot
+      exitSwapMode()
+    } else {
+      // Swap with existing box Pokemon
+      const targetPokemon = box.value.find((p) => p.id === targetId)
+      if (!targetPokemon) return
+
+      const replacedPokemonData = POKEMON_DATA.find(
+        (p) => p.name === targetPokemon.name,
+      )
+
+      // Place in-hand pokemon in box slot
+      const newBox = box.value.map((p) =>
+        p.id === targetId
+          ? { ...inHandPokemon, id: `${Date.now().toString()}-box` }
+          : p,
+      )
+      persistBox(newBox)
+
+      // Replace team pokemon with box pokemon
+      const newTeamMember = {
+        id: Date.now().toString(),
+        name: targetPokemon.name,
+        types: targetPokemon.types,
+        ability: targetPokemon.ability,
+        berry: targetPokemon.berry,
+        moves: targetPokemon.moves,
+        specialMove: targetPokemon.specialMove,
+        megaForm: targetPokemon.megaForm,
+        megaTypes: targetPokemon.megaTypes,
+        megaSpriteId: targetPokemon.megaSpriteId,
+      }
+      persistTeam(
+        team.value.map((p) => (p.id === teamPokemonId ? newTeamMember : p)),
+      )
+
+      // Update "in hand" to be the replaced box pokemon for chain swapping
+      updateInHandPokemon(
+        replacedPokemonData,
+        targetPokemon.ability,
+        targetPokemon.berry,
+        targetPokemon.moves,
+        targetPokemon.specialMove,
+        targetPokemon.megaForm,
+        targetPokemon.megaTypes,
+        targetPokemon.megaSpriteId,
+      )
+      draftAction.value.editId = newTeamMember.id
+    }
   }
-  persistBox([...box.value.filter((p) => p.id !== boxPokemonId), newBoxMember])
-
-  // Update "in hand" to be the replaced pokemon for chain swapping
-  updateInHandPokemon(
-    replacedPokemonData,
-    targetPokemon.ability,
-    targetPokemon.berry,
-    targetPokemon.moves,
-    targetPokemon.specialMove,
-    targetPokemon.megaForm,
-    targetPokemon.megaTypes,
-    targetPokemon.megaSpriteId,
-  )
-  // Update boxPokemonId to the new box member
-  draftAction.value.boxPokemonId = newBoxMember.id
 }
 
 // Methods
