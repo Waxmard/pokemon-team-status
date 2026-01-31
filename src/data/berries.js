@@ -16,6 +16,7 @@ export const BERRIES = {
   'Colbur Berry': 'dark',
   'Babiri Berry': 'steel',
   'Roseli Berry': 'fairy',
+  'Nevermelt Ice': 'ice',
 }
 
 export const BERRY_NAMES = Object.keys(BERRIES)

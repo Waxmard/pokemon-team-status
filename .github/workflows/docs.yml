@@ -1,0 +1,26 @@
+name: Documentation
+
+on:
+  push:
+    paths: ['**.md']
+  pull_request:
+    paths: ['**.md']
+
+jobs:
+  lint:
+    name: Lint Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@07035fd053f7be764496c0f8d8f9f41f98305101 # v22
+        with:
+          globs: '**/*.md'
+
+  links:
+    name: Check Links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: tcort/github-action-markdown-link-check@e7c7a18363c842693fadde5d41a3bd3573a7a225 # v1
+        with:
+          use-quiet-mode: 'yes'

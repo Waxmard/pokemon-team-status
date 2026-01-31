@@ -10,7 +10,7 @@
     </div>
     <img
       v-show="!loading && !error"
-      :src="src"
+      :src="currentSrc"
       :alt="alt"
       :class="imgClass"
       class="sprite-img"
@@ -48,6 +48,22 @@ const props = defineProps({
 
 const loading = ref(true)
 const error = ref(false)
+const currentSrc = ref(props.src)
+const triedFallback = ref(false)
+
+// Convert high-res URL to small sprite URL
+function getSmallSpriteUrl(hdUrl) {
+  // HD: .../sprites/pokemon/other/official-artwork/25.png
+  // Small: .../sprites/pokemon/25.png
+  const match = hdUrl.match(/\/official-artwork\/(\d+)\.png$/)
+  if (match) {
+    return hdUrl.replace(
+      `/other/official-artwork/${match[1]}.png`,
+      `/${match[1]}.png`,
+    )
+  }
+  return null
+}
 
 function onLoad() {
   loading.value = false
@@ -55,13 +71,24 @@ function onLoad() {
 }
 
 function onError() {
+  if (!triedFallback.value) {
+    const fallback = getSmallSpriteUrl(props.src)
+    if (fallback) {
+      triedFallback.value = true
+      currentSrc.value = fallback
+      loading.value = true
+      return
+    }
+  }
   loading.value = false
   error.value = true
 }
 
 watch(
   () => props.src,
-  () => {
+  (newSrc) => {
+    currentSrc.value = newSrc
+    triedFallback.value = false
     loading.value = true
     error.value = false
   },

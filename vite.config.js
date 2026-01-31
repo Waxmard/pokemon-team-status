@@ -24,19 +24,53 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/raw\.githubusercontent\.com\/PokeAPI\/sprites\//,
+            // High-res official artwork
+            urlPattern:
+              /^https:\/\/raw\.githubusercontent\.com\/PokeAPI\/sprites\/master\/sprites\/pokemon\/other\/official-artwork\//,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'pokemon-sprites',
+              cacheName: 'pokemon-sprites-hd',
               expiration: {
                 maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
               },
               cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          }
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            // Small sprites (pre-cached)
+            urlPattern:
+              /^https:\/\/raw\.githubusercontent\.com\/PokeAPI\/sprites\/master\/sprites\/pokemon\/\d+\.png$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pokemon-sprites-small',
+              expiration: {
+                maxEntries: 1000,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            // Berry and item sprites
+            urlPattern:
+              /^https:\/\/raw\.githubusercontent\.com\/PokeAPI\/sprites\/master\/sprites\/items\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pokemon-items',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
         ]
       }
     })
