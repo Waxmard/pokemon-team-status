@@ -21,7 +21,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
   src: {
@@ -48,8 +48,8 @@ const props = defineProps({
 
 const loading = ref(true)
 const error = ref(false)
-const currentSrc = ref(props.src)
-const triedFallback = ref(false)
+const currentSrc = ref('')
+const hdLoaded = ref(false)
 
 // Convert high-res URL to small sprite URL
 function getSmallSpriteUrl(hdUrl) {
@@ -65,32 +65,61 @@ function getSmallSpriteUrl(hdUrl) {
   return null
 }
 
+// Load HD sprite in background and swap when ready
+function loadHdSprite(hdUrl) {
+  const img = new Image()
+  img.onload = () => {
+    hdLoaded.value = true
+    currentSrc.value = hdUrl
+  }
+  // If HD fails, keep showing small sprite (no action needed)
+  img.src = hdUrl
+}
+
+// Initialize with small sprite, then load HD in background
+function initSprite(hdUrl) {
+  const smallUrl = getSmallSpriteUrl(hdUrl)
+  hdLoaded.value = false
+
+  if (smallUrl) {
+    // Start with small sprite (likely pre-cached)
+    currentSrc.value = smallUrl
+    loading.value = true
+    // Load HD in background
+    loadHdSprite(hdUrl)
+  } else {
+    // No small sprite available, load HD directly
+    currentSrc.value = hdUrl
+    loading.value = true
+  }
+}
+
 function onLoad() {
   loading.value = false
   error.value = false
 }
 
 function onError() {
-  if (!triedFallback.value) {
-    const fallback = getSmallSpriteUrl(props.src)
-    if (fallback) {
-      triedFallback.value = true
-      currentSrc.value = fallback
-      loading.value = true
-      return
-    }
+  // If small sprite failed, try HD directly
+  if (!hdLoaded.value && currentSrc.value !== props.src) {
+    currentSrc.value = props.src
+    loading.value = true
+    return
   }
+  // Both failed, show error
   loading.value = false
   error.value = true
 }
 
+onMounted(() => {
+  initSprite(props.src)
+})
+
 watch(
   () => props.src,
   (newSrc) => {
-    currentSrc.value = newSrc
-    triedFallback.value = false
-    loading.value = true
     error.value = false
+    initSprite(newSrc)
   },
 )
 </script>
