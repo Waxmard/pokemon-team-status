@@ -11,6 +11,11 @@ export const ABILITIES = {
   'Dry Skin': { immunity: ['water'], weakness: ['fire'] },
   'Motor Drive': { immunity: ['electric'] },
   Heatproof: { resistance: ['fire'] },
+  'Water Bubble': { resistance: ['fire'] },
+  'Purifying Salt': { resistance: ['ghost'] },
+  'Earth Eater': { immunity: ['ground'] },
+  'Well-Baked Body': { immunity: ['fire'] },
+  Fluffy: { weakness: ['fire'] },
   Protean: { protean: true },
   Libero: { protean: true },
 }

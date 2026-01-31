@@ -22,6 +22,10 @@ export function getSmallSpriteUrl(pokemonName) {
 
 export function getBerrySprite(berryName) {
   if (!berryName) return null
+  // Special case: Nevermelt Ice uses different slug format
+  if (berryName === 'Nevermelt Ice') {
+    return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/never-melt-ice.png'
+  }
   // "Occa Berry" → "occa-berry"
   const slug = berryName.toLowerCase().replace(' ', '-')
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${slug}.png`

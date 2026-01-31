@@ -295,7 +295,7 @@ const wizardStepTitle = computed(() => {
   const titles = {
     pokemon: 'Choose Pokemon',
     ability: 'Choose Ability',
-    berry: 'Choose Berry',
+    berry: 'Choose Item',
     moves: 'Move Types',
   }
   return titles[wizardStep.value]
@@ -428,13 +428,23 @@ const relevantBerries = computed(() => {
     mult = applyAbilityDefense(mult, attackType, draftAction.value.ability)
     return mult > 1
   })
-  return weakTypes
+  const berries = weakTypes
     .map((type) => ({
       label: BERRY_BY_TYPE[type],
       value: BERRY_BY_TYPE[type],
       type,
     }))
     .filter((b) => b.label)
+
+  // Always include Nevermelt Ice if not already present
+  if (!berries.some((b) => b.value === 'Nevermelt Ice')) {
+    berries.push({
+      label: 'Nevermelt Ice',
+      value: 'Nevermelt Ice',
+      type: 'ice',
+    })
+  }
+  return berries
 })
 
 // Move selection helpers for wizard
