@@ -24,6 +24,32 @@ npx vite --host
 
 This exposes the dev server on your local IP (e.g., `http://192.168.1.100:5173`).
 
+#### Testing PWA/Offline on iOS
+
+**Service workers require HTTPS** (except `localhost`). Testing via local IP (`http://192.168.x.x`) won't register the service worker.
+
+Options for HTTPS testing:
+
+1. **Cloudflare Tunnel** (easiest):
+   ```bash
+   npm run build && npm run preview
+   cloudflared tunnel --url http://localhost:4173
+   ```
+   Use the `https://xxxx.trycloudflare.com` URL on your iPhone.
+
+2. **ngrok**:
+   ```bash
+   npm run build && npm run preview
+   ngrok http 4173
+   ```
+
+To verify the service worker registered:
+- Mac Safari → Develop menu → [Your iPhone] → [The URL]
+- Check Console for registration messages
+- Check Application/Storage → Service Workers
+
+**iOS offline only works as Home Screen PWA** (not Safari tabs). See [Deployment docs](deployment.md#ios-offline-behavior) for details.
+
 ## Project Structure
 
 ```

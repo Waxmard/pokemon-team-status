@@ -30,6 +30,7 @@ npx vite --host
 - Track defeated gyms
 - Mega evolution support
 - Works fully offline (PWA)
+  - **iOS**: Must be added to Home Screen for offline support
 
 ## Tech Stack
 

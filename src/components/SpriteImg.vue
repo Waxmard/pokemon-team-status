@@ -66,14 +66,16 @@ function getSmallSpriteUrl(hdUrl) {
 }
 
 // Load HD sprite in background and swap when ready
-function loadHdSprite(hdUrl) {
-  const img = new Image()
-  img.onload = () => {
-    hdLoaded.value = true
-    currentSrc.value = hdUrl
+async function loadHdSprite(hdUrl) {
+  try {
+    const response = await fetch(hdUrl)
+    if (response.ok) {
+      hdLoaded.value = true
+      currentSrc.value = hdUrl
+    }
+  } catch {
+    // Silently fail - small sprite is already showing
   }
-  // If HD fails, keep showing small sprite (no action needed)
-  img.src = hdUrl
 }
 
 // Initialize with small sprite, then load HD in background
