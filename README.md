@@ -4,6 +4,8 @@ A PWA for calculating team weaknesses against gym types. Built with Vue 3 + Vite
 
 Primarily designed for [Pokemon Emerald Rogue](https://www.pokecommunity.com/threads/pokemon-emerald-rogue.479406/) where gym types are randomized, but works for any Pokemon game.
 
+![Team overview](screenshots/team-overview.png)
+
 ## Quick Start
 
 ```bash
