@@ -1,10 +1,12 @@
 # Pokemon Team Weakness Calculator
 
-A PWA for calculating team weaknesses against gym types. Built with Vue 3 + Vite.
+A PWA for calculating team weaknesses against gym types. Built with Vue 3 + Vite. Optimized for Safari on iPhone.
 
 Primarily designed for [Pokemon Emerald Rogue](https://www.pokecommunity.com/threads/pokemon-emerald-rogue.479406/) where gym types are randomized, but works for any Pokemon game.
 
-![Team overview](screenshots/team-overview.png)
+**[Try it live](https://pokemon-team-status.pages.dev)**
+
+<img src="screenshots/team-overview.png" alt="Team overview">
 
 ## Quick Start
 
@@ -32,6 +34,14 @@ npx vite --host
 - Track defeated gyms
 - Mega evolution support
 - Works fully offline (PWA)
+
+## Screenshots
+
+See more screenshots in the [`screenshots/`](screenshots/) directory:
+- Team building and Pokemon selection
+- Ability, move, and berry configuration
+- Gym weakness grid (mobile and desktop)
+- Mega evolution and pin gym features
 
 ## Tech Stack
 
