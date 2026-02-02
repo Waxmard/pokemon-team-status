@@ -16,7 +16,9 @@ export async function prefetchAllSprites() {
   const batchSize = 50
   for (let i = 0; i < urls.length; i += batchSize) {
     const batch = urls.slice(i, i + batchSize)
-    await Promise.allSettled(batch.map((url) => fetch(url)))
+    await Promise.allSettled(
+      batch.map((url) => fetch(url, { mode: 'no-cors' })),
+    )
   }
 }
 
@@ -25,7 +27,7 @@ export async function prefetchAllSprites() {
  */
 export async function prefetchBerrySprites() {
   const urls = BERRY_NAMES.map(getBerrySprite).filter(Boolean)
-  await Promise.allSettled(urls.map((url) => fetch(url)))
+  await Promise.allSettled(urls.map((url) => fetch(url, { mode: 'no-cors' })))
 }
 
 /**
