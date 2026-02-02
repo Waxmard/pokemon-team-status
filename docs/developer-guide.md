@@ -22,11 +22,12 @@ To test on your phone (must be on the same network):
 npx vite --host
 ```
 
-This exposes the dev server on your local IP (e.g., `http://192.168.1.100:5173`).
+This exposes the dev server on your local IP
+(e.g., `http://192.168.1.100:5173`).
 
 ## Project Structure
 
-```
+```text
 src/
 ├── components/     # Vue components
 ├── composables/    # Shared state (useStorage, useDraftAction)
@@ -44,7 +45,7 @@ docs/               # Documentation
 ## Available Scripts
 
 | Command | Description |
-|---------|-------------|
+| ------- | ----------- |
 | `npm run dev` | Start development server |
 | `npm run build` | Production build to `dist/` |
 | `npm run preview` | Preview production build locally |
@@ -56,7 +57,8 @@ docs/               # Documentation
 
 ### State Management
 
-The app uses Vue composables with module-level refs (singleton pattern). State is shared across all components that import the composable.
+The app uses Vue composables with module-level refs (singleton pattern). State
+is shared across all components that import the composable.
 
 #### useStorage.js
 
@@ -74,7 +76,8 @@ Data persists across sessions and works offline.
 Manages the draft/editing state for adding or modifying Pokemon:
 
 - Tracks current edit operation (add to team, add to box, edit, swap)
-- Holds temporary Pokemon configuration (pokemon, ability, berry, moves, specialMove)
+- Holds temporary Pokemon configuration (pokemon, ability, berry, moves,
+  specialMove)
 
 ### Core Type Calculation
 
@@ -91,16 +94,16 @@ See [How It Works](how-it-works.md) for algorithm details.
 ### Data Files
 
 | File | Contents |
-|------|----------|
+| ---- | -------- |
 | `src/data/types.js` | Type chart, colors, and icons |
 | `src/data/pokemon.js` | Pokemon definitions with types and evolution chains |
-| `src/data/abilities.js` | Ability effects (immunities, resistances, weaknesses, protean) |
+| `src/data/abilities.js` | Ability effects (immunities, resistances, etc.) |
 | `src/data/berries.js` | Type-reducing berries |
-| `src/data/specialMoves.js` | Moves with unique type mechanics (Flying Press, Freeze-Dry) |
+| `src/data/specialMoves.js` | Moves with unique type mechanics |
 
 ### Component Hierarchy
 
-```
+```text
 App.vue
 ├── TeamSection.vue          # Team and box display with DraftPanel
 │   ├── TeamSlot.vue         # Individual Pokemon slot
@@ -121,4 +124,3 @@ The project uses [Biome](https://biomejs.dev/) for linting and formatting:
 - No trailing commas
 
 Run `npm run lint:fix` before committing.
-
