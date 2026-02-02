@@ -1,5 +1,8 @@
 import { ref } from 'vue'
-import { prefetchAllSprites } from '../utils/spriteCache.js'
+import {
+  prefetchAllSprites,
+  prefetchBerrySprites,
+} from '../utils/spriteCache.js'
 
 const DB_NAME = 'pokemon-team-calculator'
 const DB_VERSION = 2
@@ -98,8 +101,9 @@ export function useStorage() {
       box.value = await loadArrayFromStore('box')
       pinnedGym.value = await loadSetting('pinnedGym', null)
 
-      // Pre-cache all small sprites (fire-and-forget, ~2.5MB)
+      // Pre-cache sprites (fire-and-forget)
       prefetchAllSprites()
+      prefetchBerrySprites()
     } catch (e) {
       console.error('Failed to load data:', e)
     }
