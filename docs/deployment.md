@@ -2,7 +2,8 @@
 
 ## Why a Web App?
 
-This app is a Progressive Web App (PWA) rather than a native mobile app for several reasons:
+This app is a Progressive Web App (PWA) rather than a native mobile app for
+several reasons:
 
 - **No hosting costs**: Cloudflare Pages free tier handles everything
 - **No App Store fees**: Apple charges $99/year, Google charges $25 one-time
@@ -10,7 +11,8 @@ This app is a Progressive Web App (PWA) rather than a native mobile app for seve
 - **Works everywhere**: Any device with a browser
 - **Easy updates**: Users always get the latest version
 
-The tradeoff is slightly worse integration with the OS, but for a simple calculator app, PWA capabilities are sufficient.
+The tradeoff is slightly worse integration with the OS, but for a simple
+calculator app, PWA capabilities are sufficient.
 
 ## Cloudflare Pages Setup
 
@@ -25,7 +27,9 @@ Cloudflare automatically redeploys on every push to main.
 
 ## Offline-First Design
 
-The app is designed to work offline because the primary use case is checking team matchups while playing Pokemon on a handheld device. You might not have reliable internet.
+The app is designed to work offline because the primary use case is checking
+team matchups while playing Pokemon on a handheld device. You might not have
+reliable internet.
 
 ### IndexedDB Persistence
 
@@ -40,17 +44,21 @@ This data persists across sessions and survives browser restarts.
 
 ### Sprite Caching Strategy
 
-Pokemon sprites are fetched from GitHub (PokeAPI sprites repository) and cached aggressively using Workbox:
+Pokemon sprites are fetched from GitHub (PokeAPI sprites repository) and
+cached aggressively using Workbox:
 
 | Cache | Contents | Max Entries | Expiration |
-|-------|----------|-------------|------------|
+| ----- | -------- | ----------- | ---------- |
 | `pokemon-sprites-hd` | High-res artwork | 500 | 30 days |
 | `pokemon-sprites-small` | Small sprites | 1000 | 30 days |
 | `pokemon-items` | Berry/item sprites | 100 | 30 days |
 
-All caches use `CacheFirst` strategy: serve from cache if available, only fetch from network on cache miss.
+All caches use `CacheFirst` strategy: serve from cache if available, only
+fetch from network on cache miss.
 
-On first load, the app pre-fetches all small sprites (~2.5MB) in the background. This ensures offline access to all Pokemon sprites after the initial load.
+On first load, the app pre-fetches all small sprites (~2.5MB) in the
+background. This ensures offline access to all Pokemon sprites after the
+initial load.
 
 ### Service Worker
 
@@ -80,7 +88,7 @@ The primary target platform is Safari on iOS (iPhone/iPad). The app includes:
 
 The production build outputs to `dist/`:
 
-```
+```text
 dist/
 ├── index.html
 ├── assets/
