@@ -11,7 +11,7 @@ randomized, but works for any Pokemon game.
 **[Try it live](https://pokemon-team-status.pages.dev)**
 
 | | |
-|:---:|:---:|
+| :---: | :---: |
 | ![Team overview](screenshots/team-overview.png) | ![Gym grid](screenshots/gym-grid-mobile.png) |
 | ![Team with megas](screenshots/team-with-megas.png) | ![Pokemon selection](screenshots/choose-pokemon-lapras.png) |
 
