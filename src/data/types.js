@@ -170,5 +170,5 @@ export const TYPE_COLORS = {
 }
 
 export function getTypeIcon(type) {
-  return new URL(`../assets/types/${type}.svg`, import.meta.url).href
+  return `/types/${type}.svg`
 }
