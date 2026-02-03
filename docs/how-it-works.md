@@ -91,11 +91,13 @@ Berries don't affect the main score, but when two gym types have the same score,
 Your team has a Swampert (Water/Ground):
 
 Against an **Electric gym**:
+
 - Defensive: Ground is immune to Electric → +2
 - Offensive: Ground moves are super effective → +1
 - **Total: +3** (excellent matchup)
 
 Against a **Grass gym**:
+
 - Defensive: Water/Ground takes 4x from Grass → -2
 - Offensive: No super effective moves (unless it knows Ice Beam) → 0
 - **Total: -2** (terrible matchup)

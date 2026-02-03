@@ -80,16 +80,23 @@ The primary target platform is Safari on iOS (iPhone/iPad). The app includes:
 
 **Important**: On iOS, offline support only works when the app is installed to the Home Screen.
 
-| Method | Offline Support |
-|--------|-----------------|
-| Home Screen PWA | Works offline after initial load |
-| Safari tabs | Does NOT work offline if Safari is fully closed |
+| Method          | Offline Support                              |
+|-----------------|----------------------------------------------|
+| Home Screen PWA | Works offline after initial load             |
+| Safari tabs     | Does NOT work offline if Safari is fully closed |
 
-This is an iOS Safari limitation. When Safari is closed completely (swiped away in app switcher), the browser terminates the service worker. When reopened offline, Safari cannot re-register the service worker, so the cached content is inaccessible.
+This is an iOS Safari limitation. When Safari is closed completely (swiped away
+in app switcher), the browser terminates the service worker. When reopened
+offline, Safari cannot re-register the service worker, so the cached content
+is inaccessible.
 
-Home Screen PWAs run in their own process and maintain service worker registration, which is why offline works there.
+Home Screen PWAs run in their own process and maintain service worker
+registration, which is why offline works there.
 
-**Technical detail**: Home Screen PWAs on iOS are loaded via the `webapp://` protocol instead of `https://`. This gives them an isolated context separate from Safari, allowing the service worker to persist even when the app is closed.
+**Technical detail**: Home Screen PWAs on iOS are loaded via the `webapp://`
+protocol instead of `https://`. This gives them an isolated context separate
+from Safari, allowing the service worker to persist even when the app is
+closed.
 
 **Recommendation**: Always install to Home Screen for reliable offline access.
 
@@ -97,7 +104,7 @@ Home Screen PWAs run in their own process and maintain service worker registrati
 
 The production build outputs to `dist/`:
 
-```
+```text
 dist/
 ├── index.html
 ├── assets/
