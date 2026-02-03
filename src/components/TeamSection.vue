@@ -58,7 +58,7 @@
             v-for="i in emptyTeamSlotCount"
             :key="'team-empty-' + i"
             :pokemon="null"
-            @add="handleSwapSelect(null)"
+            @add="swapMode ? handleSwapSelect(null) : startAdd()"
           />
         </div>
 
@@ -207,7 +207,10 @@ watch(swapMode, (isSwapMode) => {
 
 // Number of empty box slots to show in swap mode (when editing a team Pokemon)
 const emptyBoxSlotCount = computed(() => {
-  // Only show when in swap mode and editing a team pokemon (to move team → box)
+  // Always show 1 empty slot if box is empty (so there's something to interact with)
+  if (props.box.length === 0 && viewMode.value === 'box' && !swapMode.value)
+    return 1
+  // In swap mode, show empty slot when editing a team Pokemon (to move team → box)
   if (!swapMode.value) return 0
   if (viewMode.value !== 'box') return 0
   return draftAction.value?.isTeamPokemon ? 1 : 0
@@ -215,6 +218,10 @@ const emptyBoxSlotCount = computed(() => {
 
 // Number of empty team slots to show in swap mode (max 1)
 const emptyTeamSlotCount = computed(() => {
+  // Always show 1 empty slot if team is empty (so there's something to interact with)
+  if (props.team.length === 0 && viewMode.value === 'team' && !swapMode.value)
+    return 1
+  // In swap mode, show empty slot if team has room
   if (!swapMode.value || viewMode.value !== 'team') return 0
   return props.team.length < 6 ? 1 : 0
 })
@@ -254,6 +261,9 @@ function handleEditPokemon(id) {
     berry: pokemon.berry || null,
     moves: pokemon.moves,
     specialMove: pokemon.specialMove,
+    megaForm: pokemon.megaForm || null,
+    megaTypes: pokemon.megaTypes || null,
+    megaSpriteId: pokemon.megaSpriteId || null,
   })
 }
 
@@ -268,6 +278,9 @@ function handleEditBoxPokemon(boxPokemonId) {
     berry: pokemon.berry || null,
     moves: pokemon.moves,
     specialMove: pokemon.specialMove,
+    megaForm: pokemon.megaForm || null,
+    megaTypes: pokemon.megaTypes || null,
+    megaSpriteId: pokemon.megaSpriteId || null,
   })
 }
 
@@ -279,7 +292,11 @@ function toggleViewMode() {
 }
 
 function handleAddClick() {
-  startAdd()
+  if (viewMode.value === 'box') {
+    startAddToBox()
+  } else {
+    startAdd()
+  }
 }
 
 function handleDeleteClick() {
