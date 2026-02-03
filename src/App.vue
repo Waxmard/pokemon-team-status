@@ -28,6 +28,7 @@
 </template>
 
 <script setup>
+import { NConfigProvider } from 'naive-ui'
 import { computed, onMounted, ref, watch } from 'vue'
 import GymColumns from './components/GymColumns.vue'
 import TeamSection from './components/TeamSection.vue'
