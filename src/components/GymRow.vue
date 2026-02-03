@@ -2,41 +2,42 @@
   <div
     class="gym-card touchable"
     :class="{ defeated: defeated, pinned: pinned }"
-    :style="rowBackgroundStyle"
     @click="$emit('click', type)"
   >
-    <!-- Drag handle for pin -->
-    <span
-      class="drag-handle"
-      draggable="true"
-      @dragstart.stop="onHandleDragStart"
-      @touchstart.stop="onHandleTouchStart"
-    >
-      ⋮⋮
-    </span>
+    <div class="gym-card-inner" :style="rowBackgroundStyle">
+      <!-- Drag handle for pin -->
+      <span
+        class="drag-handle"
+        draggable="true"
+        @dragstart.stop="onHandleDragStart"
+        @touchstart.stop="onHandleTouchStart"
+      >
+        ⋮⋮
+      </span>
 
-    <span v-if="pinned" class="pin-indicator">📌</span>
-    <img :src="getTypeIcon(type)" :alt="type" class="type-icon" draggable="false" />
+      <span v-if="pinned" class="pin-indicator">📌</span>
+      <img :src="getTypeIcon(type)" :alt="type" class="type-icon" draggable="false" />
 
-    <span
-      v-if="berryCount > 0"
-      class="berry-corner"
-      :title="`${berryCount} ${BERRY_BY_TYPE[type]}${berryCount > 1 ? 's' : ''}`"
-    >
-      <SpriteImg
-        v-for="i in berryCount"
-        :key="i"
-        :src="berrySprite"
-        :alt="BERRY_BY_TYPE[type]"
-        :width="22"
-        :height="22"
-        class="berry-sprite"
-      />
-    </span>
+      <span
+        v-if="berryCount > 0"
+        class="berry-corner"
+        :title="`${berryCount} ${BERRY_BY_TYPE[type]}${berryCount > 1 ? 's' : ''}`"
+      >
+        <SpriteImg
+          v-for="i in berryCount"
+          :key="i"
+          :src="berrySprite"
+          :alt="BERRY_BY_TYPE[type]"
+          :width="22"
+          :height="22"
+          class="berry-sprite"
+        />
+      </span>
 
-    <span class="score-corner" :class="{ positive: score > 0, negative: score < 0 }">
-      {{ score > 0 ? '+' : '' }}{{ score }}
-    </span>
+      <span class="score-corner" :class="{ positive: score > 0, negative: score < 0 }">
+        {{ score > 0 ? '+' : '' }}{{ score }}
+      </span>
+    </div>
   </div>
 </template>
 
@@ -100,26 +101,35 @@ const rowBackgroundStyle = computed(() => {
 <style scoped>
 .gym-card {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 1;
-  border-radius: var(--radius-lg);
+  width: 100%;
+  padding-bottom: 90%; /* Slightly shorter - Safari PWA grows to correct size */
   cursor: pointer;
-  transition: transform var(--transition-base), box-shadow var(--transition-base), opacity var(--transition-base);
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   -webkit-user-drag: element;
   user-select: none;
-  border: 2px solid; /* color set via inline style */
-  color: var(--color-text-primary);
 }
 
-.gym-card:active {
+.gym-card-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  border: 2px solid; /* color set via inline style */
+  color: var(--color-text-primary);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), opacity var(--transition-base);
+}
+
+.gym-card:active .gym-card-inner {
   transform: scale(0.98);
 }
 
-.gym-card.defeated {
+.gym-card.defeated .gym-card-inner {
   opacity: 0.4;
 }
 
@@ -132,7 +142,7 @@ const rowBackgroundStyle = computed(() => {
   pointer-events: none;
 }
 
-.berry-corner {
+.gym-card-inner .berry-corner {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -148,7 +158,7 @@ const rowBackgroundStyle = computed(() => {
   margin-left: 0;
 }
 
-.score-corner {
+.gym-card-inner .score-corner {
   position: absolute;
   bottom: 8px;
   right: 8px;
@@ -168,18 +178,11 @@ const rowBackgroundStyle = computed(() => {
   color: var(--color-danger);
 }
 
-.gym-card.pinned {
+.gym-card.pinned .gym-card-inner {
   box-shadow: 0 0 0 2px var(--color-primary);
 }
 
-.pin-indicator {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  font-size: 0.75rem;
-}
-
-.drag-handle {
+.gym-card-inner .drag-handle {
   position: absolute;
   top: 0;
   left: 0;
@@ -206,8 +209,10 @@ const rowBackgroundStyle = computed(() => {
   cursor: grabbing;
 }
 
-/* Move pin indicator when drag handle is present */
-.gym-card .pin-indicator {
-  left: 28px;
+.gym-card-inner .pin-indicator {
+  position: absolute;
+  top: 4px;
+  left: 28px; /* Offset to not overlap drag handle */
+  font-size: 0.75rem;
 }
 </style>

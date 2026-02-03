@@ -64,10 +64,12 @@ const swapOriginalState = ref(null)
 
 watch(swapMode, (isSwapMode) => {
   if (isSwapMode) {
-    // Capture current state when entering swap mode
-    swapOriginalState.value = {
-      team: JSON.parse(JSON.stringify(team.value)),
-      box: JSON.parse(JSON.stringify(box.value)),
+    // Only capture if not already captured (e.g., by confirmDraft for add-replace)
+    if (!swapOriginalState.value) {
+      swapOriginalState.value = {
+        team: structuredClone(team.value),
+        box: structuredClone(box.value),
+      }
     }
   } else {
     swapOriginalState.value = null
@@ -300,6 +302,12 @@ function confirmDraft() {
       persistTeam([...team.value, newMember])
     } else {
       // Team is full - enter replace mode
+      // Capture state BEFORE adding temp Pokemon (so cancel discards it)
+      swapOriginalState.value = {
+        team: structuredClone(team.value),
+        box: structuredClone(box.value),
+      }
+
       // 1. Add new Pokemon to box temporarily
       const tempBoxMember = buildPokemonMember(draftAction.value, {
         source: 'temp',
@@ -422,7 +430,6 @@ function undefeatGym(type) {
   persistDefeatedGyms(defeatedGyms.value.filter((t) => t !== type))
 }
 
-// Load data on mount
 onMounted(() => {
   loadData()
 })
