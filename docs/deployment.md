@@ -89,6 +89,8 @@ This is an iOS Safari limitation. When Safari is closed completely (swiped away 
 
 Home Screen PWAs run in their own process and maintain service worker registration, which is why offline works there.
 
+**Technical detail**: Home Screen PWAs on iOS are loaded via the `webapp://` protocol instead of `https://`. This gives them an isolated context separate from Safari, allowing the service worker to persist even when the app is closed.
+
 **Recommendation**: Always install to Home Screen for reliable offline access.
 
 ## Build Output
