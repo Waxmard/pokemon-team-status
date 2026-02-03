@@ -279,7 +279,11 @@ function toggleViewMode() {
 }
 
 function handleAddClick() {
-  startAdd()
+  if (viewMode.value === 'box') {
+    startAddToBox()
+  } else {
+    startAdd()
+  }
 }
 
 function handleDeleteClick() {
