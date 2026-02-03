@@ -259,6 +259,9 @@ function handleEditPokemon(id) {
     berry: pokemon.berry || null,
     moves: pokemon.moves,
     specialMove: pokemon.specialMove,
+    megaForm: pokemon.megaForm || null,
+    megaTypes: pokemon.megaTypes || null,
+    megaSpriteId: pokemon.megaSpriteId || null,
   })
 }
 
@@ -273,6 +276,9 @@ function handleEditBoxPokemon(boxPokemonId) {
     berry: pokemon.berry || null,
     moves: pokemon.moves,
     specialMove: pokemon.specialMove,
+    megaForm: pokemon.megaForm || null,
+    megaTypes: pokemon.megaTypes || null,
+    megaSpriteId: pokemon.megaSpriteId || null,
   })
 }
 
