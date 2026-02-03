@@ -1,7 +1,6 @@
 <template>
   <div class="sprite-wrapper" :style="{ width: `${width}px`, height: `${height}px` }">
-    <div v-if="loading" class="sprite-skeleton" />
-    <div v-else-if="error" class="sprite-fallback">
+    <div v-if="error" class="sprite-fallback">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10" />
         <line x1="12" y1="8" x2="12" y2="12" />
@@ -9,7 +8,7 @@
       </svg>
     </div>
     <img
-      v-show="!loading && !error"
+      v-show="!error"
       :src="currentSrc"
       :alt="alt"
       :class="imgClass"
@@ -21,7 +20,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
   src: {
@@ -46,10 +45,9 @@ const props = defineProps({
   },
 })
 
-const loading = ref(true)
 const error = ref(false)
-const currentSrc = ref(props.src)
-const triedFallback = ref(false)
+const currentSrc = ref('')
+const hdLoaded = ref(false)
 
 // Convert high-res URL to small sprite URL
 function getSmallSpriteUrl(hdUrl) {
@@ -65,32 +63,56 @@ function getSmallSpriteUrl(hdUrl) {
   return null
 }
 
+// Load HD sprite in background and swap when ready
+function loadHdSprite(hdUrl) {
+  const img = new Image()
+  img.onload = () => {
+    hdLoaded.value = true
+    currentSrc.value = hdUrl
+  }
+  // If HD fails, keep showing small sprite (no action needed)
+  img.src = hdUrl
+}
+
+// Initialize with small sprite, then load HD in background
+function initSprite(hdUrl) {
+  const smallUrl = getSmallSpriteUrl(hdUrl)
+  hdLoaded.value = false
+
+  if (smallUrl) {
+    // Start with small sprite (likely pre-cached)
+    currentSrc.value = smallUrl
+    // Load HD in background
+    loadHdSprite(hdUrl)
+  } else {
+    // No small sprite available, load HD directly
+    currentSrc.value = hdUrl
+  }
+}
+
 function onLoad() {
-  loading.value = false
   error.value = false
 }
 
 function onError() {
-  if (!triedFallback.value) {
-    const fallback = getSmallSpriteUrl(props.src)
-    if (fallback) {
-      triedFallback.value = true
-      currentSrc.value = fallback
-      loading.value = true
-      return
-    }
+  // If small sprite failed, try HD directly
+  if (!hdLoaded.value && currentSrc.value !== props.src) {
+    currentSrc.value = props.src
+    return
   }
-  loading.value = false
+  // Both failed, show error
   error.value = true
 }
+
+onMounted(() => {
+  initSprite(props.src)
+})
 
 watch(
   () => props.src,
   (newSrc) => {
-    currentSrc.value = newSrc
-    triedFallback.value = false
-    loading.value = true
     error.value = false
+    initSprite(newSrc)
   },
 )
 </script>
@@ -102,14 +124,6 @@ watch(
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.sprite-skeleton {
-  width: 100%;
-  height: 100%;
-  border-radius: var(--radius-md);
-  background: var(--color-surface-light);
-  animation: pulse 1.5s ease-in-out infinite;
 }
 
 .sprite-fallback {

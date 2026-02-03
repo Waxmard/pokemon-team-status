@@ -10,7 +10,10 @@ randomized, but works for any Pokemon game.
 
 **[Try it live](https://pokemon-team-status.pages.dev)**
 
-![Team overview](screenshots/team-overview.png)
+| | |
+| :---: | :---: |
+| ![Team overview](screenshots/team-overview.png) | ![Gym grid](screenshots/gym-grid-mobile.png) |
+| ![Team with megas](screenshots/team-with-megas.png) | ![Pokemon selection](screenshots/choose-pokemon-lapras.png) |
 
 ## Quick Start
 
@@ -38,15 +41,11 @@ npx vite --host
 - Track defeated gyms
 - Mega evolution support
 - Works fully offline (PWA)
+  - **iOS**: Must be added to Home Screen for offline support
 
 ## Screenshots
 
-See more screenshots in the [`screenshots/`](screenshots/) directory:
-
-- Team building and Pokemon selection
-- Ability, move, and berry configuration
-- Gym weakness grid (mobile and desktop)
-- Mega evolution and pin gym features
+More screenshots available in the [`screenshots/`](screenshots/) directory.
 
 ## Tech Stack
 

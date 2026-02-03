@@ -178,6 +178,7 @@
 </template>
 
 <script setup>
+import { NAutoComplete } from 'naive-ui'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
