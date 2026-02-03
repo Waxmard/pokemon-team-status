@@ -430,7 +430,6 @@ function undefeatGym(type) {
   persistDefeatedGyms(defeatedGyms.value.filter((t) => t !== type))
 }
 
-// Load data on mount
 onMounted(() => {
   loadData()
 })
