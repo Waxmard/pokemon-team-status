@@ -1,7 +1,6 @@
 <template>
   <div class="sprite-wrapper" :style="{ width: `${width}px`, height: `${height}px` }">
-    <div v-if="loading" class="sprite-skeleton" />
-    <div v-else-if="error" class="sprite-fallback">
+    <div v-if="error" class="sprite-fallback">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10" />
         <line x1="12" y1="8" x2="12" y2="12" />
@@ -9,7 +8,7 @@
       </svg>
     </div>
     <img
-      v-show="!loading && !error"
+      v-show="!error"
       :src="currentSrc"
       :alt="alt"
       :class="imgClass"
@@ -46,7 +45,6 @@ const props = defineProps({
   },
 })
 
-const loading = ref(true)
 const error = ref(false)
 const currentSrc = ref('')
 const hdLoaded = ref(false)
@@ -84,18 +82,15 @@ function initSprite(hdUrl) {
   if (smallUrl) {
     // Start with small sprite (likely pre-cached)
     currentSrc.value = smallUrl
-    loading.value = true
     // Load HD in background
     loadHdSprite(hdUrl)
   } else {
     // No small sprite available, load HD directly
     currentSrc.value = hdUrl
-    loading.value = true
   }
 }
 
 function onLoad() {
-  loading.value = false
   error.value = false
 }
 
@@ -103,11 +98,9 @@ function onError() {
   // If small sprite failed, try HD directly
   if (!hdLoaded.value && currentSrc.value !== props.src) {
     currentSrc.value = props.src
-    loading.value = true
     return
   }
   // Both failed, show error
-  loading.value = false
   error.value = true
 }
 
@@ -131,14 +124,6 @@ watch(
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.sprite-skeleton {
-  width: 100%;
-  height: 100%;
-  border-radius: var(--radius-md);
-  background: var(--color-surface-light);
-  animation: pulse 1.5s ease-in-out infinite;
 }
 
 .sprite-fallback {
