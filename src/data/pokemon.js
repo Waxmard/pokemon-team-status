@@ -915,6 +915,63 @@ export const POKEMON_DATA = [
   { name: 'Castform-Sunny', types: ['fire'], spriteId: 10013 },
   { name: 'Castform-Rainy', types: ['water'], spriteId: 10014 },
   { name: 'Castform-Snowy', types: ['ice'], spriteId: 10015 },
+  // Necrozma Forms
+  { name: 'Necrozma-Dusk Mane', types: ['psychic', 'steel'], spriteId: 10155 },
+  { name: 'Necrozma-Dawn Wings', types: ['psychic', 'ghost'], spriteId: 10156 },
+  { name: 'Necrozma-Ultra', types: ['psychic', 'dragon'], spriteId: 10157 },
+  // Deoxys Forms
+  { name: 'Deoxys-Attack', types: ['psychic'], spriteId: 10001 },
+  { name: 'Deoxys-Defense', types: ['psychic'], spriteId: 10002 },
+  { name: 'Deoxys-Speed', types: ['psychic'], spriteId: 10003 },
+  // Dialga Forms
+  { name: 'Dialga-Origin', types: ['steel', 'dragon'], spriteId: 10245 },
+  // Palkia Forms
+  { name: 'Palkia-Origin', types: ['water', 'dragon'], spriteId: 10246 },
+  // Giratina Forms
+  { name: 'Giratina-Origin', types: ['ghost', 'dragon'], spriteId: 10007 },
+  // Meloetta Forms
+  {
+    name: 'Meloetta-Pirouette',
+    types: ['normal', 'fighting'],
+    spriteId: 10018,
+  },
+  // Tornadus Forms
+  { name: 'Tornadus-Therian', types: ['flying'], spriteId: 10019 },
+  // Thundurus Forms
+  { name: 'Thundurus-Therian', types: ['electric', 'flying'], spriteId: 10020 },
+  // Landorus Forms
+  { name: 'Landorus-Therian', types: ['ground', 'flying'], spriteId: 10021 },
+  // Kyurem Forms
+  { name: 'Kyurem-Black', types: ['dragon', 'ice'], spriteId: 10022 },
+  { name: 'Kyurem-White', types: ['dragon', 'ice'], spriteId: 10023 },
+  // Zygarde Forms
+  { name: 'Zygarde-10%', types: ['dragon', 'ground'], spriteId: 10118 },
+  { name: 'Zygarde-Complete', types: ['dragon', 'ground'], spriteId: 10120 },
+  // Hoopa Forms
+  { name: 'Hoopa-Unbound', types: ['psychic', 'dark'], spriteId: 10086 },
+  // Zacian Forms
+  { name: 'Zacian-Crowned', types: ['fairy', 'steel'], spriteId: 10188 },
+  // Zamazenta Forms
+  { name: 'Zamazenta-Crowned', types: ['fighting', 'steel'], spriteId: 10189 },
+  // Urshifu Forms
+  {
+    name: 'Urshifu-Rapid Strike',
+    types: ['fighting', 'water'],
+    spriteId: 10191,
+  },
+  // Calyrex Forms
+  { name: 'Calyrex-Ice Rider', types: ['psychic', 'ice'], spriteId: 10193 },
+  {
+    name: 'Calyrex-Shadow Rider',
+    types: ['psychic', 'ghost'],
+    spriteId: 10194,
+  },
+  // Enamorus Forms
+  { name: 'Enamorus-Therian', types: ['fairy', 'flying'], spriteId: 10249 },
+  // Ogerpon Forms
+  { name: 'Ogerpon-Wellspring', types: ['grass', 'water'], spriteId: 10273 },
+  { name: 'Ogerpon-Hearthflame', types: ['grass', 'fire'], spriteId: 10274 },
+  { name: 'Ogerpon-Cornerstone', types: ['grass', 'rock'], spriteId: 10275 },
   // Gen 8
   { name: 'Grookey', types: ['grass'], evolvesTo: 'Thwackey', spriteId: 810 },
   { name: 'Thwackey', types: ['grass'], evolvesTo: 'Rillaboom', spriteId: 811 },

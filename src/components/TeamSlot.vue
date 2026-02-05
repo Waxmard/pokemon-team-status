@@ -85,11 +85,12 @@ defineEmits(['edit', 'add'])
 
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null
+  const variant = props.pokemon.spriteVariant || 'default'
   // Use mega sprite if mega form is active
   if (props.pokemon.megaSpriteId) {
-    return getMegaSpriteUrl(props.pokemon.megaSpriteId)
+    return getMegaSpriteUrl(props.pokemon.megaSpriteId, variant)
   }
-  return getSpriteUrl(props.pokemon.name)
+  return getSpriteUrl(props.pokemon.name, variant)
 })
 
 const cardBackgroundStyle = computed(() => {

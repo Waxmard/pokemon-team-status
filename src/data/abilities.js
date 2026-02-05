@@ -16,6 +16,13 @@ export const ABILITIES = {
   'Earth Eater': { immunity: ['ground'] },
   'Well-Baked Body': { immunity: ['fire'] },
   Fluffy: { weakness: ['fire'] },
+  Drought: { resistance: ['water'] },
+  Drizzle: { resistance: ['fire'] },
+  'Misty Surge': { resistance: ['dragon'] },
+  'Orichalcum Pulse': { resistance: ['water'] },
+  'Desolate Land': { immunity: ['water'] },
+  'Primordial Sea': { immunity: ['fire'] },
+  'Delta Stream': { resistance: ['electric', 'ice', 'rock'] },
   Protean: { protean: true },
   Libero: { protean: true },
 }

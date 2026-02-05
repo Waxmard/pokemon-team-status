@@ -22,6 +22,7 @@ export function useDraftAction() {
       megaForm: null,
       megaTypes: null,
       megaSpriteId: null,
+      spriteVariant: 'default',
     }
   }
 
@@ -45,6 +46,7 @@ export function useDraftAction() {
       megaForm: member.megaForm || null,
       megaTypes: member.megaTypes || null,
       megaSpriteId: member.megaSpriteId || null,
+      spriteVariant: member.spriteVariant || 'default',
     }
   }
 
@@ -68,6 +70,7 @@ export function useDraftAction() {
       megaForm: boxMember.megaForm || null,
       megaTypes: boxMember.megaTypes || null,
       megaSpriteId: boxMember.megaSpriteId || null,
+      spriteVariant: boxMember.spriteVariant || 'default',
     }
   }
 
@@ -85,6 +88,7 @@ export function useDraftAction() {
       megaForm: null,
       megaTypes: null,
       megaSpriteId: null,
+      spriteVariant: 'default',
     }
   }
 
@@ -141,6 +145,12 @@ export function useDraftAction() {
     draftAction.value = null
   }
 
+  function updateSpriteVariant(variant) {
+    if (draftAction.value) {
+      draftAction.value.spriteVariant = variant
+    }
+  }
+
   function updateInHandPokemon(
     pokemonData,
     ability,
@@ -150,6 +160,7 @@ export function useDraftAction() {
     megaForm,
     megaTypes,
     megaSpriteId,
+    spriteVariant,
   ) {
     if (draftAction.value) {
       draftAction.value = {
@@ -162,6 +173,7 @@ export function useDraftAction() {
         megaForm,
         megaTypes,
         megaSpriteId,
+        spriteVariant: spriteVariant || 'default',
       }
     }
   }
@@ -186,6 +198,7 @@ export function useDraftAction() {
     updateSpecialMove,
     updateMegaForm,
     updateReplaceTarget,
+    updateSpriteVariant,
     updateInHandPokemon,
     enterSwapMode,
     exitSwapMode,

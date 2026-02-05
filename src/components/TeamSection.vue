@@ -99,7 +99,7 @@ import { computed, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { useLongPress } from '../composables/useLongPress.js'
 import { POKEMON_DATA } from '../data/pokemon.js'
-import { getSpriteUrl } from '../utils/pokemon.js'
+import { getMegaSpriteUrl, getSpriteUrl } from '../utils/pokemon.js'
 import DraftPanel from './DraftPanel.vue'
 import SpriteImg from './SpriteImg.vue'
 import TeamSlot from './TeamSlot.vue'
@@ -139,10 +139,11 @@ const {
 // Sprite URL for the pokemon "in hand" during swap mode
 const swapPokemonSpriteUrl = computed(() => {
   if (!swapMode.value || !draftAction.value?.pokemon) return null
+  const variant = draftAction.value.spriteVariant || 'default'
   if (draftAction.value.megaSpriteId) {
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${draftAction.value.megaSpriteId}.png`
+    return getMegaSpriteUrl(draftAction.value.megaSpriteId, variant)
   }
-  return getSpriteUrl(draftAction.value.pokemon.name)
+  return getSpriteUrl(draftAction.value.pokemon.name, variant)
 })
 
 const viewMode = ref('team')
@@ -264,6 +265,7 @@ function handleEditPokemon(id) {
     megaForm: pokemon.megaForm || null,
     megaTypes: pokemon.megaTypes || null,
     megaSpriteId: pokemon.megaSpriteId || null,
+    spriteVariant: pokemon.spriteVariant || 'default',
   })
 }
 
@@ -281,6 +283,7 @@ function handleEditBoxPokemon(boxPokemonId) {
     megaForm: pokemon.megaForm || null,
     megaTypes: pokemon.megaTypes || null,
     megaSpriteId: pokemon.megaSpriteId || null,
+    spriteVariant: pokemon.spriteVariant || 'default',
   })
 }
 

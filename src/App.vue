@@ -1,6 +1,7 @@
 <template>
   <n-config-provider :theme-overrides="themeOverrides">
     <div class="app-container">
+      <button class="reset-btn" @click="showResetDialog = true" aria-label="Reset">✦</button>
       <h1 class="app-title">
         <span class="title-accent">Weakness Calculator</span>
       </h1>
@@ -25,6 +26,20 @@
       />
     </div>
   </n-config-provider>
+
+  <Teleport to="body">
+    <div v-if="showResetDialog" class="reset-overlay" @click.self="showResetDialog = false">
+      <div class="reset-dialog">
+        <h3 class="reset-dialog-title">Reset</h3>
+        <div class="reset-dialog-options">
+          <button class="reset-option" @click="resetPokemon">Team & Box</button>
+          <button class="reset-option" @click="resetGyms">Gyms</button>
+          <button class="reset-option reset-option-danger" @click="resetAll">Everything</button>
+        </div>
+        <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -59,6 +74,28 @@ const {
   cancel,
 } = useDraftAction()
 
+const showResetDialog = ref(false)
+
+function resetPokemon() {
+  persistTeam([])
+  persistBox([])
+  cancel()
+  showResetDialog.value = false
+}
+
+function resetGyms() {
+  persistDefeatedGyms([])
+  showResetDialog.value = false
+}
+
+function resetAll() {
+  persistTeam([])
+  persistBox([])
+  persistDefeatedGyms([])
+  cancel()
+  showResetDialog.value = false
+}
+
 // Store original state when swap mode starts
 const swapOriginalState = ref(null)
 
@@ -67,8 +104,8 @@ watch(swapMode, (isSwapMode) => {
     // Only capture if not already captured (e.g., by confirmDraft for add-replace)
     if (!swapOriginalState.value) {
       swapOriginalState.value = {
-        team: structuredClone(team.value),
-        box: structuredClone(box.value),
+        team: JSON.parse(JSON.stringify(team.value)),
+        box: JSON.parse(JSON.stringify(box.value)),
       }
     }
   } else {
@@ -214,6 +251,7 @@ function handleImmediateSwap(targetId) {
       targetPokemon.megaForm,
       targetPokemon.megaTypes,
       targetPokemon.megaSpriteId,
+      targetPokemon.spriteVariant,
     )
     draftAction.value.boxPokemonId = newBoxMember.id
   } else if (draftAction.value.isTeamPokemon) {
@@ -265,6 +303,7 @@ function handleImmediateSwap(targetId) {
         targetPokemon.megaForm,
         targetPokemon.megaTypes,
         targetPokemon.megaSpriteId,
+        targetPokemon.spriteVariant,
       )
       draftAction.value.editId = newTeamMember.id
     }
@@ -304,8 +343,8 @@ function confirmDraft() {
       // Team is full - enter replace mode
       // Capture state BEFORE adding temp Pokemon (so cancel discards it)
       swapOriginalState.value = {
-        team: structuredClone(team.value),
-        box: structuredClone(box.value),
+        team: JSON.parse(JSON.stringify(team.value)),
+        box: JSON.parse(JSON.stringify(box.value)),
       }
 
       // 1. Add new Pokemon to box temporarily
@@ -437,6 +476,7 @@ onMounted(() => {
 
 <style scoped>
 .app-container {
+  position: relative;
   max-width: 900px;
   margin: 0 auto;
   animation: fadeIn var(--transition-slow) ease forwards;
@@ -459,6 +499,25 @@ onMounted(() => {
   background-clip: text;
 }
 
+.reset-btn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: color var(--transition-base);
+}
+
+.reset-btn:hover,
+.reset-btn:active {
+  color: rgba(139, 92, 246, 1);
+}
+
 @media (orientation: landscape) and (max-height: 500px) {
   .app-container {
     display: flex;
@@ -473,14 +532,99 @@ onMounted(() => {
     margin-bottom: var(--space-2);
   }
 
-  .app-container > :nth-child(2) {
-    flex: 1;
-    min-width: 0;
-  }
-
   .app-container > :nth-child(3) {
     flex: 1;
     min-width: 0;
   }
+
+  .app-container > :nth-child(4) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .reset-btn {
+    top: auto;
+    bottom: 0;
+  }
+}
+</style>
+
+<style>
+.reset-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn var(--transition-fast) ease forwards;
+}
+
+.reset-dialog {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-6);
+  min-width: 220px;
+  text-align: center;
+  position: relative;
+  animation: scaleIn var(--transition-base) ease forwards;
+}
+
+.reset-dialog-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  color: var(--color-text-primary);
+}
+
+.reset-dialog-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.reset-option {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base);
+}
+
+.reset-option:hover {
+  background: var(--color-surface-light);
+  border-color: var(--color-text-muted);
+}
+
+.reset-option-danger {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.reset-option-danger:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: var(--color-danger);
+}
+
+.reset-dialog-cancel {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: color var(--transition-base);
+}
+
+.reset-dialog-cancel:hover {
+  color: var(--color-text-primary);
 }
 </style>
