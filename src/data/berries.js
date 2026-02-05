@@ -24,3 +24,9 @@ export const BERRY_NAMES = Object.keys(BERRIES)
 export const BERRY_BY_TYPE = Object.fromEntries(
   Object.entries(BERRIES).map(([berry, type]) => [type, berry]),
 )
+
+export const ITEMS = {
+  'Air Balloon': 'ground',
+}
+
+export const ITEM_NAMES = Object.keys(ITEMS)

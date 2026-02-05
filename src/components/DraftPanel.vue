@@ -47,6 +47,14 @@
             clearable
           />
           <div v-if="draftAction.pokemon" class="pokemon-preview">
+            <button
+              class="variant-btn"
+              :class="{ active: draftAction.spriteVariant !== 'default' }"
+              @click="cycleSpriteVariant"
+              aria-label="Switch sprite variant"
+            >
+              ⇄
+            </button>
             <SpriteImg
               v-if="selectedSpriteUrl"
               :src="selectedSpriteUrl"
@@ -220,6 +228,7 @@ const {
   updateMoves,
   updateSpecialMove,
   updateMegaForm,
+  updateSpriteVariant,
 } = useDraftAction()
 
 // Wizard state
@@ -302,13 +311,50 @@ const wizardStepTitle = computed(() => {
   return titles[wizardStep.value]
 })
 
+// Probe for female sprite availability per-Pokemon
+const femaleAvailable = ref(false)
+
+watch(
+  () => draftAction.value?.pokemon,
+  (pokemon) => {
+    femaleAvailable.value = false
+    if (!pokemon) return
+    const index = POKEMON_DATA.findIndex((p) => p.name === pokemon.name)
+    if (index === -1) return
+    const id = pokemon.spriteId ?? index + 1
+    const img = new Image()
+    img.onload = () => {
+      femaleAvailable.value = true
+    }
+    img.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/female/${id}.png`
+  },
+  { immediate: true },
+)
+
+const availableVariants = computed(() => {
+  const variants = ['default', 'shiny']
+  if (femaleAvailable.value && !draftAction.value?.megaSpriteId) {
+    variants.push('female', 'shiny-female')
+  }
+  return variants
+})
+
+function cycleSpriteVariant() {
+  const current = draftAction.value?.spriteVariant || 'default'
+  const variants = availableVariants.value
+  const currentIndex = variants.indexOf(current)
+  const nextIndex = (currentIndex + 1) % variants.length
+  updateSpriteVariant(variants[nextIndex])
+}
+
 const selectedSpriteUrl = computed(() => {
   if (!draftAction.value?.pokemon) return null
+  const variant = draftAction.value.spriteVariant || 'default'
   // Use mega sprite if mega form is active
   if (draftAction.value.megaSpriteId) {
-    return getMegaSpriteUrl(draftAction.value.megaSpriteId)
+    return getMegaSpriteUrl(draftAction.value.megaSpriteId, variant)
   }
-  return getSpriteUrl(draftAction.value.pokemon.name)
+  return getSpriteUrl(draftAction.value.pokemon.name, variant)
 })
 
 const autocompleteOptions = computed(() => {
@@ -405,6 +451,7 @@ function clearSelections() {
   updateMoves([])
   updateSpecialMove(null)
   updateMegaForm(null, null, null)
+  updateSpriteVariant('default')
 }
 
 function capitalize(str) {
@@ -443,6 +490,14 @@ const relevantBerries = computed(() => {
       label: 'Nevermelt Ice',
       value: 'Nevermelt Ice',
       type: 'ice',
+    })
+  }
+  // Always include Air Balloon if not already present
+  if (!berries.some((b) => b.value === 'Air Balloon')) {
+    berries.push({
+      label: 'Air Balloon',
+      value: 'Air Balloon',
+      type: 'ground',
     })
   }
   return berries
@@ -875,6 +930,28 @@ function onSearchInput(value) {
   align-items: center;
   justify-content: center;
   margin: var(--space-4) 0;
+}
+
+.variant-btn {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-3);
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+  font-weight: 900;
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: color var(--transition-base);
+}
+
+.variant-btn:active {
+  transform: scale(0.95);
+}
+
+.variant-btn.active {
+  color: rgba(139, 92, 246, 1);
 }
 
 .evolve-btn {
