@@ -67,8 +67,8 @@ watch(swapMode, (isSwapMode) => {
     // Only capture if not already captured (e.g., by confirmDraft for add-replace)
     if (!swapOriginalState.value) {
       swapOriginalState.value = {
-        team: structuredClone(team.value),
-        box: structuredClone(box.value),
+        team: JSON.parse(JSON.stringify(team.value)),
+        box: JSON.parse(JSON.stringify(box.value)),
       }
     }
   } else {
@@ -304,8 +304,8 @@ function confirmDraft() {
       // Team is full - enter replace mode
       // Capture state BEFORE adding temp Pokemon (so cancel discards it)
       swapOriginalState.value = {
-        team: structuredClone(team.value),
-        box: structuredClone(box.value),
+        team: JSON.parse(JSON.stringify(team.value)),
+        box: JSON.parse(JSON.stringify(box.value)),
       }
 
       // 1. Add new Pokemon to box temporarily
