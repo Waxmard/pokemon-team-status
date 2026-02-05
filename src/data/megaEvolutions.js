@@ -61,7 +61,14 @@ export const MEGA_EVOLUTIONS = {
   Metagross: [{ form: 'mega', types: ['steel', 'psychic'], spriteId: 10076 }],
   Latias: [{ form: 'mega', types: ['dragon', 'psychic'], spriteId: 10062 }],
   Latios: [{ form: 'mega', types: ['dragon', 'psychic'], spriteId: 10063 }],
-  Rayquaza: [{ form: 'mega', types: ['dragon', 'flying'], spriteId: 10079 }],
+  Rayquaza: [
+    {
+      form: 'mega',
+      types: ['dragon', 'flying'],
+      spriteId: 10079,
+      ability: 'Delta Stream',
+    },
+  ],
   Lopunny: [{ form: 'mega', types: ['normal', 'fighting'], spriteId: 10088 }],
   Gallade: [{ form: 'mega', types: ['psychic', 'fighting'], spriteId: 10068 }],
   Audino: [{ form: 'mega', types: ['normal', 'fairy'], spriteId: 10069 }],
