@@ -15,7 +15,6 @@
         ⋮⋮
       </span>
 
-      <span v-if="pinned" class="pin-indicator">📌</span>
       <img :src="getTypeIcon(type)" :alt="type" class="type-icon" draggable="false" />
 
       <span
@@ -209,10 +208,4 @@ const rowBackgroundStyle = computed(() => {
   cursor: grabbing;
 }
 
-.gym-card-inner .pin-indicator {
-  position: absolute;
-  top: 4px;
-  left: 28px; /* Offset to not overlap drag handle */
-  font-size: 0.75rem;
-}
 </style>
