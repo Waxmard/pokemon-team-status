@@ -251,6 +251,7 @@ function handleImmediateSwap(targetId) {
       targetPokemon.megaForm,
       targetPokemon.megaTypes,
       targetPokemon.megaSpriteId,
+      targetPokemon.spriteVariant,
     )
     draftAction.value.boxPokemonId = newBoxMember.id
   } else if (draftAction.value.isTeamPokemon) {
@@ -302,6 +303,7 @@ function handleImmediateSwap(targetId) {
         targetPokemon.megaForm,
         targetPokemon.megaTypes,
         targetPokemon.megaSpriteId,
+        targetPokemon.spriteVariant,
       )
       draftAction.value.editId = newTeamMember.id
     }
