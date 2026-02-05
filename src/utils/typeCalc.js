@@ -1,5 +1,5 @@
 import { ABILITIES } from '../data/abilities.js'
-import { BERRIES } from '../data/berries.js'
+import { BERRIES, ITEMS } from '../data/berries.js'
 import { SPECIAL_MOVES } from '../data/specialMoves.js'
 import { ALL_TYPES, TYPE_CHART } from '../data/types.js'
 
@@ -138,7 +138,8 @@ export function calculateScoreChanges(team, draftMember) {
 export function calculateBerryTiebreaker(gymType, team) {
   let count = 0
   for (const member of team) {
-    if (member.berry && BERRIES[member.berry] === gymType) {
+    const berryType = BERRIES[member.berry] ?? ITEMS[member.berry]
+    if (member.berry && berryType === gymType) {
       // Only count berry if the gym type deals super effective damage
       let multiplier = getDefensiveMultiplier(gymType, member.types)
       multiplier = applyAbilityDefense(multiplier, gymType, member.ability)

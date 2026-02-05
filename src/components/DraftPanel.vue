@@ -445,6 +445,14 @@ const relevantBerries = computed(() => {
       type: 'ice',
     })
   }
+  // Always include Air Balloon if not already present
+  if (!berries.some((b) => b.value === 'Air Balloon')) {
+    berries.push({
+      label: 'Air Balloon',
+      value: 'Air Balloon',
+      type: 'ground',
+    })
+  }
   return berries
 })
 
