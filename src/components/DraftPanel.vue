@@ -5,6 +5,47 @@
         <div class="wizard-header">
           <h3 class="wizard-title">{{ wizardStepTitle }}</h3>
 
+          <!-- Pokemon step: suggestion button -->
+          <template v-if="wizardStep === 'pokemon' && canShowSuggestion">
+            <span
+              v-if="showSuggestion && swapSuggestion"
+              class="suggestion-inline"
+              @click="$emit('swapSuggestion', {
+                currentId: draftAction.isTeamPokemon ? draftAction.editId : draftAction.boxPokemonId,
+                candidateId: swapSuggestion.candidate.id,
+                isTeamMember: !!draftAction.isTeamPokemon,
+              })"
+            >
+              <span
+                class="suggestion-urgency"
+                :class="swapSuggestion.improvement > 0 ? 'positive' : swapSuggestion.improvement < 0 ? 'negative' : ''"
+              >
+                {{ swapSuggestion.improvement > 0 ? '+' : '' }}{{ swapSuggestion.improvement }}
+              </span>
+              <SpriteImg
+                :src="getSuggestionSpriteUrl(draftAction.pokemon.name, draftAction.spriteVariant, draftAction.megaSpriteId)"
+                :alt="draftAction.pokemon.name"
+                :width="24"
+                :height="24"
+              />
+              <span class="suggestion-swap-icon">⇄</span>
+              <SpriteImg
+                :src="getSuggestionSpriteUrl(swapSuggestion.candidate.name, swapSuggestion.candidate.spriteVariant, swapSuggestion.candidate.megaSpriteId)"
+                :alt="swapSuggestion.candidate.name"
+                :width="24"
+                :height="24"
+              />
+            </span>
+            <button
+              class="suggestion-btn"
+              :class="{ active: showSuggestion }"
+              @click="toggleSuggestion"
+              aria-label="Swap suggestion"
+            >
+              ✦
+            </button>
+          </template>
+
           <!-- Moves step: inline special move UI -->
           <template v-if="wizardStep === 'moves'">
             <!-- Selected special move badge (when not editing) -->
@@ -189,6 +230,7 @@
 import { NAutoComplete } from 'naive-ui'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
+import { useStorage } from '../composables/useStorage.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
 import { getMegaOptions } from '../data/megaEvolutions.js'
@@ -197,12 +239,15 @@ import { SPECIAL_MOVE_NAMES } from '../data/specialMoves.js'
 import { ALL_TYPES, getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { hexToRgba } from '../utils/colors.js'
 import {
+  buildPokemonMember,
   getBerrySprite,
   getMegaSpriteUrl,
+  getSmallSpriteUrl,
   getSpriteUrl,
 } from '../utils/pokemon.js'
 import {
   applyAbilityDefense,
+  findBestSwap,
   getDefensiveMultiplier,
 } from '../utils/typeCalc.js'
 import SpriteImg from './SpriteImg.vue'
@@ -218,7 +263,7 @@ const props = defineProps({
   },
 })
 
-defineEmits(['confirm', 'cancel'])
+defineEmits(['confirm', 'cancel', 'swapSuggestion'])
 
 const {
   draftAction,
@@ -230,6 +275,65 @@ const {
   updateMegaForm,
   updateSpriteVariant,
 } = useDraftAction()
+
+const { team: storageTeam, box, defeatedGyms } = useStorage()
+
+// Suggestion state
+const showSuggestion = ref(false)
+
+const canShowSuggestion = computed(() => {
+  if (!draftAction.value) return false
+  const isEditing =
+    draftAction.value.isTeamPokemon || draftAction.value.isBoxPokemon
+  if (!isEditing) return false
+  // The opposite pool must have at least one member
+  if (draftAction.value.isTeamPokemon) return box.value.length > 0
+  return storageTeam.value.length > 0
+})
+
+const swapSuggestion = computed(() => {
+  if (!showSuggestion.value || !canShowSuggestion.value) return null
+  if (!draftAction.value?.pokemon) return null
+
+  const isTeamMember = !!draftAction.value.isTeamPokemon
+  const currentMember = buildPokemonMember(draftAction.value, {
+    id: draftAction.value.editId ?? draftAction.value.boxPokemonId,
+  })
+
+  if (isTeamMember) {
+    // Editing team member: find best box member to swap in
+    // Build a draft team reflecting the user's current edits
+    const draftTeam = props.team.map((p) =>
+      p.id === currentMember.id ? currentMember : p,
+    )
+    return findBestSwap(
+      draftTeam,
+      currentMember,
+      true,
+      box.value,
+      defeatedGyms.value,
+    )
+  } else {
+    // Editing box member: find best team member to replace
+    return findBestSwap(
+      props.team,
+      currentMember,
+      false,
+      props.team,
+      defeatedGyms.value,
+    )
+  }
+})
+
+function toggleSuggestion() {
+  showSuggestion.value = !showSuggestion.value
+}
+
+function getSuggestionSpriteUrl(pokemonName, spriteVariant, megaSpriteId) {
+  const variant = spriteVariant || 'default'
+  if (megaSpriteId) return getMegaSpriteUrl(megaSpriteId, variant)
+  return getSmallSpriteUrl(pokemonName, variant)
+}
 
 // Wizard state
 const wizardStep = ref('pokemon')
@@ -751,6 +855,53 @@ function onSearchInput(value) {
   font-size: 1.1rem;
   margin-bottom: 0;
   text-align: left;
+}
+
+.suggestion-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: color var(--transition-base);
+}
+
+.suggestion-btn:hover,
+.suggestion-btn.active {
+  color: rgba(139, 92, 246, 1);
+}
+
+.suggestion-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  animation: fadeSlideIn 0.2s ease;
+}
+
+.suggestion-inline:active {
+  opacity: 0.7;
+}
+
+.suggestion-urgency {
+  font-size: 0.8rem;
+  font-weight: 700;
+  min-width: 28px;
+  text-align: center;
+}
+
+.suggestion-urgency.positive {
+  color: var(--color-success);
+}
+
+.suggestion-urgency.negative {
+  color: var(--color-danger);
+}
+
+.suggestion-swap-icon {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
 }
 
 .special-move-btn {

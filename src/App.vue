@@ -15,6 +15,7 @@
         @deleteBoxPokemon="deleteBoxPokemon"
         @cancelSwap="handleCancelSwap"
         @deletePokemon="handleDeleteFromDraft"
+        @swapSuggestion="handleSwapSuggestion"
       />
 
       <GymColumns
@@ -308,6 +309,16 @@ function handleImmediateSwap(targetId) {
       draftAction.value.editId = newTeamMember.id
     }
   }
+}
+
+function handleSwapSuggestion({ candidateId }) {
+  // Capture original state before swap mode
+  swapOriginalState.value = {
+    team: JSON.parse(JSON.stringify(team.value)),
+    box: JSON.parse(JSON.stringify(box.value)),
+  }
+  enterSwapMode()
+  handleImmediateSwap(candidateId)
 }
 
 // Methods
