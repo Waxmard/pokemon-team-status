@@ -87,7 +87,7 @@
         :team="team"
         @confirm="$emit('confirmDraft')"
         @cancel="cancel"
-        @swapSuggestion="$emit('swapSuggestion', $event)"
+        @swapSuggestion="handleSwapSuggestion"
       />
     </Transition>
     </div>
@@ -150,6 +150,7 @@ const swapPokemonSpriteUrl = computed(() => {
 
 const viewMode = ref('team')
 const isCollapsed = ref(false)
+const fromSuggestion = ref(false)
 
 // Long-press handling for collapse
 const { longPressFired, startLongPress, cancelLongPress, handleTouchEnd } =
@@ -200,8 +201,13 @@ function handleConfirmSwap() {
 // Switch to opposite view when entering swap mode, reset to team view when exiting
 watch(swapMode, (isSwapMode) => {
   if (isSwapMode) {
-    // Show opposite view: editing team → show box, editing box → show team
-    viewMode.value = draftAction.value?.isTeamPokemon ? 'box' : 'team'
+    if (fromSuggestion.value) {
+      viewMode.value = 'team'
+      fromSuggestion.value = false
+    } else {
+      // Show opposite view: editing team → show box, editing box → show team
+      viewMode.value = draftAction.value?.isTeamPokemon ? 'box' : 'team'
+    }
   } else {
     // Always return to team view when swap mode ends (any exit path)
     viewMode.value = 'team'
@@ -302,6 +308,11 @@ function handleAddClick() {
   } else {
     startAdd()
   }
+}
+
+function handleSwapSuggestion(event) {
+  fromSuggestion.value = true
+  emit('swapSuggestion', event)
 }
 
 function handleDeleteClick() {
