@@ -7,43 +7,39 @@
 
           <!-- Pokemon step: suggestion button -->
           <template v-if="wizardStep === 'pokemon' && canShowSuggestion">
-            <span
-              v-if="showSuggestion && swapSuggestion"
-              class="suggestion-inline"
-              @click="$emit('swapSuggestion', {
-                currentId: draftAction.isTeamPokemon ? draftAction.editId : draftAction.boxPokemonId,
-                candidateId: swapSuggestion.candidate.id,
-                isTeamMember: !!draftAction.isTeamPokemon,
-              })"
-            >
+            <span class="suggestion-group">
               <span
-                class="suggestion-urgency"
-                :class="swapSuggestion.improvement > 0 ? 'positive' : swapSuggestion.improvement < 0 ? 'negative' : ''"
+                v-if="showSuggestion && swapSuggestion"
+                class="suggestion-inline"
+                @click="$emit('swapSuggestion', {
+                  currentId: draftAction.isTeamPokemon ? draftAction.editId : draftAction.boxPokemonId,
+                  candidateId: swapSuggestion.candidate.id,
+                  isTeamMember: !!draftAction.isTeamPokemon,
+                })"
               >
-                {{ swapSuggestion.improvement > 0 ? '+' : '' }}{{ swapSuggestion.improvement }}
+                <SpriteImg
+                  :src="getSuggestionSpriteUrl(draftAction.pokemon.name, draftAction.spriteVariant, draftAction.megaSpriteId)"
+                  :alt="draftAction.pokemon.name"
+                  :width="24"
+                  :height="24"
+                />
+                <span class="suggestion-swap-icon">⇄</span>
+                <SpriteImg
+                  :src="getSuggestionSpriteUrl(swapSuggestion.candidate.name, swapSuggestion.candidate.spriteVariant, swapSuggestion.candidate.megaSpriteId)"
+                  :alt="swapSuggestion.candidate.name"
+                  :width="24"
+                  :height="24"
+                />
               </span>
-              <SpriteImg
-                :src="getSuggestionSpriteUrl(draftAction.pokemon.name, draftAction.spriteVariant, draftAction.megaSpriteId)"
-                :alt="draftAction.pokemon.name"
-                :width="24"
-                :height="24"
-              />
-              <span class="suggestion-swap-icon">⇄</span>
-              <SpriteImg
-                :src="getSuggestionSpriteUrl(swapSuggestion.candidate.name, swapSuggestion.candidate.spriteVariant, swapSuggestion.candidate.megaSpriteId)"
-                :alt="swapSuggestion.candidate.name"
-                :width="24"
-                :height="24"
-              />
+              <button
+                class="suggestion-btn"
+                :class="{ active: showSuggestion }"
+                @click="toggleSuggestion"
+                aria-label="Swap suggestion"
+              >
+                ✦
+              </button>
             </span>
-            <button
-              class="suggestion-btn"
-              :class="{ active: showSuggestion }"
-              @click="toggleSuggestion"
-              aria-label="Swap suggestion"
-            >
-              ✦
-            </button>
           </template>
 
           <!-- Moves step: inline special move UI -->
@@ -857,19 +853,20 @@ function onSearchInput(value) {
   text-align: left;
 }
 
+.suggestion-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .suggestion-btn {
   background: transparent;
   border: none;
-  color: var(--color-text-muted);
+  color: rgba(139, 92, 246, 1);
   font-size: 1.25rem;
   cursor: pointer;
   padding: var(--space-1);
   transition: color var(--transition-base);
-}
-
-.suggestion-btn:hover,
-.suggestion-btn.active {
-  color: rgba(139, 92, 246, 1);
 }
 
 .suggestion-inline {
@@ -882,21 +879,6 @@ function onSearchInput(value) {
 
 .suggestion-inline:active {
   opacity: 0.7;
-}
-
-.suggestion-urgency {
-  font-size: 0.8rem;
-  font-weight: 700;
-  min-width: 28px;
-  text-align: center;
-}
-
-.suggestion-urgency.positive {
-  color: var(--color-success);
-}
-
-.suggestion-urgency.negative {
-  color: var(--color-danger);
 }
 
 .suggestion-swap-icon {
