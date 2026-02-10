@@ -30,6 +30,9 @@
                   :width="24"
                   :height="24"
                 />
+                <span v-if="suggestionIndicator" :class="['suggestion-indicator', suggestionIndicator.cls]">
+                  {{ suggestionIndicator.symbol }}
+                </span>
               </span>
               <button
                 class="suggestion-btn"
@@ -319,6 +322,14 @@ const swapSuggestion = computed(() => {
       defeatedGyms.value,
     )
   }
+})
+
+const suggestionIndicator = computed(() => {
+  if (!swapSuggestion.value) return null
+  const imp = swapSuggestion.value.improvement
+  if (imp > 0) return { symbol: '\u25B2', cls: 'improvement-up' }
+  if (imp < 0) return { symbol: '\u25BC', cls: 'improvement-down' }
+  return { symbol: '\u2014', cls: 'improvement-neutral' }
 })
 
 function toggleSuggestion() {
@@ -885,6 +896,16 @@ function onSearchInput(value) {
   font-size: 0.85rem;
   color: var(--color-text-muted);
 }
+
+.suggestion-indicator {
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: var(--space-1);
+}
+
+.improvement-up { color: var(--color-success); }
+.improvement-down { color: var(--color-danger); }
+.improvement-neutral { color: var(--color-text-muted); }
 
 .special-move-btn {
   background: transparent;
