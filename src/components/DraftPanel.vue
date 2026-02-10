@@ -35,6 +35,7 @@
                 </span>
               </span>
               <button
+                v-else
                 class="suggestion-btn"
                 :class="{ active: showSuggestion }"
                 @click="toggleSuggestion"
