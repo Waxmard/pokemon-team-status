@@ -311,14 +311,49 @@ function handleImmediateSwap(targetId) {
   }
 }
 
-function handleSwapSuggestion({ candidateId }) {
-  // Capture original state before swap mode
+function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
   swapOriginalState.value = {
     team: JSON.parse(JSON.stringify(team.value)),
     box: JSON.parse(JSON.stringify(box.value)),
   }
+
+  if (isTeamMember) {
+    // Editing team Pokemon A (currentId), candidate is box Pokemon B (candidateId)
+    const teamPokemon = team.value.find((p) => p.id === currentId)
+    const boxPokemon = box.value.find((p) => p.id === candidateId)
+    if (!teamPokemon || !boxPokemon) return
+
+    // B goes to team where A was
+    const newTeamMember = buildPokemonMember(boxPokemon, { source: 'team' })
+    persistTeam(team.value.map((p) => (p.id === currentId ? newTeamMember : p)))
+
+    // A goes to box where B was
+    const newBoxMember = buildPokemonMember(teamPokemon, { source: 'box' })
+    persistBox(box.value.map((p) => (p.id === candidateId ? newBoxMember : p)))
+
+    // Set A as "in hand" box Pokemon for chain swapping
+    const pokemonData = POKEMON_DATA.find((p) => p.name === teamPokemon.name)
+    updateInHandPokemon(
+      pokemonData,
+      teamPokemon.ability,
+      teamPokemon.berry,
+      teamPokemon.moves,
+      teamPokemon.specialMove,
+      teamPokemon.megaForm,
+      teamPokemon.megaTypes,
+      teamPokemon.megaSpriteId,
+      teamPokemon.spriteVariant,
+    )
+    draftAction.value.isTeamPokemon = false
+    draftAction.value.isBoxPokemon = true
+    draftAction.value.boxPokemonId = newBoxMember.id
+    delete draftAction.value.editId
+  } else {
+    // Box editing: handleImmediateSwap already sets correct perspective
+    handleImmediateSwap(candidateId)
+  }
+
   enterSwapMode()
-  handleImmediateSwap(candidateId)
 }
 
 // Methods
