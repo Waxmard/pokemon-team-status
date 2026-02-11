@@ -140,13 +140,6 @@
               :width="144"
               :height="144"
             />
-            <!-- Selection overlays (top-left) -->
-            <div class="selection-overlays">
-              <div v-if="draftAction.moves?.length" class="move-icons-overlay">
-                <img v-for="type in draftAction.moves" :key="type" :src="getTypeIcon(type)" class="overlay-type-icon" />
-              </div>
-              <SpriteImg v-if="draftAction.berry" :src="getBerrySprite(draftAction.berry)" class="overlay-berry" :width="24" :height="24" />
-            </div>
           </div>
         </div>
 
@@ -1044,33 +1037,6 @@ function onSearchInput(value) {
 .berry-type-option.selected {
   border-color: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
-}
-
-/* Selection overlays positioned top-left of sprite */
-.selection-overlays {
-  position: absolute;
-  top: var(--space-2);
-  left: var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.move-icons-overlay {
-  display: flex;
-  gap: 2px;
-  flex-wrap: wrap;
-  max-width: 80px;
-}
-
-.overlay-type-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.overlay-berry {
-  width: 24px;
-  height: 24px;
 }
 
 .wizard-actions {
