@@ -152,7 +152,7 @@ export function calculateUrgency(team, gymTypes) {
   return total
 }
 
-const DEFEATED_WEIGHT = 0.25
+const DEFEATED_WEIGHT = 0.5
 
 function weightedTeamScore(team, defeatedGyms) {
   let total = 0
