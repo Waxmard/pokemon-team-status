@@ -2,7 +2,7 @@
   <div
     class="gym-card touchable"
     :class="{ defeated: defeated && !suggestionMode, pinned: pinned }"
-    @click="$emit('click', type)"
+    @click="!suggestionMode && $emit('click', type)"
   >
     <div class="gym-card-inner" :style="rowBackgroundStyle">
       <!-- Drag handle for pin -->

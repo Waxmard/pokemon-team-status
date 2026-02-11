@@ -135,7 +135,7 @@ export function calculateScoreChanges(team, draftMember) {
   }).filter((c) => c.diff !== 0)
 }
 
-const SUGGESTION_THRESHOLD = 3
+const SUGGESTION_THRESHOLD = 2
 const SUGGESTION_POWER = 1.25
 
 function urgency(score) {
@@ -152,16 +152,44 @@ export function calculateUrgency(team, gymTypes) {
   return total
 }
 
-const DEFEATED_WEIGHT = 0.5
+const SCORE_CAP = 2
 
-function weightedTeamScore(team, defeatedGyms) {
-  let total = 0
+function teamScoreProfile(team, defeatedGyms) {
+  const undefeatedScores = []
+  const allCapped = []
+  const allUncapped = []
+
   for (const type of ALL_TYPES) {
-    const score = calculateScore(type, team)
-    const weight = defeatedGyms.includes(type) ? DEFEATED_WEIGHT : 1
-    total += score * weight
+    const raw = calculateScore(type, team)
+    const capped = Math.min(raw, SCORE_CAP)
+    if (!defeatedGyms.includes(type)) {
+      undefeatedScores.push(capped)
+    }
+    allCapped.push(capped)
+    allUncapped.push(raw)
   }
-  return total
+
+  undefeatedScores.sort((a, b) => a - b)
+  allCapped.sort((a, b) => a - b)
+  allUncapped.sort((a, b) => a - b)
+
+  return { undefeatedScores, allCapped, allUncapped }
+}
+
+function compareArrays(a, b) {
+  const len = Math.min(a.length, b.length)
+  for (let i = 0; i < len; i++) {
+    if (a[i] !== b[i]) return a[i] - b[i]
+  }
+  return a.length - b.length
+}
+
+function compareProfiles(a, b) {
+  const c1 = compareArrays(a.undefeatedScores, b.undefeatedScores)
+  if (c1 !== 0) return c1
+  const c2 = compareArrays(a.allCapped, b.allCapped)
+  if (c2 !== 0) return c2
+  return compareArrays(a.allUncapped, b.allUncapped)
 }
 
 export function findBestSwap(
@@ -173,46 +201,48 @@ export function findBestSwap(
 ) {
   if (pool.length === 0) return null
 
-  const currentScore = weightedTeamScore(team, defeatedGyms)
+  const currentProfile = teamScoreProfile(team, defeatedGyms)
 
   let best = null
+  let bestProfile = null
 
   for (const candidate of pool) {
     let newTeam
     if (isTeamMember) {
-      // Replace editing team member with box candidate
       newTeam = team.map((p) => (p.id === editingMember.id ? candidate : p))
     } else {
-      // Replace a team member with the editing box member
       newTeam = team.map((p) => (p.id === candidate.id ? editingMember : p))
     }
 
-    const newScore = weightedTeamScore(newTeam, defeatedGyms)
-    const improvement = newScore - currentScore
+    const profile = teamScoreProfile(newTeam, defeatedGyms)
 
-    if (!best || improvement > best.improvement) {
-      best = { candidate, improvement }
+    if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
+      bestProfile = profile
+      best = candidate
     }
   }
 
-  return best
+  const improvement = compareProfiles(bestProfile, currentProfile)
+  return { candidate: best, improvement }
 }
 
 export function findGlobalBestSwap(team, box, defeatedGyms) {
   if (team.length === 0 || box.length === 0) return null
-  const currentScore = weightedTeamScore(team, defeatedGyms)
+  const currentProfile = teamScoreProfile(team, defeatedGyms)
   let best = null
+  let bestProfile = null
   for (const teamMember of team) {
     for (const boxMember of box) {
       const newTeam = team.map((p) => (p.id === teamMember.id ? boxMember : p))
-      const newScore = weightedTeamScore(newTeam, defeatedGyms)
-      const improvement = newScore - currentScore
-      if (!best || improvement > best.improvement) {
-        best = { teamMember, boxMember, improvement }
+      const profile = teamScoreProfile(newTeam, defeatedGyms)
+      if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
+        bestProfile = profile
+        best = { teamMember, boxMember }
       }
     }
   }
-  return best
+  const improvement = compareProfiles(bestProfile, currentProfile)
+  return { ...best, improvement }
 }
 
 export function suggestTypes(team, defeatedGyms) {
