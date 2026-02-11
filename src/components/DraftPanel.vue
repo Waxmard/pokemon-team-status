@@ -1129,7 +1129,7 @@ function onSearchInput(value) {
 .evolve-options {
   position: absolute;
   top: calc(var(--space-2) + 2.5rem);
-  right: var(--space-3);
+  right: var(--space-2);
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-1);
@@ -1139,13 +1139,12 @@ function onSearchInput(value) {
 .evolve-option-pill {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-xl);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-md);
+  background: none;
+  border: none;
   cursor: pointer;
-  padding: var(--space-1);
+  padding: 0;
   transition: all var(--transition-base);
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
 }
 
 .evolve-option-pill:active {
@@ -1153,8 +1152,7 @@ function onSearchInput(value) {
 }
 
 .evolve-option-pill.mega-selected {
-  border-color: var(--color-success);
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+  filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.6));
 }
 
 @keyframes fadeSlideIn {
