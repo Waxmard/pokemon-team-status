@@ -39,6 +39,7 @@ npx vite --host
 - Build a team of up to 6 Pokemon with reserve box
 - See weakness/resistance scores against all 18 types
 - Track defeated gyms
+- Swap suggestions to optimize team coverage
 - Mega evolution support
 - Works fully offline (PWA)
   - **iOS**: Must be added to Home Screen for offline support

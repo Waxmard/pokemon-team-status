@@ -107,6 +107,31 @@ Berries don't affect the main score, but when two gym types have the same
 score, the one where more of your Pokemon have relevant berries ranks lower
 (you're better prepared for it).
 
+## Suggestions
+
+### Swap Suggestions
+
+The app can suggest which box Pokemon to swap onto your team. It evaluates
+every possible team/box swap, comparing score profiles (undefeated gyms first,
+then all gyms). The best improvement is shown in the header.
+
+### Type Suggestions
+
+`suggestTypes` creates a hypothetical single-type Pokemon for each of the 18
+types and measures how much it would reduce the team's urgency score. This
+helps you know what type coverage your team is missing.
+
+### Urgency Algorithm
+
+Gyms where the team scores below a threshold (2) contribute urgency using
+`(threshold - score)^1.25`. This non-linear scoring prioritizes shoring up the
+worst matchups over improving already-decent ones.
+
+### Sorting in Suggestion Mode
+
+When a swap suggestion is active, gyms are sorted by how much the suggested
+swap improves each matchup, so you can see where the swap helps most.
+
 ## Example
 
 Your team has a Swampert (Water/Ground):
