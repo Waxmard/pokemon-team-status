@@ -3,6 +3,7 @@
     <div class="gyms-header">
       <span
         v-if="showSwapPreview"
+        v-show="!headerSettling"
         class="suggestion-inline"
         @click="handleSwapClick"
       >
@@ -25,6 +26,7 @@
       </span>
       <button
         v-if="canShowSuggestion"
+        v-show="!headerSettling"
         class="suggestion-btn"
         :class="{ active: showSuggestions }"
         @click="showSuggestions = !showSuggestions"
@@ -32,7 +34,9 @@
       >
         ✦
       </button>
-      <span class="gyms-label">{{ gymColumnTitle }}</span>
+      <Transition name="label-fade" mode="out-in">
+        <span class="gyms-label" :key="gymColumnTitle">{{ gymColumnTitle }}</span>
+      </Transition>
     </div>
     <div class="gym-section">
       <GymColumn
@@ -79,6 +83,14 @@ const emit = defineEmits(['defeatGym', 'undefeatGym', 'swapSuggestion'])
 
 // Suggestion state
 const showSuggestions = ref(false)
+const headerSettling = ref(false)
+
+watch(showSuggestions, () => {
+  headerSettling.value = true
+  setTimeout(() => {
+    headerSettling.value = false
+  }, 300)
+})
 
 const canShowSuggestion = computed(
   () => team.value.length > 0 && box.value.length > 0 && !props.draftActive,
@@ -122,11 +134,12 @@ function getSwapSpriteUrl(pokemon) {
 }
 
 function handleSwapClick() {
-  if (!globalSwap.value) return
+  const swap = globalSwap.value
+  if (!swap) return
   showSuggestions.value = false
   emit('swapSuggestion', {
-    currentId: globalSwap.value.teamMember.id,
-    candidateId: globalSwap.value.boxMember.id,
+    currentId: swap.teamMember.id,
+    candidateId: swap.boxMember.id,
     isTeamMember: true,
   })
 }
@@ -235,7 +248,6 @@ function handlePin(type) {
 .gyms-label {
   display: flex;
   align-items: center;
-  justify-content: center;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -244,6 +256,7 @@ function handlePin(type) {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-text-primary);
+  white-space: nowrap;
 }
 
 .suggestion-btn {
@@ -253,7 +266,8 @@ function handlePin(type) {
   font-size: 1.25rem;
   cursor: pointer;
   padding: var(--space-1);
-  transition: color var(--transition-base);
+  transition: color var(--transition-base), opacity var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .suggestion-btn.active {
@@ -271,6 +285,7 @@ function handlePin(type) {
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
   animation: fadeSlideIn 0.2s ease;
+  transition: opacity var(--transition-fast);
 }
 
 .suggestion-inline:active {
@@ -296,10 +311,31 @@ function handlePin(type) {
   color: var(--color-text-muted);
 }
 
+.label-fade-enter-active,
+.label-fade-leave-active {
+  transition: opacity var(--transition-fast);
+}
+
+.label-fade-enter-from,
+.label-fade-leave-to {
+  opacity: 0;
+}
+
 @media (orientation: portrait) {
   .gyms-header {
-    top: var(--space-4);
+    top: var(--space-2);
     right: calc(var(--space-4) + var(--space-4));
+  }
+
+  .suggestion-inline {
+    border: none;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+    position: relative;
+    right: var(--space-3);
+    top: calc(var(--space-1) / 2);
   }
 
   .gyms-label {

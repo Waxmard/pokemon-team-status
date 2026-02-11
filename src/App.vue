@@ -334,26 +334,27 @@ function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
 
     // Set A as "in hand" box Pokemon for chain swapping
     const pokemonData = POKEMON_DATA.find((p) => p.name === teamPokemon.name)
-    updateInHandPokemon(
-      pokemonData,
-      teamPokemon.ability,
-      teamPokemon.berry,
-      teamPokemon.moves,
-      teamPokemon.specialMove,
-      teamPokemon.megaForm,
-      teamPokemon.megaTypes,
-      teamPokemon.megaSpriteId,
-      teamPokemon.spriteVariant,
-    )
-    draftAction.value.isTeamPokemon = false
-    draftAction.value.isBoxPokemon = true
-    draftAction.value.boxPokemonId = newBoxMember.id
-    delete draftAction.value.editId
+    draftAction.value = {
+      type: 'edit',
+      isBoxPokemon: true,
+      isTeamPokemon: false,
+      boxPokemonId: newBoxMember.id,
+      pokemon: pokemonData,
+      ability: teamPokemon.ability,
+      berry: teamPokemon.berry,
+      moves: [...(teamPokemon.moves || [])],
+      specialMove: teamPokemon.specialMove || null,
+      megaForm: teamPokemon.megaForm || null,
+      megaTypes: teamPokemon.megaTypes || null,
+      megaSpriteId: teamPokemon.megaSpriteId || null,
+      spriteVariant: teamPokemon.spriteVariant || 'default',
+    }
   } else {
     // Box editing: handleImmediateSwap already sets correct perspective
     handleImmediateSwap(candidateId)
   }
 
+  window.scrollTo({ top: 0, behavior: 'smooth' })
   enterSwapMode()
 }
 
