@@ -135,6 +135,149 @@ export function calculateScoreChanges(team, draftMember) {
   }).filter((c) => c.diff !== 0)
 }
 
+const SUGGESTION_THRESHOLD = 2
+const SUGGESTION_POWER = 1.25
+
+function urgency(score) {
+  return score >= SUGGESTION_THRESHOLD
+    ? 0
+    : (SUGGESTION_THRESHOLD - score) ** SUGGESTION_POWER
+}
+
+export function calculateUrgency(team, gymTypes) {
+  let total = 0
+  for (const type of gymTypes) {
+    total += urgency(calculateScore(type, team))
+  }
+  return total
+}
+
+const SCORE_CAP = 2
+
+function teamScoreProfile(team, defeatedGyms) {
+  const undefeatedScores = []
+  const allCapped = []
+  const allUncapped = []
+
+  for (const type of ALL_TYPES) {
+    const raw = calculateScore(type, team)
+    const capped = Math.min(raw, SCORE_CAP)
+    if (!defeatedGyms.includes(type)) {
+      undefeatedScores.push(capped)
+    }
+    allCapped.push(capped)
+    allUncapped.push(raw)
+  }
+
+  undefeatedScores.sort((a, b) => a - b)
+  allCapped.sort((a, b) => a - b)
+  allUncapped.sort((a, b) => a - b)
+
+  return { undefeatedScores, allCapped, allUncapped }
+}
+
+function compareArrays(a, b) {
+  const len = Math.min(a.length, b.length)
+  for (let i = 0; i < len; i++) {
+    if (a[i] !== b[i]) return a[i] - b[i]
+  }
+  return a.length - b.length
+}
+
+function compareProfiles(a, b) {
+  const c1 = compareArrays(a.undefeatedScores, b.undefeatedScores)
+  if (c1 !== 0) return c1
+  const c2 = compareArrays(a.allCapped, b.allCapped)
+  if (c2 !== 0) return c2
+  return compareArrays(a.allUncapped, b.allUncapped)
+}
+
+export function findBestSwap(
+  team,
+  editingMember,
+  isTeamMember,
+  pool,
+  defeatedGyms,
+) {
+  if (pool.length === 0) return null
+
+  const currentProfile = teamScoreProfile(team, defeatedGyms)
+
+  let best = null
+  let bestProfile = null
+
+  for (const candidate of pool) {
+    let newTeam
+    if (isTeamMember) {
+      newTeam = team.map((p) => (p.id === editingMember.id ? candidate : p))
+    } else {
+      newTeam = team.map((p) => (p.id === candidate.id ? editingMember : p))
+    }
+
+    const profile = teamScoreProfile(newTeam, defeatedGyms)
+
+    if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
+      bestProfile = profile
+      best = candidate
+    }
+  }
+
+  const improvement = compareProfiles(bestProfile, currentProfile)
+  return { candidate: best, improvement }
+}
+
+export function findGlobalBestSwap(team, box, defeatedGyms) {
+  if (team.length === 0 || box.length === 0) return null
+  const currentProfile = teamScoreProfile(team, defeatedGyms)
+  let best = null
+  let bestProfile = null
+  for (const teamMember of team) {
+    for (const boxMember of box) {
+      const newTeam = team.map((p) => (p.id === teamMember.id ? boxMember : p))
+      const profile = teamScoreProfile(newTeam, defeatedGyms)
+      if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
+        bestProfile = profile
+        best = { teamMember, boxMember }
+      }
+    }
+  }
+  const improvement = compareProfiles(bestProfile, currentProfile)
+  return { ...best, improvement }
+}
+
+export function suggestTypes(team, defeatedGyms) {
+  const undefeated = ALL_TYPES.filter((t) => !defeatedGyms.includes(t))
+  const defeated = ALL_TYPES.filter((t) => defeatedGyms.includes(t))
+
+  const currentUndefeated = calculateUrgency(team, undefeated)
+  const currentDefeated = calculateUrgency(team, defeated)
+
+  return ALL_TYPES.map((type) => {
+    const hypothetical = {
+      id: `hypothetical-${type}`,
+      types: [type],
+      moves: [type],
+      ability: null,
+      berry: null,
+      specialMove: null,
+      megaTypes: [],
+    }
+    const newTeam = [...team, hypothetical]
+    const newUndefeated = calculateUrgency(newTeam, undefeated)
+    const newDefeated = calculateUrgency(newTeam, defeated)
+
+    return {
+      type,
+      undefeatedImprovement: currentUndefeated - newUndefeated,
+      defeatedImprovement: currentDefeated - newDefeated,
+    }
+  }).sort((a, b) => {
+    if (a.undefeatedImprovement !== b.undefeatedImprovement)
+      return b.undefeatedImprovement - a.undefeatedImprovement
+    return b.defeatedImprovement - a.defeatedImprovement
+  })
+}
+
 export function calculateBerryTiebreaker(gymType, team) {
   let count = 0
   for (const member of team) {

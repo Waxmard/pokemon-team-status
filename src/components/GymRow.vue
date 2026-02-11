@@ -1,8 +1,8 @@
 <template>
   <div
     class="gym-card touchable"
-    :class="{ defeated: defeated, pinned: pinned }"
-    @click="$emit('click', type)"
+    :class="{ defeated: defeated && !suggestionMode, pinned: pinned }"
+    @click="!suggestionMode && $emit('click', type)"
   >
     <div class="gym-card-inner" :style="rowBackgroundStyle">
       <!-- Drag handle for pin -->
@@ -33,7 +33,18 @@
         />
       </span>
 
-      <span class="score-corner" :class="{ positive: score > 0, negative: score < 0 }">
+      <span
+        v-if="suggestionMode && improvementScore != null"
+        class="score-corner"
+        :class="improvementClass"
+      >
+        {{ improvementSymbol }}
+      </span>
+      <span
+        v-else-if="!suggestionMode"
+        class="score-corner"
+        :class="{ positive: score > 0, negative: score < 0 }"
+      >
         {{ score > 0 ? '+' : '' }}{{ score }}
       </span>
     </div>
@@ -69,6 +80,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  suggestionMode: {
+    type: Boolean,
+    default: false,
+  },
+  improvementScore: {
+    type: Number,
+    default: undefined,
+  },
 })
 
 const emit = defineEmits(['click', 'dragstart', 'touchdragstart'])
@@ -86,6 +105,18 @@ function onHandleDragStart(event) {
 function onHandleTouchStart() {
   emit('touchdragstart')
 }
+
+const improvementSymbol = computed(() => {
+  if (props.improvementScore > 0) return '\u25B2'
+  if (props.improvementScore < 0) return '\u25BC'
+  return '\u2014'
+})
+
+const improvementClass = computed(() => {
+  if (props.improvementScore > 0) return 'improvement-up'
+  if (props.improvementScore < 0) return 'improvement-down'
+  return 'improvement-neutral'
+})
 
 const rowBackgroundStyle = computed(() => {
   const baseStyle = getTypeBackground(props.type, 0.35)
@@ -175,6 +206,18 @@ const rowBackgroundStyle = computed(() => {
 
 .score-corner.negative {
   color: var(--color-danger);
+}
+
+.score-corner.improvement-up {
+  color: var(--color-success);
+}
+
+.score-corner.improvement-down {
+  color: var(--color-danger);
+}
+
+.score-corner.improvement-neutral {
+  color: var(--color-text-muted);
 }
 
 .gym-card.pinned .gym-card-inner {

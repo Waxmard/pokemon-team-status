@@ -33,6 +33,8 @@
         :berryCount="element.berryCount || 0"
         :defeated="element.defeated || false"
         :pinned="element.type === pinnedType"
+        :improvementScore="element.improvementScore"
+        :suggestionMode="suggestionMode"
         :style="{ animationDelay: `${index * 30}ms` }"
         @click="$emit('gymClick', element.type)"
         @dragstart="onRowDragStart(element.type, $event)"
@@ -74,6 +76,10 @@ const props = defineProps({
   pinnedType: {
     type: String,
     default: null,
+  },
+  suggestionMode: {
+    type: Boolean,
+    default: false,
   },
 })
 
