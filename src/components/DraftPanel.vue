@@ -5,6 +5,47 @@
         <div class="wizard-header">
           <h3 class="wizard-title">{{ wizardStepTitle }}</h3>
 
+          <!-- Pokemon step: suggestion button -->
+          <template v-if="wizardStep === 'pokemon' && canShowSuggestion">
+            <span class="suggestion-group">
+              <span
+                v-if="showSuggestion && swapSuggestion"
+                class="suggestion-inline"
+                @click="$emit('swapSuggestion', {
+                  currentId: draftAction.isTeamPokemon ? draftAction.editId : draftAction.boxPokemonId,
+                  candidateId: swapSuggestion.candidate.id,
+                  isTeamMember: !!draftAction.isTeamPokemon,
+                })"
+              >
+                <SpriteImg
+                  :src="getSuggestionSpriteUrl(draftAction.pokemon.name, draftAction.spriteVariant, draftAction.megaSpriteId)"
+                  :alt="draftAction.pokemon.name"
+                  :width="24"
+                  :height="24"
+                />
+                <span class="suggestion-swap-icon">⇄</span>
+                <SpriteImg
+                  :src="getSuggestionSpriteUrl(swapSuggestion.candidate.name, swapSuggestion.candidate.spriteVariant, swapSuggestion.candidate.megaSpriteId)"
+                  :alt="swapSuggestion.candidate.name"
+                  :width="24"
+                  :height="24"
+                />
+                <span v-if="suggestionIndicator" :class="['suggestion-indicator', suggestionIndicator.cls]">
+                  {{ suggestionIndicator.symbol }}
+                </span>
+              </span>
+              <button
+                v-else
+                class="suggestion-btn"
+                :class="{ active: showSuggestion }"
+                @click="toggleSuggestion"
+                aria-label="Swap suggestion"
+              >
+                ✦
+              </button>
+            </span>
+          </template>
+
           <!-- Moves step: inline special move UI -->
           <template v-if="wizardStep === 'moves'">
             <!-- Selected special move badge (when not editing) -->
@@ -99,13 +140,6 @@
               :width="144"
               :height="144"
             />
-            <!-- Selection overlays (top-left) -->
-            <div class="selection-overlays">
-              <div v-if="draftAction.moves?.length" class="move-icons-overlay">
-                <img v-for="type in draftAction.moves" :key="type" :src="getTypeIcon(type)" class="overlay-type-icon" />
-              </div>
-              <SpriteImg v-if="draftAction.berry" :src="getBerrySprite(draftAction.berry)" class="overlay-berry" :width="24" :height="24" />
-            </div>
           </div>
         </div>
 
@@ -189,6 +223,7 @@
 import { NAutoComplete } from 'naive-ui'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
+import { useStorage } from '../composables/useStorage.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
 import { getMegaOptions } from '../data/megaEvolutions.js'
@@ -197,12 +232,15 @@ import { SPECIAL_MOVE_NAMES } from '../data/specialMoves.js'
 import { ALL_TYPES, getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { hexToRgba } from '../utils/colors.js'
 import {
+  buildPokemonMember,
   getBerrySprite,
   getMegaSpriteUrl,
+  getSmallSpriteUrl,
   getSpriteUrl,
 } from '../utils/pokemon.js'
 import {
   applyAbilityDefense,
+  findBestSwap,
   getDefensiveMultiplier,
 } from '../utils/typeCalc.js'
 import SpriteImg from './SpriteImg.vue'
@@ -218,7 +256,7 @@ const props = defineProps({
   },
 })
 
-defineEmits(['confirm', 'cancel'])
+defineEmits(['confirm', 'cancel', 'swapSuggestion'])
 
 const {
   draftAction,
@@ -230,6 +268,73 @@ const {
   updateMegaForm,
   updateSpriteVariant,
 } = useDraftAction()
+
+const { team: storageTeam, box, defeatedGyms } = useStorage()
+
+// Suggestion state
+const showSuggestion = ref(false)
+
+const canShowSuggestion = computed(() => {
+  if (!draftAction.value) return false
+  const isEditing =
+    draftAction.value.isTeamPokemon || draftAction.value.isBoxPokemon
+  if (!isEditing) return false
+  // The opposite pool must have at least one member
+  if (draftAction.value.isTeamPokemon) return box.value.length > 0
+  return storageTeam.value.length > 0
+})
+
+const swapSuggestion = computed(() => {
+  if (!showSuggestion.value || !canShowSuggestion.value) return null
+  if (!draftAction.value?.pokemon) return null
+
+  const isTeamMember = !!draftAction.value.isTeamPokemon
+  const currentMember = buildPokemonMember(draftAction.value, {
+    id: draftAction.value.editId ?? draftAction.value.boxPokemonId,
+  })
+
+  if (isTeamMember) {
+    // Editing team member: find best box member to swap in
+    // Build a draft team reflecting the user's current edits
+    const draftTeam = props.team.map((p) =>
+      p.id === currentMember.id ? currentMember : p,
+    )
+    return findBestSwap(
+      draftTeam,
+      currentMember,
+      true,
+      box.value,
+      defeatedGyms.value,
+    )
+  } else {
+    // Editing box member: find best team member to replace
+    return findBestSwap(
+      props.team,
+      currentMember,
+      false,
+      props.team,
+      defeatedGyms.value,
+    )
+  }
+})
+
+const suggestionIndicator = computed(() => {
+  if (!swapSuggestion.value) return null
+  const imp = swapSuggestion.value.improvement
+  if (imp > 0) return { symbol: '\u25B2', cls: 'improvement-up' }
+  if (imp < 0) return { symbol: '\u25BC', cls: 'improvement-down' }
+  return { symbol: '\u2014', cls: 'improvement-neutral' }
+})
+
+function toggleSuggestion() {
+  showSuggestion.value = !showSuggestion.value
+}
+
+function getSuggestionSpriteUrl(pokemonName, spriteVariant, megaSpriteId) {
+  const variant = spriteVariant || 'default'
+  if (megaSpriteId) return getMegaSpriteUrl(megaSpriteId, variant)
+  return getSmallSpriteUrl(pokemonName, variant)
+}
 
 // Wizard state
 const wizardStep = ref('pokemon')
@@ -753,6 +858,49 @@ function onSearchInput(value) {
   text-align: left;
 }
 
+.suggestion-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.suggestion-btn {
+  background: transparent;
+  border: none;
+  color: rgba(139, 92, 246, 1);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: color var(--transition-base);
+}
+
+.suggestion-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  animation: fadeSlideIn 0.2s ease;
+}
+
+.suggestion-inline:active {
+  opacity: 0.7;
+}
+
+.suggestion-swap-icon {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.suggestion-indicator {
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: var(--space-1);
+}
+
+.improvement-up { color: var(--color-success); }
+.improvement-down { color: var(--color-danger); }
+.improvement-neutral { color: var(--color-text-muted); }
+
 .special-move-btn {
   background: transparent;
   border: none;
@@ -891,33 +1039,6 @@ function onSearchInput(value) {
   transform: scale(1.05);
 }
 
-/* Selection overlays positioned top-left of sprite */
-.selection-overlays {
-  position: absolute;
-  top: var(--space-2);
-  left: var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.move-icons-overlay {
-  display: flex;
-  gap: 2px;
-  flex-wrap: wrap;
-  max-width: 80px;
-}
-
-.overlay-type-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.overlay-berry {
-  width: 24px;
-  height: 24px;
-}
-
 .wizard-actions {
   display: flex;
   gap: var(--space-3);
@@ -974,7 +1095,7 @@ function onSearchInput(value) {
 .evolve-options {
   position: absolute;
   top: calc(var(--space-2) + 2.5rem);
-  right: var(--space-3);
+  right: var(--space-2);
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-1);
@@ -984,13 +1105,12 @@ function onSearchInput(value) {
 .evolve-option-pill {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-xl);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-md);
+  background: none;
+  border: none;
   cursor: pointer;
-  padding: var(--space-1);
+  padding: 0;
   transition: all var(--transition-base);
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
 }
 
 .evolve-option-pill:active {
@@ -998,8 +1118,7 @@ function onSearchInput(value) {
 }
 
 .evolve-option-pill.mega-selected {
-  border-color: var(--color-success);
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+  filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.6));
 }
 
 @keyframes fadeSlideIn {

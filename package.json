@@ -10,7 +10,10 @@
     "preview:build": "vite build && vite preview --host",
     "lint": "biome check src/",
     "lint:fix": "biome check --write src/",
-    "format": "biome format --write src/"
+    "format": "biome format --write src/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "naive-ui": "^2.38.0",
@@ -20,7 +23,9 @@
   "devDependencies": {
     "@biomejs/biome": "2.3.13",
     "@vitejs/plugin-vue": "^5.0.0",
+    "@vitest/coverage-v8": "^4.0.18",
     "vite": "^5.0.0",
-    "vite-plugin-pwa": "^0.17.0"
+    "vite-plugin-pwa": "^0.17.0",
+    "vitest": "^4.0.18"
   }
 }

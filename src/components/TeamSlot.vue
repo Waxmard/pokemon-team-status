@@ -19,14 +19,6 @@
                   :width="80"
                   :height="80"
                 />
-                <SpriteImg
-                  v-if="pokemon.berry"
-                  :src="getBerrySprite(pokemon.berry)"
-                  :alt="pokemon.berry"
-                  :title="pokemon.berry"
-                  :width="24"
-                  :height="24"
-                />
               </div>
               <div class="pokemon-info">
                 <div v-if="pokemon.moves.length" class="pokemon-moves">
@@ -40,6 +32,15 @@
                   />
                 </div>
                 <div class="pokemon-badges">
+                  <SpriteImg
+                    v-if="pokemon.berry"
+                    class="berry-icon"
+                    :src="getBerrySprite(pokemon.berry)"
+                    :alt="pokemon.berry"
+                    :title="pokemon.berry"
+                    :width="24"
+                    :height="24"
+                  />
                   <span v-if="pokemon.specialMove" class="special-move-badge">
                     {{ pokemon.specialMove }}
                   </span>
@@ -143,7 +144,6 @@ const cardBackgroundStyle = computed(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: var(--space-2);
-  min-height: 90px;
   position: relative;
   box-shadow: var(--shadow-md);
   transition: transform var(--transition-base), box-shadow var(--transition-base);
@@ -237,10 +237,14 @@ const cardBackgroundStyle = computed(() => {
 
 .pokemon-badges {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-end;
   gap: var(--space-1);
-  margin-top: var(--space-1);
   margin-left: auto;
+}
+
+.berry-icon {
+  margin-right: var(--space-1);
 }
 
 .special-move-badge,

@@ -15,6 +15,7 @@
         @deleteBoxPokemon="deleteBoxPokemon"
         @cancelSwap="handleCancelSwap"
         @deletePokemon="handleDeleteFromDraft"
+        @swapSuggestion="handleSwapSuggestion"
       />
 
       <GymColumns
@@ -23,6 +24,7 @@
         :draftActive="hasDraft"
         @defeatGym="defeatGym"
         @undefeatGym="undefeatGym"
+        @swapSuggestion="handleSwapSuggestion"
       />
     </div>
   </n-config-provider>
@@ -308,6 +310,52 @@ function handleImmediateSwap(targetId) {
       draftAction.value.editId = newTeamMember.id
     }
   }
+}
+
+function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
+  swapOriginalState.value = {
+    team: JSON.parse(JSON.stringify(team.value)),
+    box: JSON.parse(JSON.stringify(box.value)),
+  }
+
+  if (isTeamMember) {
+    // Editing team Pokemon A (currentId), candidate is box Pokemon B (candidateId)
+    const teamPokemon = team.value.find((p) => p.id === currentId)
+    const boxPokemon = box.value.find((p) => p.id === candidateId)
+    if (!teamPokemon || !boxPokemon) return
+
+    // B goes to team where A was
+    const newTeamMember = buildPokemonMember(boxPokemon, { source: 'team' })
+    persistTeam(team.value.map((p) => (p.id === currentId ? newTeamMember : p)))
+
+    // A goes to box where B was
+    const newBoxMember = buildPokemonMember(teamPokemon, { source: 'box' })
+    persistBox(box.value.map((p) => (p.id === candidateId ? newBoxMember : p)))
+
+    // Set A as "in hand" box Pokemon for chain swapping
+    const pokemonData = POKEMON_DATA.find((p) => p.name === teamPokemon.name)
+    draftAction.value = {
+      type: 'edit',
+      isBoxPokemon: true,
+      isTeamPokemon: false,
+      boxPokemonId: newBoxMember.id,
+      pokemon: pokemonData,
+      ability: teamPokemon.ability,
+      berry: teamPokemon.berry,
+      moves: [...(teamPokemon.moves || [])],
+      specialMove: teamPokemon.specialMove || null,
+      megaForm: teamPokemon.megaForm || null,
+      megaTypes: teamPokemon.megaTypes || null,
+      megaSpriteId: teamPokemon.megaSpriteId || null,
+      spriteVariant: teamPokemon.spriteVariant || 'default',
+    }
+  } else {
+    // Box editing: handleImmediateSwap already sets correct perspective
+    handleImmediateSwap(candidateId)
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  enterSwapMode()
 }
 
 // Methods

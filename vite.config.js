@@ -4,6 +4,16 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   base: '/',
+  test: {
+    coverage: {
+      provider: 'v8',
+      include: ['src/utils/**/*.js'],
+      exclude: ['src/utils/__tests__/**', 'src/utils/spriteCache.js'],
+      thresholds: {
+        lines: 70,
+      },
+    },
+  },
   preview: {
     allowedHosts: ['localhost', '.trycloudflare.com'],
   },

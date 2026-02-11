@@ -87,6 +87,7 @@
         :team="team"
         @confirm="$emit('confirmDraft')"
         @cancel="cancel"
+        @swapSuggestion="handleSwapSuggestion"
       />
     </Transition>
     </div>
@@ -122,6 +123,7 @@ const emit = defineEmits([
   'deleteBoxPokemon',
   'cancelSwap',
   'deletePokemon',
+  'swapSuggestion',
 ])
 
 const {
@@ -300,6 +302,10 @@ function handleAddClick() {
   } else {
     startAdd()
   }
+}
+
+function handleSwapSuggestion(event) {
+  emit('swapSuggestion', event)
 }
 
 function handleDeleteClick() {
