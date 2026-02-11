@@ -796,7 +796,6 @@ describe('minimax comparison', () => {
 
   it('works when all gyms are defeated', () => {
     const fire = member({ id: 'f1', types: ['fire'], moves: ['fire'] })
-    const normal = member({ id: 'n1', types: ['normal'] })
     const team = [fire]
 
     const water = member({
@@ -928,8 +927,8 @@ describe('suggestTypes', () => {
       expect(suggestions[0].undefeatedImprovement).toBeGreaterThan(5)
       // Types with many resistances that complement water should rank high
       const top5 = suggestions.slice(0, 5).map((s) => s.type)
-      const broadResistors = ['steel', 'ghost', 'fairy', 'poison']
-      expect(top5.some((t) => broadResistors.includes(t))).toBe(true)
+      const broadResistors = new Set(['steel', 'ghost', 'fairy', 'poison'])
+      expect(top5.some((t) => broadResistors.has(t))).toBe(true)
     })
   })
 
@@ -973,8 +972,8 @@ describe('suggestTypes', () => {
       const suggestions = suggestTypes(team, [])
       const top5 = suggestions.slice(0, 5).map((s) => s.type)
       // Water, rock, fire, or dragon all resist fire
-      const fireResistant = ['water', 'rock', 'fire', 'dragon']
-      expect(top5.some((t) => fireResistant.includes(t))).toBe(true)
+      const fireResistant = new Set(['water', 'rock', 'fire', 'dragon'])
+      expect(top5.some((t) => fireResistant.has(t))).toBe(true)
     })
   })
 
