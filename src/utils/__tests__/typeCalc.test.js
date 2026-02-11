@@ -499,6 +499,185 @@ describe('findBestSwap', () => {
       expect(result.improvement).toBeLessThan(0)
     })
   })
+
+  describe('ability-driven swap preference', () => {
+    it('prefers Levitate candidate over plain ground-type', () => {
+      // Team has a normal-type we want to replace
+      const normal = member({ id: 'n1', types: ['normal'] })
+      const team = [normal]
+
+      // Two ground candidates: plain ground vs ground with Levitate
+      // Against ground gym: ground->ground = 1 -> 0 pts (plain)
+      // Levitate grants ground immunity -> 0 multiplier -> +2 pts
+      const plainGround = member({
+        id: 'g1',
+        types: ['ground'],
+        moves: ['ground'],
+      })
+      const levitateGround = member({
+        id: 'g2',
+        types: ['ground'],
+        moves: ['ground'],
+        ability: 'Levitate',
+      })
+
+      const result = findBestSwap(
+        team,
+        normal,
+        true,
+        [plainGround, levitateGround],
+        [],
+      )
+      expect(result.candidate.id).toBe('g2')
+    })
+  })
+
+  describe('dual-type advantage', () => {
+    it('prefers water/ground over plain water', () => {
+      const normal = member({ id: 'n1', types: ['normal'] })
+      const team = [normal]
+
+      // Water vs electric gym: electric->water = 2 -> -1
+      // Water/ground vs electric gym: electric->water * electric->ground = 2*0 = 0 -> +2
+      const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
+      const waterGround = member({
+        id: 'wg1',
+        types: ['water', 'ground'],
+        moves: ['water', 'ground'],
+      })
+
+      const result = findBestSwap(team, normal, true, [water, waterGround], [])
+      expect(result.candidate.id).toBe('wg1')
+    })
+  })
+
+  describe('removing immunities is costly', () => {
+    it('reports negative improvement when replacing immune member', () => {
+      // Ghost: immune to normal (+2) and fighting (+2), resists poison (+1), bug (+1)
+      const ghost = member({ id: 'gh1', types: ['ghost'] })
+      const team = [ghost]
+
+      // Replacing with plain normal loses all those defensive points
+      const normal = member({ id: 'n1', types: ['normal'] })
+      const result = findBestSwap(team, ghost, true, [normal], [])
+
+      expect(result.improvement).toBeLessThan(0)
+      // The lost immunities alone are worth +4, so net loss is significant
+      expect(result.improvement).toBeLessThanOrEqual(-2)
+    })
+  })
+
+  describe('defeated gym weight accumulation', () => {
+    it('reduces improvement as more relevant gyms are defeated', () => {
+      const normal = member({ id: 'n1', types: ['normal'] })
+      const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
+      const team = [normal]
+
+      // Water covers fire (resist+SE=2), ground (SE=1), rock (SE=1)
+      // Defeating those gyms reduces their weight from 1.0 to 0.25
+      const noDefeated = findBestSwap(team, normal, true, [water], [])
+      const oneDefeated = findBestSwap(team, normal, true, [water], ['fire'])
+      const threeDefeated = findBestSwap(
+        team,
+        normal,
+        true,
+        [water],
+        ['fire', 'ground', 'rock'],
+      )
+
+      expect(noDefeated.improvement).toBeGreaterThan(oneDefeated.improvement)
+      expect(oneDefeated.improvement).toBeGreaterThan(threeDefeated.improvement)
+    })
+  })
+
+  describe('full 6-member team swap', () => {
+    it('identifies beneficial swap in a complete team', () => {
+      // Team with a clear weak link: normal-type with no moves
+      const team = [
+        member({ id: 't1', types: ['water'], moves: ['water', 'ice'] }),
+        member({ id: 't2', types: ['flying'], moves: ['flying'] }),
+        member({ id: 't3', types: ['steel'], moves: ['steel'] }),
+        member({ id: 't4', types: ['fire'], moves: ['fire'] }),
+        member({ id: 't5', types: ['fairy'], moves: ['fairy'] }),
+        member({ id: 't6', types: ['normal'] }),
+      ]
+
+      // Ground-type fills electric gap and adds rock coverage
+      const ground = member({
+        id: 'box1',
+        types: ['ground'],
+        moves: ['ground', 'rock'],
+      })
+
+      const result = findBestSwap(team, team[5], true, [ground], [])
+      expect(result.candidate.id).toBe('box1')
+      expect(result.improvement).toBeGreaterThan(0)
+    })
+  })
+
+  describe('Protean swap preference', () => {
+    it('prefers Protean candidate over plain with same moves', () => {
+      const normal = member({ id: 'n1', types: ['normal'] })
+      const team = [normal]
+
+      // Both candidates have water/fire/grass moves
+      // Protean adds resistance-only points for each move type
+      const plainCandidate = member({
+        id: 'p1',
+        types: ['normal'],
+        moves: ['water', 'fire', 'grass'],
+      })
+      const proteanCandidate = member({
+        id: 'p2',
+        types: ['normal'],
+        moves: ['water', 'fire', 'grass'],
+        ability: 'Protean',
+      })
+
+      const result = findBestSwap(
+        team,
+        normal,
+        true,
+        [plainCandidate, proteanCandidate],
+        [],
+      )
+      expect(result.candidate.id).toBe('p2')
+    })
+  })
+
+  describe('tie-breaking', () => {
+    it('keeps first candidate when improvements are equal', () => {
+      const normal = member({ id: 'n1', types: ['normal'] })
+      const team = [normal]
+
+      // Two identical water candidates produce the same improvement
+      const water1 = member({ id: 'w1', types: ['water'], moves: ['water'] })
+      const water2 = member({ id: 'w2', types: ['water'], moves: ['water'] })
+
+      const result = findBestSwap(team, normal, true, [water1, water2], [])
+      // Strict > in comparison means ties keep the earlier candidate
+      expect(result.candidate.id).toBe('w1')
+    })
+  })
+
+  describe('swap direction symmetry', () => {
+    it('produces equal improvement regardless of direction', () => {
+      const fire = member({ id: 'f1', types: ['fire'], moves: ['fire'] })
+      const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
+      const team = [fire]
+
+      // isTeamMember=true: editing fire on team, pool=[water from box]
+      // newTeam replaces fire with water -> [water]
+      const teamResult = findBestSwap(team, fire, true, [water], [])
+
+      // isTeamMember=false: editing water from box, pool=[fire from team]
+      // newTeam replaces fire (candidate) with water (editingMember) -> [water]
+      const boxResult = findBestSwap(team, water, false, [fire], [])
+
+      // Both represent the same swap: fire -> water on the team
+      expect(teamResult.improvement).toBe(boxResult.improvement)
+    })
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -546,6 +725,124 @@ describe('suggestTypes', () => {
     expect(noDefeated[0].undefeatedImprovement).not.toBe(
       withDefeated[0].undefeatedImprovement,
     )
+  })
+
+  describe('weakness coverage', () => {
+    it('prioritizes broad coverage for all-water team', () => {
+      // Water is weak to electric and grass, plus has many neutral-urgency gyms
+      // The algorithm optimizes total urgency reduction across all 18 types,
+      // so types with many resistances (steel, ghost) outrank single-weakness counters
+      const team = mkTeam([
+        { types: ['water'], moves: ['water'] },
+        { types: ['water'], moves: ['water'] },
+        { types: ['water'], moves: ['water'] },
+      ])
+      const suggestions = suggestTypes(team, [])
+      // Top suggestion should provide substantial improvement
+      expect(suggestions[0].undefeatedImprovement).toBeGreaterThan(5)
+      // Types with many resistances that complement water should rank high
+      const top5 = suggestions.slice(0, 5).map((s) => s.type)
+      const broadResistors = ['steel', 'ghost', 'fairy', 'poison']
+      expect(top5.some((t) => broadResistors.includes(t))).toBe(true)
+    })
+  })
+
+  describe('empty team baseline', () => {
+    it('has all positive undefeatedImprovement', () => {
+      // With no team, every gym has score 0 -> urgency = 3^1.25 each
+      // Any hypothetical type reduces urgency for at least some gyms
+      const suggestions = suggestTypes([], [])
+      for (const s of suggestions) {
+        expect(s.undefeatedImprovement).toBeGreaterThan(0)
+      }
+    })
+  })
+
+  describe('all gyms defeated', () => {
+    it('sets undefeatedImprovement to 0 for every type', () => {
+      // With all gyms defeated, undefeated list is empty
+      // calculateUrgency(team, []) = 0 for both old and new
+      const suggestions = suggestTypes([], ALL_TYPES)
+      for (const s of suggestions) {
+        expect(s.undefeatedImprovement).toBe(0)
+      }
+    })
+
+    it('has positive defeatedImprovement for at least some types', () => {
+      const suggestions = suggestTypes([], ALL_TYPES)
+      const anyPositive = suggestions.some((s) => s.defeatedImprovement > 0)
+      expect(anyPositive).toBe(true)
+    })
+  })
+
+  describe('double-weakness team', () => {
+    it('ranks fire-resistant types high for grass/ice team', () => {
+      // Grass/ice is 4x weak to fire (fire->grass=2, fire->ice=2 -> multiplier=4 -> -2 per member)
+      // Fire gym score = -6 for this team -> extremely urgent
+      const team = mkTeam([
+        { types: ['grass', 'ice'], moves: ['grass', 'ice'] },
+        { types: ['grass', 'ice'], moves: ['grass', 'ice'] },
+        { types: ['grass', 'ice'], moves: ['grass', 'ice'] },
+      ])
+      const suggestions = suggestTypes(team, [])
+      const top5 = suggestions.slice(0, 5).map((s) => s.type)
+      // Water, rock, fire, or dragon all resist fire
+      const fireResistant = ['water', 'rock', 'fire', 'dragon']
+      expect(top5.some((t) => fireResistant.includes(t))).toBe(true)
+    })
+  })
+
+  describe('diminishing returns', () => {
+    it('shows smaller improvement for well-covered team than empty team', () => {
+      const emptyResult = suggestTypes([], [])
+      const coveredTeam = mkTeam([
+        { types: ['water'], moves: ['water', 'ice'] },
+        { types: ['fire'], moves: ['fire'] },
+        { types: ['grass'], moves: ['grass'] },
+        { types: ['electric'], moves: ['electric'] },
+        { types: ['ground'], moves: ['ground', 'rock'] },
+      ])
+      const coveredResult = suggestTypes(coveredTeam, [])
+
+      // A balanced 5-member team leaves less room for improvement
+      expect(coveredResult[0].undefeatedImprovement).toBeLessThan(
+        emptyResult[0].undefeatedImprovement,
+      )
+    })
+  })
+
+  describe('defeatedImprovement tiebreaker', () => {
+    it('sorts by defeatedImprovement when undefeatedImprovement ties', () => {
+      // Verify the sort contract: among entries with equal primary key,
+      // they are ordered by defeatedImprovement descending
+      const suggestions = suggestTypes([], [])
+      for (let i = 1; i < suggestions.length; i++) {
+        const prev = suggestions[i - 1]
+        const curr = suggestions[i]
+        if (prev.undefeatedImprovement === curr.undefeatedImprovement) {
+          expect(prev.defeatedImprovement).toBeGreaterThanOrEqual(
+            curr.defeatedImprovement,
+          )
+        }
+      }
+    })
+  })
+
+  describe('mixed defeated/undefeated gyms', () => {
+    it('populates both improvement columns with one defeated gym', () => {
+      const team = mkTeam([{ types: ['fire'], moves: ['fire'] }])
+      // Grass gym defeated; the other 17 are undefeated
+      const suggestions = suggestTypes(team, ['grass'])
+      const top = suggestions[0]
+
+      // Team is small, so adding any good type reduces undefeated urgency
+      expect(top.undefeatedImprovement).toBeGreaterThan(0)
+      // At least some types should improve coverage for the defeated grass gym too
+      const hasDefeatedImprovement = suggestions.some(
+        (s) => s.defeatedImprovement !== 0,
+      )
+      expect(hasDefeatedImprovement).toBe(true)
+    })
   })
 })
 
