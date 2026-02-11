@@ -1,7 +1,7 @@
 <template>
   <div
     class="gym-card touchable"
-    :class="{ defeated: defeated, pinned: pinned }"
+    :class="{ defeated: defeated && !suggestionMode, pinned: pinned }"
     @click="$emit('click', type)"
   >
     <div class="gym-card-inner" :style="rowBackgroundStyle">
@@ -33,7 +33,7 @@
         />
       </span>
 
-      <span class="score-corner" :class="{ positive: score > 0, negative: score < 0 }">
+      <span v-if="!suggestionMode" class="score-corner" :class="{ positive: score > 0, negative: score < 0 }">
         {{ score > 0 ? '+' : '' }}{{ score }}
       </span>
     </div>
@@ -66,6 +66,10 @@ const props = defineProps({
     default: false,
   },
   pinned: {
+    type: Boolean,
+    default: false,
+  },
+  suggestionMode: {
     type: Boolean,
     default: false,
   },

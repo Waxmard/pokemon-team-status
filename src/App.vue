@@ -24,6 +24,7 @@
         :draftActive="hasDraft"
         @defeatGym="defeatGym"
         @undefeatGym="undefeatGym"
+        @swapSuggestion="handleSwapSuggestion"
       />
     </div>
   </n-config-provider>

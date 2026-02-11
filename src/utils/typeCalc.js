@@ -198,6 +198,23 @@ export function findBestSwap(
   return best
 }
 
+export function findGlobalBestSwap(team, box, defeatedGyms) {
+  if (team.length === 0 || box.length === 0) return null
+  const currentScore = weightedTeamScore(team, defeatedGyms)
+  let best = null
+  for (const teamMember of team) {
+    for (const boxMember of box) {
+      const newTeam = team.map((p) => (p.id === teamMember.id ? boxMember : p))
+      const newScore = weightedTeamScore(newTeam, defeatedGyms)
+      const improvement = newScore - currentScore
+      if (!best || improvement > best.improvement) {
+        best = { teamMember, boxMember, improvement }
+      }
+    }
+  }
+  return best
+}
+
 export function suggestTypes(team, defeatedGyms) {
   const undefeated = ALL_TYPES.filter((t) => !defeatedGyms.includes(t))
   const defeated = ALL_TYPES.filter((t) => defeatedGyms.includes(t))

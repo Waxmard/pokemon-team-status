@@ -1,12 +1,46 @@
 <template>
   <div class="gym-section-wrapper">
-    <span class="gyms-label">{{ draftActive ? 'Gyms Preview' : 'Gyms' }}</span>
+    <div class="gyms-header">
+      <span
+        v-if="showSwapPreview"
+        class="suggestion-inline"
+        @click="handleSwapClick"
+      >
+        <SpriteImg
+          :src="getSwapSpriteUrl(globalSwap.teamMember)"
+          :alt="globalSwap.teamMember.name"
+          :width="24"
+          :height="24"
+        />
+        <span class="suggestion-swap-icon">⇄</span>
+        <SpriteImg
+          :src="getSwapSpriteUrl(globalSwap.boxMember)"
+          :alt="globalSwap.boxMember.name"
+          :width="24"
+          :height="24"
+        />
+        <span v-if="suggestionIndicator" :class="['suggestion-indicator', suggestionIndicator.cls]">
+          {{ suggestionIndicator.symbol }}
+        </span>
+      </span>
+      <button
+        v-if="canShowSuggestion"
+        class="suggestion-btn"
+        :class="{ active: showSuggestions }"
+        @click="showSuggestions = !showSuggestions"
+        aria-label="Swap suggestion"
+      >
+        ✦
+      </button>
+      <span class="gyms-label">{{ gymColumnTitle }}</span>
+    </div>
     <div class="gym-section">
       <GymColumn
-        :title="draftActive ? 'Gyms Preview' : 'Gyms'"
+        :title="gymColumnTitle"
         :gyms="unifiedGymsList"
         :draftActive="draftActive"
         :pinnedType="pinnedGym"
+        :suggestionMode="showSuggestions"
         transitionName="slide-right"
         emptyMessage="No gyms"
         @gymClick="handleGymClick"
@@ -17,11 +51,14 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useStorage } from '../composables/useStorage.js'
+import { getMegaSpriteUrl, getSmallSpriteUrl } from '../utils/pokemon.js'
+import { calculateScore, findGlobalBestSwap } from '../utils/typeCalc.js'
 import GymColumn from './GymColumn.vue'
+import SpriteImg from './SpriteImg.vue'
 
-const { pinnedGym, persistPinnedGym } = useStorage()
+const { team, box, defeatedGyms, pinnedGym, persistPinnedGym } = useStorage()
 
 const props = defineProps({
   remainingGyms: {
@@ -38,7 +75,61 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['defeatGym', 'undefeatGym'])
+const emit = defineEmits(['defeatGym', 'undefeatGym', 'swapSuggestion'])
+
+// Suggestion state
+const showSuggestions = ref(false)
+
+const canShowSuggestion = computed(
+  () => team.value.length > 0 && box.value.length > 0 && !props.draftActive,
+)
+
+watch(canShowSuggestion, (canShow) => {
+  if (!canShow) showSuggestions.value = false
+})
+
+const globalSwap = computed(() => {
+  if (!showSuggestions.value || !canShowSuggestion.value) return null
+  return findGlobalBestSwap(team.value, box.value, defeatedGyms.value)
+})
+
+const showSwapPreview = computed(
+  () =>
+    showSuggestions.value &&
+    globalSwap.value &&
+    globalSwap.value.improvement >= 0,
+)
+
+const suggestionIndicator = computed(() => {
+  if (!globalSwap.value) return null
+  if (globalSwap.value.improvement > 0)
+    return { symbol: '\u25B2', cls: 'improvement-up' }
+  if (globalSwap.value.improvement === 0)
+    return { symbol: '\u2014', cls: 'improvement-neutral' }
+  return null
+})
+
+const gymColumnTitle = computed(() => {
+  if (showSuggestions.value) return 'Suggestions'
+  return props.draftActive ? 'Gyms Preview' : 'Gyms'
+})
+
+function getSwapSpriteUrl(pokemon) {
+  const variant = pokemon.spriteVariant || 'default'
+  if (pokemon.megaSpriteId)
+    return getMegaSpriteUrl(pokemon.megaSpriteId, variant)
+  return getSmallSpriteUrl(pokemon.name, variant)
+}
+
+function handleSwapClick() {
+  if (!globalSwap.value) return
+  showSuggestions.value = false
+  emit('swapSuggestion', {
+    currentId: globalSwap.value.teamMember.id,
+    candidateId: globalSwap.value.boxMember.id,
+    isTeamMember: true,
+  })
+}
 
 // Create a set of defeated gym types for quick lookup
 const defeatedTypes = computed(() => {
@@ -56,6 +147,28 @@ const unifiedGymsList = computed(() => {
     defeated: true,
   }))
   const combined = [...remaining, ...defeated]
+
+  if (showSuggestions.value && globalSwap.value) {
+    const swappedTeam = team.value.map((p) =>
+      p.id === globalSwap.value.teamMember.id ? globalSwap.value.boxMember : p,
+    )
+    // Compute improvement per gym and mark all as non-defeated
+    const withImprovement = combined.map((gym) => ({
+      ...gym,
+      defeated: false,
+      improvementScore:
+        calculateScore(gym.type, swappedTeam) -
+        calculateScore(gym.type, team.value),
+    }))
+    // Sort by improvement descending, then current score ascending as tiebreaker
+    withImprovement.sort((a, b) => {
+      if (a.improvementScore !== b.improvementScore)
+        return b.improvementScore - a.improvementScore
+      return a.score - b.score
+    })
+    return withImprovement
+  }
+
   // Sort by score ascending, then by berry count ascending as tiebreaker
   combined.sort((a, b) => {
     if (a.score !== b.score) return a.score - b.score
@@ -109,11 +222,17 @@ function handlePin(type) {
   display: block;
 }
 
-.gyms-label {
+.gyms-header {
   position: absolute;
   top: calc(-1 * var(--space-8) - var(--space-2));
   right: var(--space-4);
   z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.gyms-label {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -127,7 +246,62 @@ function handlePin(type) {
   color: var(--color-text-primary);
 }
 
+.suggestion-btn {
+  background: transparent;
+  border: none;
+  color: rgba(139, 92, 246, 1);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: color var(--transition-base);
+}
+
+.suggestion-btn.active {
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+}
+
+.suggestion-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  animation: fadeSlideIn 0.2s ease;
+}
+
+.suggestion-inline:active {
+  opacity: 0.7;
+}
+
+.suggestion-swap-icon {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.suggestion-indicator {
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: var(--space-1);
+}
+
+.improvement-up {
+  color: var(--color-success);
+}
+
+.improvement-neutral {
+  color: var(--color-text-muted);
+}
+
 @media (orientation: portrait) {
+  .gyms-header {
+    top: var(--space-4);
+    right: calc(var(--space-4) + var(--space-4));
+  }
+
   .gyms-label {
     display: none;
   }
