@@ -4,6 +4,7 @@ import {
   calculateBerryTiebreaker,
   calculateScore,
   calculateScoreChanges,
+  calculateTypeSuggestionScore,
   calculateUrgency,
   findBestSwap,
   findGlobalBestSwap,
@@ -862,6 +863,60 @@ describe('findGlobalBestSwap', () => {
     // because ground is also weak to water, leaving it at -3
     expect(result.boxMember.id).toBe('w1')
     expect(result.improvement).toBeGreaterThan(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Layer 4c: calculateTypeSuggestionScore - per-type swap suggestion
+// ---------------------------------------------------------------------------
+
+describe('calculateTypeSuggestionScore', () => {
+  it('returns 0 for empty team', () => {
+    expect(calculateTypeSuggestionScore('water', [], [])).toBe(0)
+  })
+
+  it('returns positive for type that improves mono-fire team', () => {
+    const team = mkTeam([
+      { id: 'f1', types: ['fire'], moves: ['fire'] },
+      { id: 'f2', types: ['fire'], moves: ['fire'] },
+      { id: 'f3', types: ['fire'], moves: ['fire'] },
+    ])
+    // Water resists fire's weaknesses and is SE against fire gym
+    const score = calculateTypeSuggestionScore('water', team, [])
+    expect(score).toBeGreaterThan(0)
+  })
+
+  it('returns non-positive when swapping same type into mono team', () => {
+    const team = mkTeam([{ id: 'f1', types: ['fire'], moves: ['fire'] }])
+    // Swapping fire for fire (same type/move) should not improve
+    const score = calculateTypeSuggestionScore('fire', team, [])
+    expect(score).toBeLessThanOrEqual(0)
+  })
+
+  it('considers defeated gyms in scoring', () => {
+    const team = mkTeam([
+      { id: 'f1', types: ['fire'], moves: ['fire'] },
+      { id: 'f2', types: ['fire'], moves: ['fire'] },
+    ])
+    const noDefeated = calculateTypeSuggestionScore('water', team, [])
+    // With water gym defeated, water-type's advantage on that gym
+    // moves to a lower-priority tier
+    const waterDefeated = calculateTypeSuggestionScore('water', team, [
+      'water',
+      'ground',
+      'rock',
+    ])
+    expect(noDefeated).toBeGreaterThanOrEqual(waterDefeated)
+  })
+
+  it('ranks water higher than fire for mono-fire team', () => {
+    const team = mkTeam([
+      { id: 'f1', types: ['fire'], moves: ['fire'] },
+      { id: 'f2', types: ['fire'], moves: ['fire'] },
+    ])
+    const waterScore = calculateTypeSuggestionScore('water', team, [])
+    const fireScore = calculateTypeSuggestionScore('fire', team, [])
+    expect(waterScore).toBeGreaterThan(fireScore)
   })
 })
 

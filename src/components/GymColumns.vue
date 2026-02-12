@@ -58,7 +58,10 @@
 import { computed, ref, watch } from 'vue'
 import { useStorage } from '../composables/useStorage.js'
 import { getMegaSpriteUrl, getSmallSpriteUrl } from '../utils/pokemon.js'
-import { calculateScore, findGlobalBestSwap } from '../utils/typeCalc.js'
+import {
+  calculateTypeSuggestionScore,
+  findGlobalBestSwap,
+} from '../utils/typeCalc.js'
 import GymColumn from './GymColumn.vue'
 import SpriteImg from './SpriteImg.vue'
 
@@ -93,7 +96,7 @@ watch(showSuggestions, () => {
 })
 
 const canShowSuggestion = computed(
-  () => team.value.length > 0 && box.value.length > 0 && !props.draftActive,
+  () => team.value.length > 0 && !props.draftActive,
 )
 
 watch(canShowSuggestion, (canShow) => {
@@ -102,6 +105,7 @@ watch(canShowSuggestion, (canShow) => {
 
 const globalSwap = computed(() => {
   if (!showSuggestions.value || !canShowSuggestion.value) return null
+  if (box.value.length === 0) return null
   return findGlobalBestSwap(team.value, box.value, defeatedGyms.value)
 })
 
@@ -161,17 +165,16 @@ const unifiedGymsList = computed(() => {
   }))
   const combined = [...remaining, ...defeated]
 
-  if (showSuggestions.value && globalSwap.value) {
-    const swappedTeam = team.value.map((p) =>
-      p.id === globalSwap.value.teamMember.id ? globalSwap.value.boxMember : p,
-    )
-    // Compute improvement per gym and mark all as non-defeated
+  if (showSuggestions.value) {
+    // For each gym type, create a dummy monotype Pokemon and find its best swap improvement
     const withImprovement = combined.map((gym) => ({
       ...gym,
       defeated: false,
-      improvementScore:
-        calculateScore(gym.type, swappedTeam) -
-        calculateScore(gym.type, team.value),
+      improvementScore: calculateTypeSuggestionScore(
+        gym.type,
+        team.value,
+        defeatedGyms.value,
+      ),
     }))
     // Sort by improvement descending, then current score ascending as tiebreaker
     withImprovement.sort((a, b) => {
