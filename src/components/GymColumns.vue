@@ -93,7 +93,7 @@ watch(showSuggestions, () => {
 })
 
 const canShowSuggestion = computed(
-  () => team.value.length > 0 && box.value.length > 0 && !props.draftActive,
+  () => team.value.length > 0 && !props.draftActive,
 )
 
 watch(canShowSuggestion, (canShow) => {
@@ -161,10 +161,15 @@ const unifiedGymsList = computed(() => {
   }))
   const combined = [...remaining, ...defeated]
 
-  if (showSuggestions.value && globalSwap.value) {
-    const swappedTeam = team.value.map((p) =>
-      p.id === globalSwap.value.teamMember.id ? globalSwap.value.boxMember : p,
-    )
+  if (showSuggestions.value) {
+    const swappedTeam = globalSwap.value
+      ? team.value.map((p) =>
+          p.id === globalSwap.value.teamMember.id
+            ? globalSwap.value.boxMember
+            : p,
+        )
+      : team.value
+
     // Compute improvement per gym and mark all as non-defeated
     const withImprovement = combined.map((gym) => ({
       ...gym,
