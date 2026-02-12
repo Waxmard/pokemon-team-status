@@ -175,7 +175,6 @@ function handleModeClick() {
   // If in swap mode, clicking toggle cancels swap
   if (swapMode.value) {
     emit('cancelSwap')
-    viewMode.value = 'team'
     return
   }
   // If editing a team or box Pokemon, start swap mode
@@ -189,34 +188,40 @@ function handleModeClick() {
 
 function handleCancelSwap() {
   emit('cancelSwap')
-  viewMode.value = 'team'
 }
 
 function handleConfirmSwap() {
   exitSwapMode()
-  viewMode.value = 'team'
 }
+
+const previousViewMode = ref('team')
 
 // Switch to opposite view when entering swap mode, reset to team view when exiting
 watch(swapMode, (isSwapMode) => {
   if (isSwapMode) {
     // Show opposite view: editing team → show box, editing box → show team
+    previousViewMode.value = viewMode.value
     viewMode.value = draftAction.value?.isTeamPokemon ? 'box' : 'team'
   } else {
-    // Always return to team view when swap mode ends (any exit path)
-    viewMode.value = 'team'
+    // Restore previous view mode when swap mode ends
+    viewMode.value = previousViewMode.value
   }
 })
 
 // Number of empty box slots to show in swap mode (when editing a team Pokemon)
 const emptyBoxSlotCount = computed(() => {
-  // Always show 1 empty slot if box is empty (so there's something to interact with)
-  if (props.box.length === 0 && viewMode.value === 'box' && !swapMode.value)
-    return 1
+  // Always show 1 empty slot when in box view (for adding infinite box members)
+  if (viewMode.value === 'box' && !swapMode.value) return 1
+
   // In swap mode, show empty slot when editing a team Pokemon (to move team → box)
-  if (!swapMode.value) return 0
-  if (viewMode.value !== 'box') return 0
-  return draftAction.value?.isTeamPokemon ? 1 : 0
+  if (
+    swapMode.value &&
+    viewMode.value === 'box' &&
+    draftAction.value?.isTeamPokemon
+  )
+    return 1
+
+  return 0
 })
 
 // Number of empty team slots to show in swap mode (max 1)
