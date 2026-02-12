@@ -214,7 +214,12 @@ const emptyBoxSlotCount = computed(() => {
   if (viewMode.value === 'box' && !swapMode.value) return 1
 
   // In swap mode, show empty slot when editing a team Pokemon (to move team → box)
-  if (swapMode.value && viewMode.value === 'box' && draftAction.value?.isTeamPokemon) return 1
+  if (
+    swapMode.value &&
+    viewMode.value === 'box' &&
+    draftAction.value?.isTeamPokemon
+  )
+    return 1
 
   return 0
 })
