@@ -59,7 +59,6 @@ import { computed, ref, watch } from 'vue'
 import { useStorage } from '../composables/useStorage.js'
 import { getMegaSpriteUrl, getSmallSpriteUrl } from '../utils/pokemon.js'
 import {
-  calculateScore,
   calculateTypeSuggestionScore,
   findGlobalBestSwap,
 } from '../utils/typeCalc.js'
