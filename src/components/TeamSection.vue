@@ -210,8 +210,9 @@ watch(swapMode, (isSwapMode) => {
 
 // Number of empty box slots to show in swap mode (when editing a team Pokemon)
 const emptyBoxSlotCount = computed(() => {
-  // Always show 1 empty slot when in box view (for adding infinite box members)
-  if (viewMode.value === 'box' && !swapMode.value) return 1
+  // Show 1 empty slot when box is empty (so there's something to interact with)
+  if (viewMode.value === 'box' && !swapMode.value && props.box.length === 0)
+    return 1
 
   // In swap mode, show empty slot when editing a team Pokemon (to move team → box)
   if (
