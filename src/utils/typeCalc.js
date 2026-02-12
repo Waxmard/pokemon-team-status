@@ -278,6 +278,33 @@ export function suggestTypes(team, defeatedGyms) {
   })
 }
 
+export function calculateTypeSuggestionScore(gymType, team, defeatedGyms) {
+  if (team.length === 0) return 0
+
+  const hypothetical = {
+    id: 'hypothetical-suggestion',
+    types: [gymType],
+    moves: [gymType],
+    ability: null,
+    berry: null,
+    specialMove: null,
+    megaTypes: [],
+  }
+
+  const currentProfile = teamScoreProfile(team, defeatedGyms)
+  let bestProfile = null
+
+  for (const teamMember of team) {
+    const newTeam = team.map((p) => (p.id === teamMember.id ? hypothetical : p))
+    const profile = teamScoreProfile(newTeam, defeatedGyms)
+    if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
+      bestProfile = profile
+    }
+  }
+
+  return compareProfiles(bestProfile, currentProfile)
+}
+
 export function calculateBerryTiebreaker(gymType, team) {
   let count = 0
   for (const member of team) {
