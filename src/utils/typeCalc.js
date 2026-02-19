@@ -135,23 +135,6 @@ export function calculateScoreChanges(team, draftMember) {
   }).filter((c) => c.diff !== 0)
 }
 
-const SUGGESTION_THRESHOLD = 2
-const SUGGESTION_POWER = 1.25
-
-function urgency(score) {
-  return score >= SUGGESTION_THRESHOLD
-    ? 0
-    : (SUGGESTION_THRESHOLD - score) ** SUGGESTION_POWER
-}
-
-export function calculateUrgency(team, gymTypes) {
-  let total = 0
-  for (const type of gymTypes) {
-    total += urgency(calculateScore(type, team))
-  }
-  return total
-}
-
 const SCORE_CAP = 2
 
 function teamScoreProfile(team, defeatedGyms) {
@@ -243,39 +226,6 @@ export function findGlobalBestSwap(team, box, defeatedGyms) {
   }
   const improvement = compareProfiles(bestProfile, currentProfile)
   return { ...best, improvement }
-}
-
-export function suggestTypes(team, defeatedGyms) {
-  const undefeated = ALL_TYPES.filter((t) => !defeatedGyms.includes(t))
-  const defeated = ALL_TYPES.filter((t) => defeatedGyms.includes(t))
-
-  const currentUndefeated = calculateUrgency(team, undefeated)
-  const currentDefeated = calculateUrgency(team, defeated)
-
-  return ALL_TYPES.map((type) => {
-    const hypothetical = {
-      id: `hypothetical-${type}`,
-      types: [type],
-      moves: [type],
-      ability: null,
-      berry: null,
-      specialMove: null,
-      megaTypes: [],
-    }
-    const newTeam = [...team, hypothetical]
-    const newUndefeated = calculateUrgency(newTeam, undefeated)
-    const newDefeated = calculateUrgency(newTeam, defeated)
-
-    return {
-      type,
-      undefeatedImprovement: currentUndefeated - newUndefeated,
-      defeatedImprovement: currentDefeated - newDefeated,
-    }
-  }).sort((a, b) => {
-    if (a.undefeatedImprovement !== b.undefeatedImprovement)
-      return b.undefeatedImprovement - a.undefeatedImprovement
-    return b.defeatedImprovement - a.defeatedImprovement
-  })
 }
 
 export function calculateTypeSuggestionScore(gymType, team, defeatedGyms) {

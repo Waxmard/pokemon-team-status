@@ -117,15 +117,14 @@ then all gyms). The best improvement is shown in the header.
 
 ### Type Suggestions
 
-`suggestTypes` creates a hypothetical single-type Pokemon for each of the 18
-types and measures how much it would reduce the team's urgency score. This
-helps you know what type coverage your team is missing.
+In suggestion mode, each gym type shows an improvement indicator (▲, ▼, or —).
+This answers: "How much would adding this type of coverage help my team?"
 
-### Urgency Algorithm
-
-Gyms where the team scores below a threshold (2) contribute urgency using
-`(threshold - score)^1.25`. This non-linear scoring prioritizes shoring up the
-worst matchups over improving already-decent ones.
+For each gym type, the app creates a hypothetical single-type Pokemon with a
+matching move and tries replacing each team member with it. The best replacement
+is compared against the current team using score profiles (undefeated gyms
+first). Types where the hypothetical replacement improves the profile rank
+higher, helping you identify what type coverage your team is missing.
 
 ### Sorting in Suggestion Mode
 

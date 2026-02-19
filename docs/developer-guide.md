@@ -120,10 +120,9 @@ Manages the draft/editing state for adding or modifying Pokemon:
 - `applyAbilityDefense()` - Ability modifier application
 - `hasEffectiveMove()` - Offensive coverage check
 - `calculateBerryTiebreaker()` - Tiebreaker for equal scores
-- `calculateUrgency()` - Non-linear urgency scoring for weak matchups
 - `findBestSwap()` - Best swap candidate from a pool for one team member
 - `findGlobalBestSwap()` - Best single team/box swap across all pairs
-- `suggestTypes()` - Rank all 18 types by how much they'd help the team
+- `calculateTypeSuggestionScore()` - Per-type improvement score for suggestion mode
 
 See [How It Works](how-it-works.md) for algorithm details.
 

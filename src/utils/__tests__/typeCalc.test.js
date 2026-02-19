@@ -5,14 +5,12 @@ import {
   calculateScore,
   calculateScoreChanges,
   calculateTypeSuggestionScore,
-  calculateUrgency,
   findBestSwap,
   findGlobalBestSwap,
   getDefensiveMultiplier,
   getSpecialMoveEffectiveness,
   getTypeEffectiveness,
   hasEffectiveMove,
-  suggestTypes,
 } from '../typeCalc.js'
 
 let idCounter = 0
@@ -328,30 +326,6 @@ describe('calculateScoreChanges', () => {
     expect(types).toContain('ghost')
     // Neutral types produce no diff
     expect(types).not.toContain('fire')
-  })
-})
-
-describe('calculateUrgency', () => {
-  it('returns 0 when score >= 2', () => {
-    const team = mkTeam([{ types: ['water'] }, { types: ['water'] }])
-    // Each water resists fire (+1 each), score = 2, urgency = 0
-    expect(calculateUrgency(team, ['fire'])).toBe(0)
-  })
-
-  it('returns 1 when score is 1', () => {
-    const team = mkTeam([{ types: ['water'] }])
-    // Score = 1, urgency = (2-1)^1.25 = 1
-    expect(calculateUrgency(team, ['fire'])).toBe(1)
-  })
-
-  it('returns 2^1.25 when score is 0', () => {
-    expect(calculateUrgency([], ['fire'])).toBeCloseTo(2 ** 1.25, 5)
-  })
-
-  it('sums urgency across multiple gym types', () => {
-    const singleUrgency = calculateUrgency([], ['fire'])
-    const doubleUrgency = calculateUrgency([], ['fire', 'water'])
-    expect(doubleUrgency).toBeCloseTo(singleUrgency * 2, 5)
   })
 })
 
@@ -917,172 +891,6 @@ describe('calculateTypeSuggestionScore', () => {
     const waterScore = calculateTypeSuggestionScore('water', team, [])
     const fireScore = calculateTypeSuggestionScore('fire', team, [])
     expect(waterScore).toBeGreaterThan(fireScore)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Layer 5: suggestTypes - type recommendation
-// ---------------------------------------------------------------------------
-
-describe('suggestTypes', () => {
-  it('returns all 18 types', () => {
-    const suggestions = suggestTypes([], [])
-    expect(suggestions.length).toBe(18)
-  })
-
-  it('returns suggestions sorted by undefeatedImprovement descending', () => {
-    const suggestions = suggestTypes([], [])
-    for (let i = 1; i < suggestions.length; i++) {
-      const prev = suggestions[i - 1]
-      const curr = suggestions[i]
-      if (prev.undefeatedImprovement !== curr.undefeatedImprovement) {
-        expect(prev.undefeatedImprovement).toBeGreaterThan(
-          curr.undefeatedImprovement,
-        )
-      }
-    }
-  })
-
-  it('suggests types that cover fire team weaknesses', () => {
-    const team = mkTeam([
-      { types: ['fire'], moves: ['fire'] },
-      { types: ['fire'], moves: ['fire'] },
-      { types: ['fire'], moves: ['fire'] },
-    ])
-    const suggestions = suggestTypes(team, [])
-    const top5 = suggestions.slice(0, 5).map((s) => s.type)
-    // Ground covers fire's weaknesses (SE fire/rock + electric immunity)
-    expect(top5).toContain('ground')
-  })
-
-  it('changes rankings when key gyms are defeated', () => {
-    const team = mkTeam([{ types: ['fire'], moves: ['fire'] }])
-
-    const noDefeated = suggestTypes(team, [])
-    const withDefeated = suggestTypes(team, ['water', 'ground', 'rock'])
-
-    // Urgency is computed over different sets, so values differ
-    expect(noDefeated[0].undefeatedImprovement).not.toBe(
-      withDefeated[0].undefeatedImprovement,
-    )
-  })
-
-  describe('weakness coverage', () => {
-    it('prioritizes broad coverage for all-water team', () => {
-      // Water is weak to electric and grass, plus has many neutral-urgency gyms
-      // The algorithm optimizes total urgency reduction across all 18 types,
-      // so types with many resistances (steel, ghost) outrank single-weakness counters
-      const team = mkTeam([
-        { types: ['water'], moves: ['water'] },
-        { types: ['water'], moves: ['water'] },
-        { types: ['water'], moves: ['water'] },
-      ])
-      const suggestions = suggestTypes(team, [])
-      // Top suggestion should provide substantial improvement
-      expect(suggestions[0].undefeatedImprovement).toBeGreaterThan(5)
-      // Types with many resistances that complement water should rank high
-      const top5 = suggestions.slice(0, 5).map((s) => s.type)
-      const broadResistors = new Set(['steel', 'ghost', 'fairy', 'poison'])
-      expect(top5.some((t) => broadResistors.has(t))).toBe(true)
-    })
-  })
-
-  describe('empty team baseline', () => {
-    it('has all positive undefeatedImprovement', () => {
-      // With no team, every gym has score 0 -> urgency = 2^1.25 each
-      // Any hypothetical type reduces urgency for at least some gyms
-      const suggestions = suggestTypes([], [])
-      for (const s of suggestions) {
-        expect(s.undefeatedImprovement).toBeGreaterThan(0)
-      }
-    })
-  })
-
-  describe('all gyms defeated', () => {
-    it('sets undefeatedImprovement to 0 for every type', () => {
-      // With all gyms defeated, undefeated list is empty
-      // calculateUrgency(team, []) = 0 for both old and new
-      const suggestions = suggestTypes([], ALL_TYPES)
-      for (const s of suggestions) {
-        expect(s.undefeatedImprovement).toBe(0)
-      }
-    })
-
-    it('has positive defeatedImprovement for at least some types', () => {
-      const suggestions = suggestTypes([], ALL_TYPES)
-      const anyPositive = suggestions.some((s) => s.defeatedImprovement > 0)
-      expect(anyPositive).toBe(true)
-    })
-  })
-
-  describe('double-weakness team', () => {
-    it('ranks fire-resistant types high for grass/ice team', () => {
-      // Grass/ice is 4x weak to fire (fire->grass=2, fire->ice=2 -> multiplier=4 -> -2 per member)
-      // Fire gym score = -6 for this team -> extremely urgent
-      const team = mkTeam([
-        { types: ['grass', 'ice'], moves: ['grass', 'ice'] },
-        { types: ['grass', 'ice'], moves: ['grass', 'ice'] },
-        { types: ['grass', 'ice'], moves: ['grass', 'ice'] },
-      ])
-      const suggestions = suggestTypes(team, [])
-      const top5 = suggestions.slice(0, 5).map((s) => s.type)
-      // Water, rock, fire, or dragon all resist fire
-      const fireResistant = new Set(['water', 'rock', 'fire', 'dragon'])
-      expect(top5.some((t) => fireResistant.has(t))).toBe(true)
-    })
-  })
-
-  describe('diminishing returns', () => {
-    it('shows smaller improvement for well-covered team than empty team', () => {
-      const emptyResult = suggestTypes([], [])
-      const coveredTeam = mkTeam([
-        { types: ['water'], moves: ['water', 'ice'] },
-        { types: ['fire'], moves: ['fire'] },
-        { types: ['grass'], moves: ['grass'] },
-        { types: ['electric'], moves: ['electric'] },
-        { types: ['ground'], moves: ['ground', 'rock'] },
-      ])
-      const coveredResult = suggestTypes(coveredTeam, [])
-
-      // A balanced 5-member team leaves less room for improvement
-      expect(coveredResult[0].undefeatedImprovement).toBeLessThan(
-        emptyResult[0].undefeatedImprovement,
-      )
-    })
-  })
-
-  describe('defeatedImprovement tiebreaker', () => {
-    it('sorts by defeatedImprovement when undefeatedImprovement ties', () => {
-      // Verify the sort contract: among entries with equal primary key,
-      // they are ordered by defeatedImprovement descending
-      const suggestions = suggestTypes([], [])
-      for (let i = 1; i < suggestions.length; i++) {
-        const prev = suggestions[i - 1]
-        const curr = suggestions[i]
-        if (prev.undefeatedImprovement === curr.undefeatedImprovement) {
-          expect(prev.defeatedImprovement).toBeGreaterThanOrEqual(
-            curr.defeatedImprovement,
-          )
-        }
-      }
-    })
-  })
-
-  describe('mixed defeated/undefeated gyms', () => {
-    it('populates both improvement columns with one defeated gym', () => {
-      const team = mkTeam([{ types: ['fire'], moves: ['fire'] }])
-      // Grass gym defeated; the other 17 are undefeated
-      const suggestions = suggestTypes(team, ['grass'])
-      const top = suggestions[0]
-
-      // Team is small, so adding any good type reduces undefeated urgency
-      expect(top.undefeatedImprovement).toBeGreaterThan(0)
-      // At least some types should improve coverage for the defeated grass gym too
-      const hasDefeatedImprovement = suggestions.some(
-        (s) => s.defeatedImprovement !== 0,
-      )
-      expect(hasDefeatedImprovement).toBe(true)
-    })
   })
 })
 
