@@ -106,7 +106,12 @@ watch(canShowSuggestion, (canShow) => {
 const globalSwap = computed(() => {
   if (!showSuggestions.value || !canShowSuggestion.value) return null
   if (box.value.length === 0) return null
-  return findGlobalBestSwap(team.value, box.value, defeatedGyms.value)
+  return findGlobalBestSwap(
+    team.value,
+    box.value,
+    defeatedGyms.value,
+    pinnedGym.value,
+  )
 })
 
 const showSwapPreview = computed(
@@ -174,6 +179,7 @@ const unifiedGymsList = computed(() => {
         gym.type,
         team.value,
         defeatedGyms.value,
+        pinnedGym.value,
       ),
     }))
     // Sort by improvement descending, then current score ascending as tiebreaker

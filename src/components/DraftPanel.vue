@@ -269,7 +269,7 @@ const {
   updateSpriteVariant,
 } = useDraftAction()
 
-const { team: storageTeam, box, defeatedGyms } = useStorage()
+const { team: storageTeam, box, defeatedGyms, pinnedGym } = useStorage()
 
 // Suggestion state
 const showSuggestion = ref(false)
@@ -305,6 +305,7 @@ const swapSuggestion = computed(() => {
       true,
       box.value,
       defeatedGyms.value,
+      pinnedGym.value,
     )
   } else {
     // Editing box member: find best team member to replace
@@ -314,6 +315,7 @@ const swapSuggestion = computed(() => {
       false,
       props.team,
       defeatedGyms.value,
+      pinnedGym.value,
     )
   }
 })

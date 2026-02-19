@@ -135,9 +135,11 @@ export function calculateScoreChanges(team, draftMember) {
   }).filter((c) => c.diff !== 0)
 }
 
-const SCORE_CAP = 2
+const SCORE_CAP = 3
+const PINNED_SCORE_CAP = 4
 
-function teamScoreProfile(team, defeatedGyms) {
+function teamScoreProfile(team, defeatedGyms, pinnedGym = null) {
+  const pinnedScore = []
   const undefeatedScores = []
   const allCapped = []
   const allUncapped = []
@@ -145,6 +147,9 @@ function teamScoreProfile(team, defeatedGyms) {
   for (const type of ALL_TYPES) {
     const raw = calculateScore(type, team)
     const capped = Math.min(raw, SCORE_CAP)
+    if (type === pinnedGym) {
+      pinnedScore.push(Math.min(raw, PINNED_SCORE_CAP))
+    }
     if (!defeatedGyms.includes(type)) {
       undefeatedScores.push(capped)
     }
@@ -156,7 +161,7 @@ function teamScoreProfile(team, defeatedGyms) {
   allCapped.sort((a, b) => a - b)
   allUncapped.sort((a, b) => a - b)
 
-  return { undefeatedScores, allCapped, allUncapped }
+  return { pinnedScore, undefeatedScores, allCapped, allUncapped }
 }
 
 function compareArrays(a, b) {
@@ -168,6 +173,8 @@ function compareArrays(a, b) {
 }
 
 function compareProfiles(a, b) {
+  const c0 = compareArrays(a.pinnedScore, b.pinnedScore)
+  if (c0 !== 0) return c0
   const c1 = compareArrays(a.undefeatedScores, b.undefeatedScores)
   if (c1 !== 0) return c1
   const c2 = compareArrays(a.allCapped, b.allCapped)
@@ -181,10 +188,11 @@ export function findBestSwap(
   isTeamMember,
   pool,
   defeatedGyms,
+  pinnedGym = null,
 ) {
   if (pool.length === 0) return null
 
-  const currentProfile = teamScoreProfile(team, defeatedGyms)
+  const currentProfile = teamScoreProfile(team, defeatedGyms, pinnedGym)
 
   let best = null
   let bestProfile = null
@@ -197,7 +205,7 @@ export function findBestSwap(
       newTeam = team.map((p) => (p.id === candidate.id ? editingMember : p))
     }
 
-    const profile = teamScoreProfile(newTeam, defeatedGyms)
+    const profile = teamScoreProfile(newTeam, defeatedGyms, pinnedGym)
 
     if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
       bestProfile = profile
@@ -209,15 +217,15 @@ export function findBestSwap(
   return { candidate: best, improvement }
 }
 
-export function findGlobalBestSwap(team, box, defeatedGyms) {
+export function findGlobalBestSwap(team, box, defeatedGyms, pinnedGym = null) {
   if (team.length === 0 || box.length === 0) return null
-  const currentProfile = teamScoreProfile(team, defeatedGyms)
+  const currentProfile = teamScoreProfile(team, defeatedGyms, pinnedGym)
   let best = null
   let bestProfile = null
   for (const teamMember of team) {
     for (const boxMember of box) {
       const newTeam = team.map((p) => (p.id === teamMember.id ? boxMember : p))
-      const profile = teamScoreProfile(newTeam, defeatedGyms)
+      const profile = teamScoreProfile(newTeam, defeatedGyms, pinnedGym)
       if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
         bestProfile = profile
         best = { teamMember, boxMember }
@@ -228,7 +236,12 @@ export function findGlobalBestSwap(team, box, defeatedGyms) {
   return { ...best, improvement }
 }
 
-export function calculateTypeSuggestionScore(gymType, team, defeatedGyms) {
+export function calculateTypeSuggestionScore(
+  gymType,
+  team,
+  defeatedGyms,
+  pinnedGym = null,
+) {
   if (team.length === 0) return 0
 
   const hypothetical = {
@@ -241,17 +254,21 @@ export function calculateTypeSuggestionScore(gymType, team, defeatedGyms) {
     megaTypes: [],
   }
 
-  const currentProfile = teamScoreProfile(team, defeatedGyms)
+  const currentProfile = teamScoreProfile(team, defeatedGyms, pinnedGym)
   let bestProfile = null
 
   if (team.length < 6) {
-    bestProfile = teamScoreProfile([...team, hypothetical], defeatedGyms)
+    bestProfile = teamScoreProfile(
+      [...team, hypothetical],
+      defeatedGyms,
+      pinnedGym,
+    )
   } else {
     for (const teamMember of team) {
       const newTeam = team.map((p) =>
         p.id === teamMember.id ? hypothetical : p,
       )
-      const profile = teamScoreProfile(newTeam, defeatedGyms)
+      const profile = teamScoreProfile(newTeam, defeatedGyms, pinnedGym)
       if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
         bestProfile = profile
       }

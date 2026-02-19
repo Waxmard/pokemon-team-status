@@ -706,7 +706,7 @@ describe('minimax comparison', () => {
     expect(result.candidate.id).toBe('gnd1')
   })
 
-  it('score cap: +3 does not beat +2 in primary comparison', () => {
+  it('extra coverage breaks tie via uncapped scores', () => {
     // Two candidates that differ only in how much they boost a high gym
     const normal = member({ id: 'n1', types: ['normal'] })
     const team = [normal]
@@ -726,8 +726,7 @@ describe('minimax comparison', () => {
     })
 
     const result = findBestSwap(team, normal, true, [water, waterIce], [])
-    // Both have same capped profiles for tier 1 and 2; tier 3 (uncapped) breaks tie
-    // waterIce has more coverage so it wins on the uncapped tiebreaker
+    // waterIce provides extra coverage, winning via capped or uncapped tiers
     expect(result.candidate.id).toBe('w2')
     // But the improvement is positive for both (better than normal)
     expect(result.improvement).toBeGreaterThan(0)
@@ -784,6 +783,127 @@ describe('minimax comparison', () => {
     const result = findBestSwap(team, fire, true, [water], ALL_TYPES)
     expect(result).not.toBeNull()
     expect(result.candidate.id).toBe('w1')
+  })
+})
+
+describe('pinned gym priority', () => {
+  it('findBestSwap prefers candidate that improves pinned gym score', () => {
+    // Team weak to both fire and water
+    const normal = member({ id: 'n1', types: ['normal'] })
+    const team = [normal]
+
+    // Water: helps vs fire (resist + SE) but hurts vs grass
+    const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
+    // Grass: helps vs water (resist + SE) but hurts vs fire
+    const grass = member({ id: 'g1', types: ['grass'], moves: ['grass'] })
+
+    // Without pin: algorithm picks based on overall worst-case
+    const noPinResult = findBestSwap(team, normal, true, [water, grass], [])
+
+    // With fire pinned: should prefer water (resists fire + SE fire)
+    const firePinResult = findBestSwap(
+      team,
+      normal,
+      true,
+      [water, grass],
+      [],
+      'fire',
+    )
+    expect(firePinResult.candidate.id).toBe('w1')
+
+    // With water pinned: should prefer grass (resists water + SE water)
+    const waterPinResult = findBestSwap(
+      team,
+      normal,
+      true,
+      [water, grass],
+      [],
+      'water',
+    )
+    expect(waterPinResult.candidate.id).toBe('g1')
+  })
+
+  it('findGlobalBestSwap prioritizes pinned gym', () => {
+    const fire1 = member({ id: 'f1', types: ['fire'], moves: ['fire'] })
+    const fire2 = member({ id: 'f2', types: ['fire'], moves: ['fire'] })
+    const team = [fire1, fire2]
+
+    const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
+    const ground = member({ id: 'gnd1', types: ['ground'], moves: ['ground'] })
+
+    // Pin water gym: water resists water gym, ground does not
+    const result = findGlobalBestSwap(team, [water, ground], [], 'water')
+    expect(result.boxMember.id).toBe('w1')
+  })
+
+  it('calculateTypeSuggestionScore ranks pinned gym coverage higher', () => {
+    const team = mkTeam([
+      { id: 'f1', types: ['fire'], moves: ['fire'] },
+      { id: 'f2', types: ['fire'], moves: ['fire'] },
+    ])
+
+    // Pin 'water' gym. Water type resists water. Ground does not.
+    const waterPinned = calculateTypeSuggestionScore('water', team, [], 'water')
+    const groundPinned = calculateTypeSuggestionScore(
+      'ground',
+      team,
+      [],
+      'water',
+    )
+
+    // Water should score higher than ground when water gym is pinned
+    // because water type resists water gym attacks and ground does not
+    expect(waterPinned).toBeGreaterThan(groundPinned)
+  })
+
+  it('pinned gym uses higher score cap than normal gyms', () => {
+    const team2 = [
+      member({ id: 'w1', types: ['water'], moves: ['water'] }),
+      member({ id: 'n1', types: ['normal'] }),
+    ]
+    const waterWithMove = member({
+      id: 'c1',
+      types: ['water'],
+      moves: ['water'],
+    })
+    const waterNoMove = member({ id: 'c2', types: ['water'] })
+
+    // With fire pinned: waterWithMove gives pinned fire score 4 vs waterNoMove gives 3
+    const pinnedResult = findBestSwap(
+      team2,
+      team2[1],
+      true,
+      [waterWithMove, waterNoMove],
+      [],
+      'fire',
+    )
+    expect(pinnedResult.candidate.id).toBe('c1')
+
+    // Without pin: both cap fire at 3, so they may tie on that gym
+    // (difference resolved by other gyms or uncapped tier)
+    const unpinnedResult = findBestSwap(
+      team2,
+      team2[1],
+      true,
+      [waterWithMove, waterNoMove],
+      [],
+    )
+    // waterWithMove still wins (via uncapped) but the key point is the pinned test above
+    expect(unpinnedResult.candidate.id).toBe('c1')
+  })
+
+  it('falls back to normal algorithm when pinnedGym is null', () => {
+    const team = mkTeam([
+      { id: 'f1', types: ['fire'], moves: ['fire'] },
+      { id: 'f2', types: ['fire'], moves: ['fire'] },
+    ])
+    const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
+
+    const withNull = findBestSwap(team, team[0], true, [water], [], null)
+    const withoutParam = findBestSwap(team, team[0], true, [water], [])
+
+    expect(withNull.improvement).toBe(withoutParam.improvement)
+    expect(withNull.candidate.id).toBe(withoutParam.candidate.id)
   })
 })
 

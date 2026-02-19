@@ -133,6 +133,14 @@ team is missing.
 When a swap suggestion is active, gyms are sorted by how much the suggested
 swap improves each matchup, so you can see where the swap helps most.
 
+### Pinned Gym Priority
+
+When a gym is pinned, all suggestion algorithms prioritize improving the pinned
+gym's score above everything else. The pinned gym score uses a higher cap (4)
+than normal gym scores (3), allowing suggestions to distinguish between good
+and excellent coverage for the gym you care about most. The normal algorithm
+(undefeated gyms first, then all gyms) serves as a tiebreaker.
+
 ## Example
 
 Your team has a Swampert (Water/Ground):
