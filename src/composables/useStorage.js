@@ -8,7 +8,7 @@ import {
 const DB_NAME = 'pokemon-team-calculator'
 const DB_VERSION = 2
 
-function openDB() {
+function openDBOnce() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
 
@@ -28,6 +28,15 @@ function openDB() {
       }
     }
   })
+}
+
+async function openDB() {
+  try {
+    return await openDBOnce()
+  } catch {
+    await new Promise((r) => setTimeout(r, 100))
+    return openDBOnce()
+  }
 }
 
 // Generic helper to save an array of items to a store (clears and replaces all)
@@ -93,6 +102,7 @@ const team = ref([])
 const defeatedGyms = ref([])
 const box = ref([])
 const pinnedGym = ref(null)
+const loadError = ref(false)
 
 export function useStorage() {
   async function loadData() {
@@ -101,13 +111,18 @@ export function useStorage() {
       defeatedGyms.value = await loadSetting('defeatedGyms', [])
       box.value = await loadArrayFromStore('box')
       pinnedGym.value = await loadSetting('pinnedGym', null)
+      loadError.value = false
 
       // Pre-cache sprites (fire-and-forget)
       prefetchAllSprites()
       prefetchBerrySprites()
       prefetchTypeIcons()
+
+      // Request persistent storage to prevent iOS eviction (fire-and-forget)
+      navigator.storage?.persist?.()
     } catch (e) {
       console.error('Failed to load data:', e)
+      loadError.value = true
     }
   }
 
@@ -136,6 +151,7 @@ export function useStorage() {
     defeatedGyms,
     box,
     pinnedGym,
+    loadError,
     loadData,
     persistTeam,
     persistDefeatedGyms,
