@@ -1,6 +1,9 @@
 <template>
   <n-config-provider :theme-overrides="themeOverrides">
     <div class="app-container">
+      <div v-if="loadError" class="load-error-banner" @click="retryLoad">
+        Failed to load saved data. Tap to retry.
+      </div>
       <button class="reset-btn" @click="showResetDialog = true" aria-label="Reset">✦</button>
       <h1 class="app-title">
         <span class="title-accent">Weakness Calculator</span>
@@ -62,6 +65,7 @@ const {
   defeatedGyms,
   box,
   loadData,
+  loadError,
   persistTeam,
   persistDefeatedGyms,
   persistBox,
@@ -77,6 +81,10 @@ const {
 } = useDraftAction()
 
 const showResetDialog = ref(false)
+
+function retryLoad() {
+  loadData()
+}
 
 function resetPokemon() {
   persistTeam([])
@@ -575,7 +583,20 @@ onMounted(() => {
     max-width: 100%;
   }
 
-  .app-title {
+.load-error-banner {
+  background: var(--color-danger);
+  color: white;
+  text-align: center;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  animation: fadeIn var(--transition-base) ease forwards;
+}
+
+.app-title {
     flex: 0 0 100%;
     margin-bottom: var(--space-2);
   }
