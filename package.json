@@ -22,7 +22,7 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.13",
+    "@biomejs/biome": "2.4.2",
     "@vitejs/plugin-vue": "^5.0.0",
     "@vitest/coverage-v8": "^4.0.18",
     "jscpd": "^4.0.8",
