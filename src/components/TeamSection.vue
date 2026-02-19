@@ -194,17 +194,13 @@ function handleConfirmSwap() {
   exitSwapMode()
 }
 
-const previousViewMode = ref('team')
-
 // Switch to opposite view when entering swap mode, reset to team view when exiting
 watch(swapMode, (isSwapMode) => {
   if (isSwapMode) {
     // Show opposite view: editing team → show box, editing box → show team
-    previousViewMode.value = viewMode.value
     viewMode.value = draftAction.value?.isTeamPokemon ? 'box' : 'team'
   } else {
-    // Restore previous view mode when swap mode ends
-    viewMode.value = previousViewMode.value
+    viewMode.value = 'team'
   }
 })
 
