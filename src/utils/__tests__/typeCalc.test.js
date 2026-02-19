@@ -36,6 +36,38 @@ beforeEach(() => {
   idCounter = 0
 })
 
+// Shared member factories for commonly-used Pokemon
+function fire(id) {
+  return member({ id, types: ['fire'], moves: ['fire'] })
+}
+
+function water(id) {
+  return member({ id, types: ['water'], moves: ['water'] })
+}
+
+function grass(id) {
+  return member({ id, types: ['grass'], moves: ['grass'] })
+}
+
+function normal(id) {
+  return member({ id, types: ['normal'] })
+}
+
+function ground(id, moves = ['ground']) {
+  return member({ id, types: ['ground'], moves })
+}
+
+// Mono-fire team factory
+function monoFireTeam(count) {
+  return mkTeam(
+    Array.from({ length: count }, (_, i) => ({
+      id: `f${i + 1}`,
+      types: ['fire'],
+      moves: ['fire'],
+    })),
+  )
+}
+
 const ALL_TYPES = [
   'normal',
   'fire',
@@ -369,24 +401,16 @@ describe('findBestSwap', () => {
 
   it('returns single candidate from pool', () => {
     const team = [member({ id: 'a', types: ['fire'] })]
-    const pool = [member({ id: 'b', types: ['water'], moves: ['water'] })]
+    const pool = [water('b')]
     const result = findBestSwap(team, team[0], true, pool, [])
     expect(result.candidate.id).toBe('b')
   })
 
   describe('team member editing (swap team -> box)', () => {
     it('suggests box member that improves coverage', () => {
-      const fire1 = member({ id: 'f1', types: ['fire'] })
-      const fire2 = member({ id: 'f2', types: ['fire'] })
-      const fire3 = member({ id: 'f3', types: ['fire'] })
-      const water = member({
-        id: 'w1',
-        types: ['water'],
-        moves: ['water'],
-      })
-      const team = [fire1, fire2, fire3]
+      const team = monoFireTeam(3)
 
-      const result = findBestSwap(team, fire1, true, [water], [])
+      const result = findBestSwap(team, team[0], true, [water('w1')], [])
       expect(result.candidate.id).toBe('w1')
       expect(result.improvement).toBeGreaterThan(0)
     })
@@ -394,18 +418,14 @@ describe('findBestSwap', () => {
 
   describe('box member editing (swap box -> team)', () => {
     it('suggests replacing a redundant team member for better worst-case', () => {
-      const fire1 = member({ id: 'f1', types: ['fire'] })
-      const fire2 = member({ id: 'f2', types: ['fire'] })
-      const grass = member({ id: 'g1', types: ['grass'], moves: ['grass'] })
-      const water = member({
-        id: 'w1',
-        types: ['water'],
-        moves: ['water'],
-      })
-      const team = [fire1, fire2, grass]
+      const f1 = fire('f1')
+      const f2 = fire('f2')
+      const g1 = grass('g1')
+      const w1 = water('w1')
+      const team = [f1, f2, g1]
 
       // Editing water (box member), pool = team members
-      const result = findBestSwap(team, water, false, [fire1, fire2, grass], [])
+      const result = findBestSwap(team, w1, false, [f1, f2, g1], [])
       // Minimax prefers replacing redundant fire for better diversity:
       // [water, fire, grass] has fewer bad matchups than [fire, fire, water]
       expect(result.candidate.id).toBe('f1')
@@ -416,19 +436,15 @@ describe('findBestSwap', () => {
   describe('defeated gym tiebreaker', () => {
     it('uses defeated gym scores to break ties on undefeated gyms', () => {
       // Two candidates identical on undefeated gyms but differ on defeated coverage
-      const normal = member({ id: 'n1', types: ['normal'] })
-      const team = [normal]
+      const n1 = normal('n1')
+      const team = [n1]
 
       // Water: resists fire (+1), SE fire (+1) = good on fire
-      const water = member({
-        id: 'w1',
-        types: ['water'],
-        moves: ['water'],
-      })
+      const w1 = water('w1')
       // Water/Ground: immune to electric (+2), SE fire (+0 water move not present)
       // Both cover similar undefeated gyms, but differ when fire is defeated
-      const noDefeated = findBestSwap(team, normal, true, [water], [])
-      const fireDefeated = findBestSwap(team, normal, true, [water], ['fire'])
+      const noDefeated = findBestSwap(team, n1, true, [w1], [])
+      const fireDefeated = findBestSwap(team, n1, true, [w1], ['fire'])
 
       // With fire undefeated, water's fire coverage lifts the worst undefeated score
       // With fire defeated, that coverage moves to a lower-priority tier
@@ -440,26 +456,18 @@ describe('findBestSwap', () => {
 
   describe('best-of-all selection', () => {
     it('picks the candidate with best worst-case gym score', () => {
-      const fire1 = member({ id: 'f1', types: ['fire'] })
-      const fire2 = member({ id: 'f2', types: ['fire'] })
-      const team = [fire1, fire2]
-
-      const water = member({
-        id: 'w1',
-        types: ['water'],
-        moves: ['water'],
-      })
-      const grass = member({
-        id: 'g1',
-        types: ['grass'],
-        moves: ['grass'],
-      })
-      const normal = member({ id: 'n1', types: ['normal'] })
+      const team = monoFireTeam(2)
 
       // Replacing one fire with water: [water, fire] has best diversity
       // Water covers fire's weaknesses (water, ground, rock) while fire
       // covers water's grass weakness → fewer bad gym matchups
-      const result = findBestSwap(team, fire1, true, [water, grass, normal], [])
+      const result = findBestSwap(
+        team,
+        team[0],
+        true,
+        [water('w1'), grass('g1'), normal('n1')],
+        [],
+      )
       expect(result.candidate.id).toBe('w1')
     })
   })
@@ -474,9 +482,13 @@ describe('findBestSwap', () => {
       const team = [water]
 
       // Pool only has plain normal types (strictly worse)
-      const n1 = member({ id: 'n1' })
-      const n2 = member({ id: 'n2' })
-      const result = findBestSwap(team, water, true, [n1, n2], [])
+      const result = findBestSwap(
+        team,
+        water,
+        true,
+        [normal('n1'), normal('n2')],
+        [],
+      )
 
       expect(result).not.toBeNull()
       expect(result.improvement).toBeLessThan(0)
@@ -486,17 +498,12 @@ describe('findBestSwap', () => {
   describe('ability-driven swap preference', () => {
     it('prefers Levitate candidate over plain ground-type', () => {
       // Team has a normal-type we want to replace
-      const normal = member({ id: 'n1', types: ['normal'] })
-      const team = [normal]
+      const n1 = normal('n1')
+      const team = [n1]
 
       // Two ground candidates: plain ground vs ground with Levitate
       // Against ground gym: ground->ground = 1 -> 0 pts (plain)
       // Levitate grants ground immunity -> 0 multiplier -> +2 pts
-      const plainGround = member({
-        id: 'g1',
-        types: ['ground'],
-        moves: ['ground'],
-      })
       const levitateGround = member({
         id: 'g2',
         types: ['ground'],
@@ -506,9 +513,9 @@ describe('findBestSwap', () => {
 
       const result = findBestSwap(
         team,
-        normal,
+        n1,
         true,
-        [plainGround, levitateGround],
+        [ground('g1'), levitateGround],
         [],
       )
       expect(result.candidate.id).toBe('g2')
@@ -517,20 +524,20 @@ describe('findBestSwap', () => {
 
   describe('dual-type worst-case', () => {
     it('avoids dual-type with 4x weakness despite better total coverage', () => {
-      const normal = member({ id: 'n1', types: ['normal'] })
-      const team = [normal]
+      const n1 = normal('n1')
+      const team = [n1]
 
       // Water: worst score = -1 (electric, grass) — two manageable weaknesses
       // Water/Ground: has 4x grass weakness → -2 worst score
       // Minimax prefers water because -1 > -2 at worst gym
-      const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
+      const w1 = water('w1')
       const waterGround = member({
         id: 'wg1',
         types: ['water', 'ground'],
         moves: ['water', 'ground'],
       })
 
-      const result = findBestSwap(team, normal, true, [water, waterGround], [])
+      const result = findBestSwap(team, n1, true, [w1, waterGround], [])
       expect(result.candidate.id).toBe('w1')
     })
   })
@@ -538,12 +545,8 @@ describe('findBestSwap', () => {
   describe('introducing worse worst-case is costly', () => {
     it('reports negative improvement when replacement has deeper weakness', () => {
       // Water: worst score = -1 (electric, grass)
-      const water = member({
-        id: 'w1',
-        types: ['water'],
-        moves: ['water'],
-      })
-      const team = [water]
+      const w1 = water('w1')
+      const team = [w1]
 
       // Grass/Ice: 4x fire weakness → -2 worst score, plus many other -1s
       // Minimax sees this as strictly worse worst-case
@@ -552,7 +555,7 @@ describe('findBestSwap', () => {
         types: ['grass', 'ice'],
         moves: ['grass', 'ice'],
       })
-      const result = findBestSwap(team, water, true, [grassIce], [])
+      const result = findBestSwap(team, w1, true, [grassIce], [])
 
       expect(result.improvement).toBeLessThan(0)
     })
@@ -560,18 +563,18 @@ describe('findBestSwap', () => {
 
   describe('defeated gym progressive deprioritization', () => {
     it('deprioritizes defeated gym improvements in tier ordering', () => {
-      const normal = member({ id: 'n1', types: ['normal'] })
-      const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
-      const team = [normal]
+      const n1 = normal('n1')
+      const w1 = water('w1')
+      const team = [n1]
 
       // Water covers fire (resist+SE), ground (SE), rock (SE)
       // Moving these to defeated shifts their improvements from tier 1 to tier 2
-      const noDefeated = findBestSwap(team, normal, true, [water], [])
+      const noDefeated = findBestSwap(team, n1, true, [w1], [])
       const threeDefeated = findBestSwap(
         team,
-        normal,
+        n1,
         true,
-        [water],
+        [w1],
         ['fire', 'ground', 'rock'],
       )
 
@@ -589,19 +592,19 @@ describe('findBestSwap', () => {
         member({ id: 't1', types: ['water'], moves: ['water', 'ice'] }),
         member({ id: 't2', types: ['flying'], moves: ['flying'] }),
         member({ id: 't3', types: ['steel'], moves: ['steel'] }),
-        member({ id: 't4', types: ['fire'], moves: ['fire'] }),
+        fire('t4'),
         member({ id: 't5', types: ['fairy'], moves: ['fairy'] }),
-        member({ id: 't6', types: ['normal'] }),
+        normal('t6'),
       ]
 
       // Ground-type fills electric gap and adds rock coverage
-      const ground = member({
-        id: 'box1',
-        types: ['ground'],
-        moves: ['ground', 'rock'],
-      })
-
-      const result = findBestSwap(team, team[5], true, [ground], [])
+      const result = findBestSwap(
+        team,
+        team[5],
+        true,
+        [ground('box1', ['ground', 'rock'])],
+        [],
+      )
       expect(result.candidate.id).toBe('box1')
       expect(result.improvement).toBeGreaterThan(0)
     })
@@ -609,8 +612,8 @@ describe('findBestSwap', () => {
 
   describe('Protean swap preference', () => {
     it('prefers Protean candidate over plain with same moves', () => {
-      const normal = member({ id: 'n1', types: ['normal'] })
-      const team = [normal]
+      const n1 = normal('n1')
+      const team = [n1]
 
       // Both candidates have water/fire/grass moves
       // Protean adds resistance-only points for each move type
@@ -628,7 +631,7 @@ describe('findBestSwap', () => {
 
       const result = findBestSwap(
         team,
-        normal,
+        n1,
         true,
         [plainCandidate, proteanCandidate],
         [],
@@ -639,14 +642,17 @@ describe('findBestSwap', () => {
 
   describe('tie-breaking', () => {
     it('keeps first candidate when improvements are equal', () => {
-      const normal = member({ id: 'n1', types: ['normal'] })
-      const team = [normal]
+      const n1 = normal('n1')
+      const team = [n1]
 
       // Two identical water candidates produce the same improvement
-      const water1 = member({ id: 'w1', types: ['water'], moves: ['water'] })
-      const water2 = member({ id: 'w2', types: ['water'], moves: ['water'] })
-
-      const result = findBestSwap(team, normal, true, [water1, water2], [])
+      const result = findBestSwap(
+        team,
+        n1,
+        true,
+        [water('w1'), water('w2')],
+        [],
+      )
       // Strict > in comparison means ties keep the earlier candidate
       expect(result.candidate.id).toBe('w1')
     })
@@ -654,17 +660,17 @@ describe('findBestSwap', () => {
 
   describe('swap direction symmetry', () => {
     it('produces equal improvement regardless of direction', () => {
-      const fire = member({ id: 'f1', types: ['fire'], moves: ['fire'] })
-      const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
-      const team = [fire]
+      const f1 = fire('f1')
+      const w1 = water('w1')
+      const team = [f1]
 
       // isTeamMember=true: editing fire on team, pool=[water from box]
       // newTeam replaces fire with water -> [water]
-      const teamResult = findBestSwap(team, fire, true, [water], [])
+      const teamResult = findBestSwap(team, f1, true, [w1], [])
 
       // isTeamMember=false: editing water from box, pool=[fire from team]
       // newTeam replaces fire (candidate) with water (editingMember) -> [water]
-      const boxResult = findBestSwap(team, water, false, [fire], [])
+      const boxResult = findBestSwap(team, w1, false, [f1], [])
 
       // Both represent the same swap: fire -> water on the team
       expect(teamResult.improvement).toBe(boxResult.improvement)
@@ -679,11 +685,7 @@ describe('findBestSwap', () => {
 describe('minimax comparison', () => {
   it('prefers raising the worst score over improving total', () => {
     // Team of 3 fire types: very weak to water (-1 each = -3), ground (-3), rock (-3)
-    const team = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-      { id: 'f3', types: ['fire'], moves: ['fire'] },
-    ])
+    const team = monoFireTeam(3)
 
     // Candidate A: electric type — covers water weakness (SE water) but doesn't
     // help ground or rock. Improves one -3 gym but leaves others at -3.
@@ -695,37 +697,35 @@ describe('minimax comparison', () => {
 
     // Candidate B: ground type — resists rock (+1), SE rock (+1), immune to electric (+2)
     // and SE fire/water/ground. Covers multiple weak gyms.
-    const ground = member({
-      id: 'gnd1',
-      types: ['ground'],
-      moves: ['ground', 'rock'],
-    })
+    const groundCandidate = ground('gnd1', ['ground', 'rock'])
 
-    const result = findBestSwap(team, team[0], true, [electric, ground], [])
+    const result = findBestSwap(
+      team,
+      team[0],
+      true,
+      [electric, groundCandidate],
+      [],
+    )
     // Ground raises more worst-case gym scores, minimax prefers it
     expect(result.candidate.id).toBe('gnd1')
   })
 
   it('extra coverage breaks tie via uncapped scores', () => {
     // Two candidates that differ only in how much they boost a high gym
-    const normal = member({ id: 'n1', types: ['normal'] })
-    const team = [normal]
+    const n1 = normal('n1')
+    const team = [n1]
 
     // Both are water-types; one also has ice move for extra coverage
     // The extra ice coverage adds +1 on gyms already at +1 or more (dragon, etc.)
     // but doesn't change worst-case because those gyms are already positive
-    const water = member({
-      id: 'w1',
-      types: ['water'],
-      moves: ['water'],
-    })
+    const w1 = water('w1')
     const waterIce = member({
       id: 'w2',
       types: ['water'],
       moves: ['water', 'ice'],
     })
 
-    const result = findBestSwap(team, normal, true, [water, waterIce], [])
+    const result = findBestSwap(team, n1, true, [w1, waterIce], [])
     // waterIce provides extra coverage, winning via capped or uncapped tiers
     expect(result.candidate.id).toBe('w2')
     // But the improvement is positive for both (better than normal)
@@ -734,31 +734,21 @@ describe('minimax comparison', () => {
 
   it('defeated gym acts as tiebreaker when undefeated profiles match', () => {
     // Two teams that are identical on undefeated gyms but differ on defeated
-    const fire1 = member({ id: 'f1', types: ['fire'], moves: ['fire'] })
-    const fire2 = member({ id: 'f2', types: ['fire'], moves: ['fire'] })
-    const team = [fire1, fire2]
+    const team = monoFireTeam(2)
 
     // Water: strong vs fire gym (resist + SE)
-    const water = member({
-      id: 'w1',
-      types: ['water'],
-      moves: ['water'],
-    })
+    const w1 = water('w1')
     // Grass: strong vs water gym (resist + SE) and ground gym (resist)
-    const grass = member({
-      id: 'g1',
-      types: ['grass'],
-      moves: ['grass'],
-    })
+    const g1 = grass('g1')
 
     // When fire gym is defeated, water's advantage on fire moves to tier 2
     // Grass then may win because its undefeated coverage is broader
-    const withoutDefeated = findBestSwap(team, fire1, true, [water, grass], [])
+    const withoutDefeated = findBestSwap(team, team[0], true, [w1, g1], [])
     const withFireDefeated = findBestSwap(
       team,
-      fire1,
+      team[0],
       true,
-      [water, grass],
+      [w1, g1],
       ['fire'],
     )
 
@@ -769,18 +759,13 @@ describe('minimax comparison', () => {
   })
 
   it('works when all gyms are defeated', () => {
-    const fire = member({ id: 'f1', types: ['fire'], moves: ['fire'] })
-    const team = [fire]
+    const team = [fire('f1')]
 
-    const water = member({
-      id: 'w1',
-      types: ['water'],
-      moves: ['water'],
-    })
+    const w1 = water('w1')
 
     // Undefeated array is empty → tier 1 ties at empty arrays
     // Falls through to tier 2 (all capped) which still differentiates
-    const result = findBestSwap(team, fire, true, [water], ALL_TYPES)
+    const result = findBestSwap(team, team[0], true, [w1], ALL_TYPES)
     expect(result).not.toBeNull()
     expect(result.candidate.id).toBe('w1')
   })
@@ -789,58 +774,36 @@ describe('minimax comparison', () => {
 describe('pinned gym priority', () => {
   it('findBestSwap prefers candidate that improves pinned gym score', () => {
     // Team weak to both fire and water
-    const normal = member({ id: 'n1', types: ['normal'] })
-    const team = [normal]
+    const n1 = normal('n1')
+    const team = [n1]
 
     // Water: helps vs fire (resist + SE) but hurts vs grass
-    const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
+    const w1 = water('w1')
     // Grass: helps vs water (resist + SE) but hurts vs fire
-    const grass = member({ id: 'g1', types: ['grass'], moves: ['grass'] })
-
-    // Without pin: algorithm picks based on overall worst-case
-    const noPinResult = findBestSwap(team, normal, true, [water, grass], [])
+    const g1 = grass('g1')
 
     // With fire pinned: should prefer water (resists fire + SE fire)
-    const firePinResult = findBestSwap(
-      team,
-      normal,
-      true,
-      [water, grass],
-      [],
-      'fire',
-    )
+    const firePinResult = findBestSwap(team, n1, true, [w1, g1], [], 'fire')
     expect(firePinResult.candidate.id).toBe('w1')
 
     // With water pinned: should prefer grass (resists water + SE water)
-    const waterPinResult = findBestSwap(
-      team,
-      normal,
-      true,
-      [water, grass],
-      [],
-      'water',
-    )
+    const waterPinResult = findBestSwap(team, n1, true, [w1, g1], [], 'water')
     expect(waterPinResult.candidate.id).toBe('g1')
   })
 
   it('findGlobalBestSwap prioritizes pinned gym', () => {
-    const fire1 = member({ id: 'f1', types: ['fire'], moves: ['fire'] })
-    const fire2 = member({ id: 'f2', types: ['fire'], moves: ['fire'] })
-    const team = [fire1, fire2]
+    const team = monoFireTeam(2)
 
-    const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
-    const ground = member({ id: 'gnd1', types: ['ground'], moves: ['ground'] })
+    const w1 = water('w1')
+    const gnd1 = ground('gnd1')
 
     // Pin water gym: water resists water gym, ground does not
-    const result = findGlobalBestSwap(team, [water, ground], [], 'water')
+    const result = findGlobalBestSwap(team, [w1, gnd1], [], 'water')
     expect(result.boxMember.id).toBe('w1')
   })
 
   it('calculateTypeSuggestionScore ranks pinned gym coverage higher', () => {
-    const team = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-    ])
+    const team = monoFireTeam(2)
 
     // Pin 'water' gym. Water type resists water. Ground does not.
     const waterPinned = calculateTypeSuggestionScore('water', team, [], 'water')
@@ -857,15 +820,8 @@ describe('pinned gym priority', () => {
   })
 
   it('pinned gym uses higher score cap than normal gyms', () => {
-    const team2 = [
-      member({ id: 'w1', types: ['water'], moves: ['water'] }),
-      member({ id: 'n1', types: ['normal'] }),
-    ]
-    const waterWithMove = member({
-      id: 'c1',
-      types: ['water'],
-      moves: ['water'],
-    })
+    const team2 = [water('w1'), normal('n1')]
+    const waterWithMove = water('c1')
     const waterNoMove = member({ id: 'c2', types: ['water'] })
 
     // With fire pinned: waterWithMove gives pinned fire score 4 vs waterNoMove gives 3
@@ -893,14 +849,11 @@ describe('pinned gym priority', () => {
   })
 
   it('falls back to normal algorithm when pinnedGym is null', () => {
-    const team = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-    ])
-    const water = member({ id: 'w1', types: ['water'], moves: ['water'] })
+    const team = monoFireTeam(2)
+    const w1 = water('w1')
 
-    const withNull = findBestSwap(team, team[0], true, [water], [], null)
-    const withoutParam = findBestSwap(team, team[0], true, [water], [])
+    const withNull = findBestSwap(team, team[0], true, [w1], [], null)
+    const withoutParam = findBestSwap(team, team[0], true, [w1], [])
 
     expect(withNull.improvement).toBe(withoutParam.improvement)
     expect(withNull.candidate.id).toBe(withoutParam.candidate.id)
@@ -917,16 +870,10 @@ describe('findGlobalBestSwap', () => {
   })
 
   it('finds the best team-box pair', () => {
-    const fire1 = member({ id: 'f1', types: ['fire'], moves: ['fire'] })
-    const fire2 = member({ id: 'f2', types: ['fire'], moves: ['fire'] })
-    const water = member({
-      id: 'w1',
-      types: ['water'],
-      moves: ['water'],
-    })
-    const team = [fire1, fire2]
+    const team = monoFireTeam(2)
+    const w1 = water('w1')
 
-    const result = findGlobalBestSwap(team, [water], [])
+    const result = findGlobalBestSwap(team, [w1], [])
     expect(result.teamMember).toBeDefined()
     expect(result.boxMember.id).toBe('w1')
     expect(result.improvement).toBeGreaterThan(0)
@@ -934,25 +881,13 @@ describe('findGlobalBestSwap', () => {
 
   it('uses minimax to pick swap that raises worst gym score', () => {
     // Team of 3 fire types — worst gyms are water/ground/rock (each -3)
-    const team = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-      { id: 'f3', types: ['fire'], moves: ['fire'] },
-    ])
+    const team = monoFireTeam(3)
     // Water resists fire's weakest gym (water) and is SE against it,
     // while ground shares the water weakness, compounding the worst case
-    const water = member({
-      id: 'w1',
-      types: ['water'],
-      moves: ['water'],
-    })
-    const ground = member({
-      id: 'gnd1',
-      types: ['ground'],
-      moves: ['ground', 'rock'],
-    })
+    const w1 = water('w1')
+    const gnd1 = ground('gnd1', ['ground', 'rock'])
 
-    const result = findGlobalBestSwap(team, [water, ground], [])
+    const result = findGlobalBestSwap(team, [w1, gnd1], [])
     // Water lifts the worst gym (water: -3 → -1) better than ground
     // because ground is also weak to water, leaving it at -3
     expect(result.boxMember.id).toBe('w1')
@@ -970,35 +905,21 @@ describe('calculateTypeSuggestionScore', () => {
   })
 
   it('returns positive for type that improves mono-fire team', () => {
-    const team = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-      { id: 'f3', types: ['fire'], moves: ['fire'] },
-    ])
+    const team = monoFireTeam(3)
     // Water resists fire's weaknesses and is SE against fire gym
     const score = calculateTypeSuggestionScore('water', team, [])
     expect(score).toBeGreaterThan(0)
   })
 
   it('returns non-positive when swapping same type into full mono team', () => {
-    const team = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-      { id: 'f3', types: ['fire'], moves: ['fire'] },
-      { id: 'f4', types: ['fire'], moves: ['fire'] },
-      { id: 'f5', types: ['fire'], moves: ['fire'] },
-      { id: 'f6', types: ['fire'], moves: ['fire'] },
-    ])
+    const team = monoFireTeam(6)
     // Swapping fire for fire (same type/move) should not improve
     const score = calculateTypeSuggestionScore('fire', team, [])
     expect(score).toBeLessThanOrEqual(0)
   })
 
   it('considers defeated gyms in scoring', () => {
-    const team = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-    ])
+    const team = monoFireTeam(2)
     const noDefeated = calculateTypeSuggestionScore('water', team, [])
     // With water gym defeated, water-type's advantage on that gym
     // moves to a lower-priority tier
@@ -1011,34 +932,20 @@ describe('calculateTypeSuggestionScore', () => {
   })
 
   it('ranks water higher than fire for mono-fire team', () => {
-    const team = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-    ])
+    const team = monoFireTeam(2)
     const waterScore = calculateTypeSuggestionScore('water', team, [])
     const fireScore = calculateTypeSuggestionScore('fire', team, [])
     expect(waterScore).toBeGreaterThan(fireScore)
   })
 
   it('appends hypothetical when team has fewer than 6', () => {
-    const team = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-      { id: 'f3', types: ['fire'], moves: ['fire'] },
-    ])
+    const team = monoFireTeam(3)
     const score = calculateTypeSuggestionScore('water', team, [])
     expect(score).toBeGreaterThan(0)
   })
 
   it('swaps hypothetical when team is full', () => {
-    const team = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-      { id: 'f3', types: ['fire'], moves: ['fire'] },
-      { id: 'f4', types: ['fire'], moves: ['fire'] },
-      { id: 'f5', types: ['fire'], moves: ['fire'] },
-      { id: 'f6', types: ['fire'], moves: ['fire'] },
-    ])
+    const team = monoFireTeam(6)
     const waterScore = calculateTypeSuggestionScore('water', team, [])
     expect(waterScore).toBeGreaterThan(0)
     const fireScore = calculateTypeSuggestionScore('fire', team, [])
@@ -1046,19 +953,8 @@ describe('calculateTypeSuggestionScore', () => {
   })
 
   it('both addition and swap produce positive scores for water on mono-fire', () => {
-    const smallTeam = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-      { id: 'f3', types: ['fire'], moves: ['fire'] },
-    ])
-    const fullTeam = mkTeam([
-      { id: 'f1', types: ['fire'], moves: ['fire'] },
-      { id: 'f2', types: ['fire'], moves: ['fire'] },
-      { id: 'f3', types: ['fire'], moves: ['fire'] },
-      { id: 'f4', types: ['fire'], moves: ['fire'] },
-      { id: 'f5', types: ['fire'], moves: ['fire'] },
-      { id: 'f6', types: ['fire'], moves: ['fire'] },
-    ])
+    const smallTeam = monoFireTeam(3)
+    const fullTeam = monoFireTeam(6)
     const addScore = calculateTypeSuggestionScore('water', smallTeam, [])
     const swapScore = calculateTypeSuggestionScore('water', fullTeam, [])
     expect(addScore).toBeGreaterThan(0)
@@ -1088,12 +984,7 @@ describe('integration scenarios', () => {
 
   describe('mono-type team weakness', () => {
     it('has very negative scores against fire weaknesses', () => {
-      const team = mkTeam([
-        { types: ['fire'], moves: ['fire'] },
-        { types: ['fire'], moves: ['fire'] },
-        { types: ['fire'], moves: ['fire'] },
-        { types: ['fire'], moves: ['fire'] },
-      ])
+      const team = monoFireTeam(4)
 
       expect(calculateScore('water', team)).toBeLessThanOrEqual(-4)
       expect(calculateScore('ground', team)).toBeLessThanOrEqual(-4)
@@ -1101,18 +992,14 @@ describe('integration scenarios', () => {
     })
 
     it('findBestSwap suggests replacing fire-type with water-type', () => {
-      const fire1 = member({ id: 'f1', types: ['fire'], moves: ['fire'] })
-      const fire2 = member({ id: 'f2', types: ['fire'], moves: ['fire'] })
-      const fire3 = member({ id: 'f3', types: ['fire'], moves: ['fire'] })
-      const fire4 = member({ id: 'f4', types: ['fire'], moves: ['fire'] })
-      const water = member({
+      const team = monoFireTeam(4)
+      const w1 = member({
         id: 'w1',
         types: ['water'],
         moves: ['water', 'ice', 'ground'],
       })
 
-      const team = [fire1, fire2, fire3, fire4]
-      const result = findBestSwap(team, fire1, true, [water], [])
+      const result = findBestSwap(team, team[0], true, [w1], [])
 
       expect(result.candidate.id).toBe('w1')
       expect(result.improvement).toBeGreaterThan(0)
