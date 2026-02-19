@@ -135,26 +135,11 @@ export function calculateScoreChanges(team, draftMember) {
   }).filter((c) => c.diff !== 0)
 }
 
-const SUGGESTION_THRESHOLD = 2
-const SUGGESTION_POWER = 1.25
+const SCORE_CAP = 3
+const PINNED_SCORE_CAP = 4
 
-function urgency(score) {
-  return score >= SUGGESTION_THRESHOLD
-    ? 0
-    : (SUGGESTION_THRESHOLD - score) ** SUGGESTION_POWER
-}
-
-export function calculateUrgency(team, gymTypes) {
-  let total = 0
-  for (const type of gymTypes) {
-    total += urgency(calculateScore(type, team))
-  }
-  return total
-}
-
-const SCORE_CAP = 2
-
-function teamScoreProfile(team, defeatedGyms) {
+function teamScoreProfile(team, defeatedGyms, pinnedGym = null) {
+  const pinnedScore = []
   const undefeatedScores = []
   const allCapped = []
   const allUncapped = []
@@ -162,6 +147,9 @@ function teamScoreProfile(team, defeatedGyms) {
   for (const type of ALL_TYPES) {
     const raw = calculateScore(type, team)
     const capped = Math.min(raw, SCORE_CAP)
+    if (type === pinnedGym) {
+      pinnedScore.push(Math.min(raw, PINNED_SCORE_CAP))
+    }
     if (!defeatedGyms.includes(type)) {
       undefeatedScores.push(capped)
     }
@@ -173,7 +161,7 @@ function teamScoreProfile(team, defeatedGyms) {
   allCapped.sort((a, b) => a - b)
   allUncapped.sort((a, b) => a - b)
 
-  return { undefeatedScores, allCapped, allUncapped }
+  return { pinnedScore, undefeatedScores, allCapped, allUncapped }
 }
 
 function compareArrays(a, b) {
@@ -185,6 +173,8 @@ function compareArrays(a, b) {
 }
 
 function compareProfiles(a, b) {
+  const c0 = compareArrays(a.pinnedScore, b.pinnedScore)
+  if (c0 !== 0) return c0
   const c1 = compareArrays(a.undefeatedScores, b.undefeatedScores)
   if (c1 !== 0) return c1
   const c2 = compareArrays(a.allCapped, b.allCapped)
@@ -198,10 +188,11 @@ export function findBestSwap(
   isTeamMember,
   pool,
   defeatedGyms,
+  pinnedGym = null,
 ) {
   if (pool.length === 0) return null
 
-  const currentProfile = teamScoreProfile(team, defeatedGyms)
+  const currentProfile = teamScoreProfile(team, defeatedGyms, pinnedGym)
 
   let best = null
   let bestProfile = null
@@ -214,7 +205,7 @@ export function findBestSwap(
       newTeam = team.map((p) => (p.id === candidate.id ? editingMember : p))
     }
 
-    const profile = teamScoreProfile(newTeam, defeatedGyms)
+    const profile = teamScoreProfile(newTeam, defeatedGyms, pinnedGym)
 
     if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
       bestProfile = profile
@@ -226,15 +217,15 @@ export function findBestSwap(
   return { candidate: best, improvement }
 }
 
-export function findGlobalBestSwap(team, box, defeatedGyms) {
+export function findGlobalBestSwap(team, box, defeatedGyms, pinnedGym = null) {
   if (team.length === 0 || box.length === 0) return null
-  const currentProfile = teamScoreProfile(team, defeatedGyms)
+  const currentProfile = teamScoreProfile(team, defeatedGyms, pinnedGym)
   let best = null
   let bestProfile = null
   for (const teamMember of team) {
     for (const boxMember of box) {
       const newTeam = team.map((p) => (p.id === teamMember.id ? boxMember : p))
-      const profile = teamScoreProfile(newTeam, defeatedGyms)
+      const profile = teamScoreProfile(newTeam, defeatedGyms, pinnedGym)
       if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
         bestProfile = profile
         best = { teamMember, boxMember }
@@ -245,40 +236,12 @@ export function findGlobalBestSwap(team, box, defeatedGyms) {
   return { ...best, improvement }
 }
 
-export function suggestTypes(team, defeatedGyms) {
-  const undefeated = ALL_TYPES.filter((t) => !defeatedGyms.includes(t))
-  const defeated = ALL_TYPES.filter((t) => defeatedGyms.includes(t))
-
-  const currentUndefeated = calculateUrgency(team, undefeated)
-  const currentDefeated = calculateUrgency(team, defeated)
-
-  return ALL_TYPES.map((type) => {
-    const hypothetical = {
-      id: `hypothetical-${type}`,
-      types: [type],
-      moves: [type],
-      ability: null,
-      berry: null,
-      specialMove: null,
-      megaTypes: [],
-    }
-    const newTeam = [...team, hypothetical]
-    const newUndefeated = calculateUrgency(newTeam, undefeated)
-    const newDefeated = calculateUrgency(newTeam, defeated)
-
-    return {
-      type,
-      undefeatedImprovement: currentUndefeated - newUndefeated,
-      defeatedImprovement: currentDefeated - newDefeated,
-    }
-  }).sort((a, b) => {
-    if (a.undefeatedImprovement !== b.undefeatedImprovement)
-      return b.undefeatedImprovement - a.undefeatedImprovement
-    return b.defeatedImprovement - a.defeatedImprovement
-  })
-}
-
-export function calculateTypeSuggestionScore(gymType, team, defeatedGyms) {
+export function calculateTypeSuggestionScore(
+  gymType,
+  team,
+  defeatedGyms,
+  pinnedGym = null,
+) {
   if (team.length === 0) return 0
 
   const hypothetical = {
@@ -291,14 +254,24 @@ export function calculateTypeSuggestionScore(gymType, team, defeatedGyms) {
     megaTypes: [],
   }
 
-  const currentProfile = teamScoreProfile(team, defeatedGyms)
+  const currentProfile = teamScoreProfile(team, defeatedGyms, pinnedGym)
   let bestProfile = null
 
-  for (const teamMember of team) {
-    const newTeam = team.map((p) => (p.id === teamMember.id ? hypothetical : p))
-    const profile = teamScoreProfile(newTeam, defeatedGyms)
-    if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
-      bestProfile = profile
+  if (team.length < 6) {
+    bestProfile = teamScoreProfile(
+      [...team, hypothetical],
+      defeatedGyms,
+      pinnedGym,
+    )
+  } else {
+    for (const teamMember of team) {
+      const newTeam = team.map((p) =>
+        p.id === teamMember.id ? hypothetical : p,
+      )
+      const profile = teamScoreProfile(newTeam, defeatedGyms, pinnedGym)
+      if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
+        bestProfile = profile
+      }
     }
   }
 
