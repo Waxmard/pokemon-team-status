@@ -244,11 +244,17 @@ export function calculateTypeSuggestionScore(gymType, team, defeatedGyms) {
   const currentProfile = teamScoreProfile(team, defeatedGyms)
   let bestProfile = null
 
-  for (const teamMember of team) {
-    const newTeam = team.map((p) => (p.id === teamMember.id ? hypothetical : p))
-    const profile = teamScoreProfile(newTeam, defeatedGyms)
-    if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
-      bestProfile = profile
+  if (team.length < 6) {
+    bestProfile = teamScoreProfile([...team, hypothetical], defeatedGyms)
+  } else {
+    for (const teamMember of team) {
+      const newTeam = team.map((p) =>
+        p.id === teamMember.id ? hypothetical : p,
+      )
+      const profile = teamScoreProfile(newTeam, defeatedGyms)
+      if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
+        bestProfile = profile
+      }
     }
   }
 

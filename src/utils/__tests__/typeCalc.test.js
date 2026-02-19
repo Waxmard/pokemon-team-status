@@ -841,7 +841,7 @@ describe('findGlobalBestSwap', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Layer 4c: calculateTypeSuggestionScore - per-type swap suggestion
+// Layer 4c: calculateTypeSuggestionScore - per-type suggestion
 // ---------------------------------------------------------------------------
 
 describe('calculateTypeSuggestionScore', () => {
@@ -860,8 +860,15 @@ describe('calculateTypeSuggestionScore', () => {
     expect(score).toBeGreaterThan(0)
   })
 
-  it('returns non-positive when swapping same type into mono team', () => {
-    const team = mkTeam([{ id: 'f1', types: ['fire'], moves: ['fire'] }])
+  it('returns non-positive when swapping same type into full mono team', () => {
+    const team = mkTeam([
+      { id: 'f1', types: ['fire'], moves: ['fire'] },
+      { id: 'f2', types: ['fire'], moves: ['fire'] },
+      { id: 'f3', types: ['fire'], moves: ['fire'] },
+      { id: 'f4', types: ['fire'], moves: ['fire'] },
+      { id: 'f5', types: ['fire'], moves: ['fire'] },
+      { id: 'f6', types: ['fire'], moves: ['fire'] },
+    ])
     // Swapping fire for fire (same type/move) should not improve
     const score = calculateTypeSuggestionScore('fire', team, [])
     expect(score).toBeLessThanOrEqual(0)
@@ -891,6 +898,51 @@ describe('calculateTypeSuggestionScore', () => {
     const waterScore = calculateTypeSuggestionScore('water', team, [])
     const fireScore = calculateTypeSuggestionScore('fire', team, [])
     expect(waterScore).toBeGreaterThan(fireScore)
+  })
+
+  it('appends hypothetical when team has fewer than 6', () => {
+    const team = mkTeam([
+      { id: 'f1', types: ['fire'], moves: ['fire'] },
+      { id: 'f2', types: ['fire'], moves: ['fire'] },
+      { id: 'f3', types: ['fire'], moves: ['fire'] },
+    ])
+    const score = calculateTypeSuggestionScore('water', team, [])
+    expect(score).toBeGreaterThan(0)
+  })
+
+  it('swaps hypothetical when team is full', () => {
+    const team = mkTeam([
+      { id: 'f1', types: ['fire'], moves: ['fire'] },
+      { id: 'f2', types: ['fire'], moves: ['fire'] },
+      { id: 'f3', types: ['fire'], moves: ['fire'] },
+      { id: 'f4', types: ['fire'], moves: ['fire'] },
+      { id: 'f5', types: ['fire'], moves: ['fire'] },
+      { id: 'f6', types: ['fire'], moves: ['fire'] },
+    ])
+    const waterScore = calculateTypeSuggestionScore('water', team, [])
+    expect(waterScore).toBeGreaterThan(0)
+    const fireScore = calculateTypeSuggestionScore('fire', team, [])
+    expect(waterScore).toBeGreaterThan(fireScore)
+  })
+
+  it('both addition and swap produce positive scores for water on mono-fire', () => {
+    const smallTeam = mkTeam([
+      { id: 'f1', types: ['fire'], moves: ['fire'] },
+      { id: 'f2', types: ['fire'], moves: ['fire'] },
+      { id: 'f3', types: ['fire'], moves: ['fire'] },
+    ])
+    const fullTeam = mkTeam([
+      { id: 'f1', types: ['fire'], moves: ['fire'] },
+      { id: 'f2', types: ['fire'], moves: ['fire'] },
+      { id: 'f3', types: ['fire'], moves: ['fire'] },
+      { id: 'f4', types: ['fire'], moves: ['fire'] },
+      { id: 'f5', types: ['fire'], moves: ['fire'] },
+      { id: 'f6', types: ['fire'], moves: ['fire'] },
+    ])
+    const addScore = calculateTypeSuggestionScore('water', smallTeam, [])
+    const swapScore = calculateTypeSuggestionScore('water', fullTeam, [])
+    expect(addScore).toBeGreaterThan(0)
+    expect(swapScore).toBeGreaterThan(0)
   })
 })
 
