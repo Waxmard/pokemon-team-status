@@ -136,7 +136,6 @@ export function calculateScoreChanges(team, draftMember) {
 }
 
 const SCORE_CAP = 3
-const PINNED_SCORE_CAP = 4
 
 function teamScoreProfile(team, defeatedGyms, pinnedGym = null) {
   const pinnedScore = []
@@ -148,7 +147,7 @@ function teamScoreProfile(team, defeatedGyms, pinnedGym = null) {
     const raw = calculateScore(type, team)
     const capped = Math.min(raw, SCORE_CAP)
     if (type === pinnedGym) {
-      pinnedScore.push(Math.min(raw, PINNED_SCORE_CAP))
+      pinnedScore.push(raw)
     }
     if (!defeatedGyms.includes(type)) {
       undefeatedScores.push(capped)
