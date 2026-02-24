@@ -19,6 +19,7 @@ export const ABILITIES = {
   Drought: { resistance: ['water'] },
   Drizzle: { resistance: ['fire'] },
   'Misty Surge': { resistance: ['dragon'] },
+  'Grassy Surge': { resistance: ['ground'] },
   'Orichalcum Pulse': { resistance: ['water'] },
   'Desolate Land': { immunity: ['water'] },
   'Primordial Sea': { immunity: ['fire'] },

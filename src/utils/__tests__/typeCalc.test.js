@@ -819,12 +819,12 @@ describe('pinned gym priority', () => {
     expect(waterPinned).toBeGreaterThan(groundPinned)
   })
 
-  it('pinned gym uses higher score cap than normal gyms', () => {
+  it('pinned gym uses uncapped score', () => {
     const team2 = [water('w1'), normal('n1')]
     const waterWithMove = water('c1')
     const waterNoMove = member({ id: 'c2', types: ['water'] })
 
-    // With fire pinned: waterWithMove gives pinned fire score 4 vs waterNoMove gives 3
+    // With fire pinned: waterWithMove gets the raw uncapped fire score vs waterNoMove
     const pinnedResult = findBestSwap(
       team2,
       team2[1],
@@ -835,8 +835,7 @@ describe('pinned gym priority', () => {
     )
     expect(pinnedResult.candidate.id).toBe('c1')
 
-    // Without pin: both cap fire at 3, so they may tie on that gym
-    // (difference resolved by other gyms or uncapped tier)
+    // Without pin: both cap fire at SCORE_CAP (3), so they tie on that gym
     const unpinnedResult = findBestSwap(
       team2,
       team2[1],
@@ -844,7 +843,7 @@ describe('pinned gym priority', () => {
       [waterWithMove, waterNoMove],
       [],
     )
-    // waterWithMove still wins (via uncapped) but the key point is the pinned test above
+    // waterWithMove still wins via other gym scores
     expect(unpinnedResult.candidate.id).toBe('c1')
   })
 
