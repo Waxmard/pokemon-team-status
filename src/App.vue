@@ -103,8 +103,8 @@ function toggleGenerationRules() {
 
 const generationRulesLabel = computed(() => {
   return generationRules.value === GENERATION_RULESETS.PRE_GEN_6
-    ? 'Generation Rules: Pre-Gen 6'
-    : 'Generation Rules: Post-Gen 6'
+    ? 'Using Pre-Gen 6 Rules'
+    : 'Using Post-Gen 6 Rules'
 })
 
 const activeTypes = computed(() => getAllTypesForRules(generationRules.value))
@@ -694,16 +694,21 @@ onMounted(() => {
   background: transparent;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  -webkit-appearance: none;
+  appearance: none;
   padding: var(--space-2) var(--space-4);
   font-size: 0.95rem;
   color: var(--color-text-primary);
   cursor: pointer;
   transition: background var(--transition-base), border-color var(--transition-base);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.reset-option:hover {
-  background: var(--color-surface-light);
-  border-color: var(--color-text-muted);
+.reset-option:focus,
+.reset-option:focus-visible,
+.reset-option:active {
+  background: transparent;
+  outline: none;
 }
 
 .reset-option-danger {
@@ -711,9 +716,16 @@ onMounted(() => {
   border-color: var(--color-danger);
 }
 
-.reset-option-danger:hover {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: var(--color-danger);
+@media (hover: hover) and (pointer: fine) {
+  .reset-option:hover {
+    background: var(--color-surface-light);
+    border-color: var(--color-text-muted);
+  }
+
+  .reset-option-danger:hover {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: var(--color-danger);
+  }
 }
 
 .reset-dialog-cancel {
