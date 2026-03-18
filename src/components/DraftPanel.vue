@@ -76,7 +76,7 @@
         </div>
 
         <!-- Step: Pokemon -->
-        <div v-if="wizardStep === 'pokemon'" class="wizard-step">
+        <div v-if="wizardStep === 'pokemon'" class="wizard-step pokemon-step">
           <n-auto-complete
             ref="pokemonInputRef"
             v-model:value="searchQuery"
@@ -96,6 +96,17 @@
             >
               ⇄
             </button>
+            <div v-if="previewTypes.length" class="preview-type-list">
+              <span
+                v-for="(type, index) in previewTypes"
+                :key="type"
+                class="preview-type-label"
+              >
+                <span :style="getTypeTextColor(type)">
+                  {{ capitalize(type) }}<span v-if="index < previewTypes.length - 1">,</span>
+                </span>
+              </span>
+            </div>
             <SpriteImg
               v-if="selectedSpriteUrl"
               :src="selectedSpriteUrl"
@@ -393,6 +404,14 @@ const effectiveDraftPokemon = computed(() => {
   )
 })
 
+const previewTypes = computed(() => {
+  if (draftAction.value?.megaTypes?.length) {
+    return draftAction.value.megaTypes
+  }
+
+  return effectiveDraftPokemon.value?.types || []
+})
+
 // Initialize form state when draftAction changes
 watch(
   draftAction,
@@ -609,6 +628,33 @@ function getTypeBackground(type, selected = false) {
   return {
     background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacityEnd)} 100%)`,
   }
+}
+
+function getTypeTextColor(type) {
+  return {
+    color: PREVIEW_TYPE_COLORS[type] || TYPE_COLORS[type].bg,
+  }
+}
+
+const PREVIEW_TYPE_COLORS = {
+  normal: '#7d7d4f',
+  fire: '#d94708',
+  water: '#2d6fe6',
+  electric: '#c79600',
+  grass: '#3f9f2a',
+  ice: '#2d9fb0',
+  fighting: '#9f1f19',
+  poison: '#812c98',
+  ground: '#b88a1c',
+  flying: '#6c63db',
+  psychic: '#e03274',
+  bug: '#7d9100',
+  rock: '#90761c',
+  ghost: '#53408c',
+  dragon: '#4c16d1',
+  dark: '#4c3b30',
+  steel: '#7b86a8',
+  fairy: '#d75f85',
 }
 
 // Wizard-related computed properties
@@ -835,7 +881,7 @@ function onSearchInput(value) {
   flex: 1;
   min-height: 300px;
   max-height: 400px;
-  padding-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
 }
 
 .wizard-actions-fixed {
@@ -888,6 +934,11 @@ function onSearchInput(value) {
   flex: 1;
   overflow-x: hidden;
   overflow-y: auto;
+  padding-bottom: var(--space-4);
+}
+
+.pokemon-step {
+  overflow: visible;
 }
 
 .wizard-header {
@@ -1096,6 +1147,7 @@ function onSearchInput(value) {
   align-items: center;
   justify-content: center;
   margin: var(--space-4) 0;
+  overflow: visible;
 }
 
 .variant-btn {
@@ -1118,6 +1170,30 @@ function onSearchInput(value) {
 
 .variant-btn.active {
   color: rgba(139, 92, 246, 1);
+}
+
+.preview-type-list {
+  position: absolute;
+  bottom: -2rem;
+  left: var(--space-3);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.14rem;
+  padding-bottom: 0.2rem;
+  overflow: visible;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.preview-type-label {
+  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.28;
+  opacity: 0.92;
 }
 
 .evolve-btn {
