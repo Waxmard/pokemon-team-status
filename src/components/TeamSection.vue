@@ -99,7 +99,8 @@
 import { computed, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { useLongPress } from '../composables/useLongPress.js'
-import { POKEMON_DATA } from '../data/pokemon.js'
+import { useStorage } from '../composables/useStorage.js'
+import { getPokemonDataForRules } from '../data/pokemon.js'
 import { getMegaSpriteUrl, getSpriteUrl } from '../utils/pokemon.js'
 import DraftPanel from './DraftPanel.vue'
 import SpriteImg from './SpriteImg.vue'
@@ -137,6 +138,12 @@ const {
   exitSwapMode,
   cancel,
 } = useDraftAction()
+
+const { generationRules } = useStorage()
+
+function getRulesetPokemonData(name) {
+  return getPokemonDataForRules(name, generationRules.value)
+}
 
 // Sprite URL for the pokemon "in hand" during swap mode
 const swapPokemonSpriteUrl = computed(() => {
@@ -259,7 +266,7 @@ const isEditing = computed(() => {
 function handleEditPokemon(id) {
   const pokemon = props.team.find((p) => p.id === id)
   if (!pokemon) return
-  const pokemonData = POKEMON_DATA.find((p) => p.name === pokemon.name)
+  const pokemonData = getRulesetPokemonData(pokemon.name)
   startEdit(id, {
     pokemonData,
     ability: pokemon.ability,
@@ -276,7 +283,7 @@ function handleEditPokemon(id) {
 function handleEditBoxPokemon(boxPokemonId) {
   const pokemon = props.box.find((p) => p.id === boxPokemonId)
   if (!pokemon) return
-  const pokemonData = POKEMON_DATA.find((p) => p.name === pokemon.name)
+  const pokemonData = getRulesetPokemonData(pokemon.name)
   startEditBox({
     id: boxPokemonId,
     pokemonData,

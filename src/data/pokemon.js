@@ -1,3 +1,5 @@
+import { DEFAULT_GENERATION_RULESET, GENERATION_RULESETS } from './types.js'
+
 // Pokemon data (Gen 1-7)
 export const POKEMON_DATA = [
   { name: 'Bulbasaur', types: ['grass', 'poison'], evolvesTo: 'Ivysaur' },
@@ -1557,3 +1559,71 @@ export const POKEMON_DATA = [
   { name: 'Hisuian Avalugg', types: ['ice', 'rock'], spriteId: 10243 },
   { name: 'Hisuian Decidueye', types: ['grass', 'fighting'], spriteId: 10244 },
 ]
+
+export const PRE_GEN_6_TYPE_OVERRIDES = {
+  Clefairy: ['normal'],
+  Clefable: ['normal'],
+  Jigglypuff: ['normal'],
+  Wigglytuff: ['normal'],
+  'Mr. Mime': ['psychic'],
+  Cleffa: ['normal'],
+  Igglybuff: ['normal'],
+  Togepi: ['normal'],
+  Togetic: ['normal', 'flying'],
+  Marill: ['water'],
+  Azumarill: ['water'],
+  Snubbull: ['normal'],
+  Granbull: ['normal'],
+  Ralts: ['psychic'],
+  Kirlia: ['psychic'],
+  Gardevoir: ['psychic'],
+  Azurill: ['normal'],
+  Mawile: ['steel'],
+  'Mime Jr.': ['psychic'],
+  Togekiss: ['normal', 'flying'],
+  Cottonee: ['grass'],
+  Whimsicott: ['grass'],
+}
+
+const POKEMON_BY_NAME = new Map(
+  POKEMON_DATA.map((pokemon) => [pokemon.name, pokemon]),
+)
+
+export function getPokemonByName(name) {
+  return POKEMON_BY_NAME.get(name) ?? null
+}
+
+export function getPokemonTypesForRules(
+  pokemonName,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
+  const pokemon = getPokemonByName(pokemonName)
+  if (!pokemon) return []
+
+  if (ruleset === GENERATION_RULESETS.PRE_GEN_6) {
+    if (PRE_GEN_6_TYPE_OVERRIDES[pokemonName]) {
+      return PRE_GEN_6_TYPE_OVERRIDES[pokemonName]
+    }
+
+    const nonFairyTypes = pokemon.types.filter((type) => type !== 'fairy')
+    return nonFairyTypes.length > 0 ? nonFairyTypes : ['normal']
+  }
+
+  return pokemon.types
+}
+
+export function getPokemonDataForRules(
+  pokemonName,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
+  const pokemon = getPokemonByName(pokemonName)
+  if (!pokemon) return null
+
+  const types = getPokemonTypesForRules(pokemonName, ruleset)
+  if (types === pokemon.types) return pokemon
+
+  return {
+    ...pokemon,
+    types,
+  }
+}

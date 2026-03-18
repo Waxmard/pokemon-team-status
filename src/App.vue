@@ -9,37 +9,25 @@
         <span class="title-accent">Weakness Calculator</span>
       </h1>
 
-      <TeamSection
-        :team="team"
-        :box="box"
-        @confirmDraft="confirmDraft"
-        @immediateSwap="handleImmediateSwap"
-        @deleteTeamPokemon="deleteTeamPokemon"
-        @deleteBoxPokemon="deleteBoxPokemon"
-        @cancelSwap="handleCancelSwap"
-        @deletePokemon="handleDeleteFromDraft"
-        @swapSuggestion="handleSwapSuggestion"
-      />
+      <TeamSection :team="team" :box="box" @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap"
+        @deleteTeamPokemon="deleteTeamPokemon" @deleteBoxPokemon="deleteBoxPokemon" @cancelSwap="handleCancelSwap"
+        @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion" />
 
-      <GymColumns
-        :remainingGyms="remainingGyms"
-        :defeatedGymsList="defeatedGymsList"
-        :draftActive="hasDraft"
-        @defeatGym="defeatGym"
-        @undefeatGym="undefeatGym"
-        @swapSuggestion="handleSwapSuggestion"
-      />
+      <GymColumns :remainingGyms="remainingGyms" :defeatedGymsList="defeatedGymsList" :draftActive="hasDraft"
+        @defeatGym="defeatGym" @undefeatGym="undefeatGym" @swapSuggestion="handleSwapSuggestion" />
     </div>
   </n-config-provider>
 
   <Teleport to="body">
     <div v-if="showResetDialog" class="reset-overlay" @click.self="showResetDialog = false">
       <div class="reset-dialog">
-        <h3 class="reset-dialog-title">Reset</h3>
+        <h3 class="reset-dialog-title">Options</h3>
         <div class="reset-dialog-options">
-          <button class="reset-option" @click="resetPokemon">Team & Box</button>
-          <button class="reset-option" @click="resetGyms">Gyms</button>
-          <button class="reset-option reset-option-danger" @click="resetAll">Everything</button>
+          <button class="reset-option" @click="toggleGenerationRules">
+            {{ generationRulesLabel }}
+          </button>
+          <button class="reset-option" @click="resetPokemon">Reset Team & Box</button>
+          <button class="reset-option" @click="resetGyms">Reset Gyms</button>
         </div>
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
       </div>
@@ -54,9 +42,13 @@ import GymColumns from './components/GymColumns.vue'
 import TeamSection from './components/TeamSection.vue'
 import { useDraftAction } from './composables/useDraftAction.js'
 import { useStorage } from './composables/useStorage.js'
-import { POKEMON_DATA } from './data/pokemon.js'
-import { ALL_TYPES } from './data/types.js'
+import { getPokemonDataForRules } from './data/pokemon.js'
+import { GENERATION_RULESETS, getAllTypesForRules } from './data/types.js'
 import { themeOverrides } from './theme/colors.js'
+import {
+  sanitizeDraftActionForRules,
+  sanitizePokemonCollectionForRules,
+} from './utils/generationRules.js'
 import { buildPokemonMember, generatePokemonId } from './utils/pokemon.js'
 import { calculateBerryTiebreaker, calculateScore } from './utils/typeCalc.js'
 
@@ -69,6 +61,8 @@ const {
   persistTeam,
   persistDefeatedGyms,
   persistBox,
+  generationRules,
+  persistGenerationRules,
 } = useStorage()
 
 const {
@@ -98,12 +92,25 @@ function resetGyms() {
   showResetDialog.value = false
 }
 
-function resetAll() {
-  persistTeam([])
-  persistBox([])
-  persistDefeatedGyms([])
-  cancel()
-  showResetDialog.value = false
+function toggleGenerationRules() {
+  const nextRuleset =
+    generationRules.value === GENERATION_RULESETS.PRE_GEN_6
+      ? GENERATION_RULESETS.POST_GEN_6
+      : GENERATION_RULESETS.PRE_GEN_6
+
+  persistGenerationRules(nextRuleset)
+}
+
+const generationRulesLabel = computed(() => {
+  return generationRules.value === GENERATION_RULESETS.PRE_GEN_6
+    ? 'Using Pre-Gen 6 Rules'
+    : 'Using Post-Gen 6 Rules'
+})
+
+const activeTypes = computed(() => getAllTypesForRules(generationRules.value))
+
+function getRulesetPokemonData(name) {
+  return getPokemonDataForRules(name, generationRules.value)
 }
 
 // Store original state when swap mode starts
@@ -123,10 +130,39 @@ watch(swapMode, (isSwapMode) => {
   }
 })
 
+watch(generationRules, (ruleset) => {
+  if (draftAction.value) {
+    draftAction.value = sanitizeDraftActionForRules(draftAction.value, ruleset)
+  }
+
+  if (swapOriginalState.value) {
+    swapOriginalState.value = {
+      team: sanitizePokemonCollectionForRules(
+        swapOriginalState.value.team,
+        ruleset,
+      ),
+      box: sanitizePokemonCollectionForRules(
+        swapOriginalState.value.box,
+        ruleset,
+      ),
+    }
+  }
+})
+
 function handleCancelSwap() {
   if (swapOriginalState.value) {
-    persistTeam(swapOriginalState.value.team)
-    persistBox(swapOriginalState.value.box)
+    persistTeam(
+      sanitizePokemonCollectionForRules(
+        swapOriginalState.value.team,
+        generationRules.value,
+      ),
+    )
+    persistBox(
+      sanitizePokemonCollectionForRules(
+        swapOriginalState.value.box,
+        generationRules.value,
+      ),
+    )
   }
   exitSwapMode()
 }
@@ -179,10 +215,14 @@ const hasDraft = computed(() => {
 const allGymScores = computed(() => {
   const effectiveTeam = hasDraft.value ? getDraftTeam() : team.value
 
-  return ALL_TYPES.map((type) => ({
+  return activeTypes.value.map((type) => ({
     type,
-    score: calculateScore(type, effectiveTeam),
-    berryCount: calculateBerryTiebreaker(type, effectiveTeam),
+    score: calculateScore(type, effectiveTeam, generationRules.value),
+    berryCount: calculateBerryTiebreaker(
+      type,
+      effectiveTeam,
+      generationRules.value,
+    ),
   }))
 })
 
@@ -232,9 +272,7 @@ function handleImmediateSwap(targetId) {
     const targetPokemon = team.value.find((p) => p.id === targetId)
     if (!targetPokemon) return
 
-    const replacedPokemonData = POKEMON_DATA.find(
-      (p) => p.name === targetPokemon.name,
-    )
+    const replacedPokemonData = getRulesetPokemonData(targetPokemon.name)
 
     // Place in-hand pokemon in team slot
     const newTeam = team.value.map((p) =>
@@ -283,9 +321,7 @@ function handleImmediateSwap(targetId) {
       const targetPokemon = box.value.find((p) => p.id === targetId)
       if (!targetPokemon) return
 
-      const replacedPokemonData = POKEMON_DATA.find(
-        (p) => p.name === targetPokemon.name,
-      )
+      const replacedPokemonData = getRulesetPokemonData(targetPokemon.name)
 
       // Place in-hand pokemon in box slot
       const newBox = box.value.map((p) =>
@@ -341,7 +377,7 @@ function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
     persistBox(box.value.map((p) => (p.id === candidateId ? newBoxMember : p)))
 
     // Set A as "in hand" box Pokemon for chain swapping
-    const pokemonData = POKEMON_DATA.find((p) => p.name === teamPokemon.name)
+    const pokemonData = getRulesetPokemonData(teamPokemon.name)
     draftAction.value = {
       type: 'edit',
       isBoxPokemon: true,
@@ -583,30 +619,30 @@ onMounted(() => {
     max-width: 100%;
   }
 
-.load-error-banner {
-  background: var(--color-danger);
-  color: white;
-  text-align: center;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-lg);
-  margin-bottom: var(--space-4);
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  animation: fadeIn var(--transition-base) ease forwards;
-}
+  .load-error-banner {
+    background: var(--color-danger);
+    color: white;
+    text-align: center;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-4);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    animation: fadeIn var(--transition-base) ease forwards;
+  }
 
-.app-title {
+  .app-title {
     flex: 0 0 100%;
     margin-bottom: var(--space-2);
   }
 
-  .app-container > :nth-child(3) {
+  .app-container> :nth-child(3) {
     flex: 1;
     min-width: 0;
   }
 
-  .app-container > :nth-child(4) {
+  .app-container> :nth-child(4) {
     flex: 1;
     min-width: 0;
   }
@@ -658,16 +694,21 @@ onMounted(() => {
   background: transparent;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  -webkit-appearance: none;
+  appearance: none;
   padding: var(--space-2) var(--space-4);
   font-size: 0.95rem;
   color: var(--color-text-primary);
   cursor: pointer;
   transition: background var(--transition-base), border-color var(--transition-base);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.reset-option:hover {
-  background: var(--color-surface-light);
-  border-color: var(--color-text-muted);
+.reset-option:focus,
+.reset-option:focus-visible,
+.reset-option:active {
+  background: transparent;
+  outline: none;
 }
 
 .reset-option-danger {
@@ -675,9 +716,16 @@ onMounted(() => {
   border-color: var(--color-danger);
 }
 
-.reset-option-danger:hover {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: var(--color-danger);
+@media (hover: hover) and (pointer: fine) {
+  .reset-option:hover {
+    background: var(--color-surface-light);
+    border-color: var(--color-text-muted);
+  }
+
+  .reset-option-danger:hover {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: var(--color-danger);
+  }
 }
 
 .reset-dialog-cancel {
