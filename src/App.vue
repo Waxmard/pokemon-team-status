@@ -523,8 +523,8 @@ function confirmDraft() {
         team.value.map((p) =>
           p.id === draftAction.value.editId
             ? buildPokemonMember(draftAction.value, {
-              id: draftAction.value.editId,
-            })
+                id: draftAction.value.editId,
+              })
             : p,
         ),
       )

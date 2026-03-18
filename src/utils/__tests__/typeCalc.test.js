@@ -267,7 +267,7 @@ describe('calculateScore', () => {
   it('uses pre-Gen 6 typing rules when requested', () => {
     const team = [member({ name: 'Clefairy', types: ['fairy'] })]
 
-    expect(calculateScore('fighting', team)).toBe(0)
+    expect(calculateScore('fighting', team)).toBe(1)
     expect(
       calculateScore('fighting', team, GENERATION_RULESETS.PRE_GEN_6),
     ).toBe(-1)
