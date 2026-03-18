@@ -1,3 +1,5 @@
+import { DEFAULT_GENERATION_RULESET, GENERATION_RULESETS } from './types.js'
+
 // Mega evolution data with types and PokeAPI sprite IDs
 export const MEGA_EVOLUTIONS = {
   Venusaur: [
@@ -75,10 +77,21 @@ export const MEGA_EVOLUTIONS = {
   Diancie: [{ form: 'mega', types: ['rock', 'fairy'], spriteId: 10075 }],
 }
 
-export function getMegaOptions(pokemonName) {
+export function getMegaEvolution(pokemonName, form) {
+  return (MEGA_EVOLUTIONS[pokemonName] || []).find((mega) => mega.form === form)
+}
+
+export function getMegaOptions(
+  pokemonName,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
+  if (ruleset === GENERATION_RULESETS.PRE_GEN_6) return []
   return MEGA_EVOLUTIONS[pokemonName] || []
 }
 
-export function hasMegaEvolution(pokemonName) {
-  return !!MEGA_EVOLUTIONS[pokemonName]
+export function hasMegaEvolution(
+  pokemonName,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
+  return getMegaOptions(pokemonName, ruleset).length > 0
 }

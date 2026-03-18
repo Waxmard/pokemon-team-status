@@ -65,9 +65,11 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useStorage } from '../composables/useStorage.js'
 import { ABILITIES } from '../data/abilities.js'
 import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { hexToRgba } from '../utils/colors.js'
+import { getMemberTypesForRules } from '../utils/generationRules.js'
 import {
   getBerrySprite,
   getMegaSpriteUrl,
@@ -84,6 +86,8 @@ const props = defineProps({
 
 defineEmits(['edit', 'add'])
 
+const { generationRules } = useStorage()
+
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null
   const variant = props.pokemon.spriteVariant || 'default'
@@ -95,10 +99,14 @@ const spriteUrl = computed(() => {
 })
 
 const cardBackgroundStyle = computed(() => {
-  if (!props.pokemon || !props.pokemon.types?.length) return {}
+  if (!props.pokemon) return {}
 
   const opacity = 0.15
-  const types = [...props.pokemon.types]
+  const types = [
+    ...getMemberTypesForRules(props.pokemon, generationRules.value),
+  ]
+
+  if (!types.length) return {}
 
   // For Protean, include move types in the gradient
   const abilityData = ABILITIES[props.pokemon.ability]

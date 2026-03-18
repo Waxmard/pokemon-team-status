@@ -1,16 +1,41 @@
 import { ABILITIES } from '../data/abilities.js'
 import { BERRIES, ITEMS } from '../data/berries.js'
 import { SPECIAL_MOVES } from '../data/specialMoves.js'
-import { ALL_TYPES, TYPE_CHART } from '../data/types.js'
+import {
+  DEFAULT_GENERATION_RULESET,
+  GENERATION_RULESETS,
+  getAllTypesForRules,
+  isTypeAvailable,
+  TYPE_CHART,
+} from '../data/types.js'
+import { getMemberTypesForRules } from './generationRules.js'
 
-export function getTypeEffectiveness(attackingType, defendingType) {
+export function getTypeEffectiveness(
+  attackingType,
+  defendingType,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
+  if (!isTypeAvailable(attackingType, ruleset)) return 1
+  if (!isTypeAvailable(defendingType, ruleset)) return 1
+  if (
+    ruleset === GENERATION_RULESETS.PRE_GEN_6 &&
+    defendingType === 'steel' &&
+    (attackingType === 'dark' || attackingType === 'ghost')
+  ) {
+    return 0.5
+  }
+
   return TYPE_CHART[attackingType]?.[defendingType] ?? 1
 }
 
-export function getDefensiveMultiplier(attackingType, defenderTypes) {
+export function getDefensiveMultiplier(
+  attackingType,
+  defenderTypes,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
   let multiplier = 1
   for (const defType of defenderTypes) {
-    multiplier *= getTypeEffectiveness(attackingType, defType)
+    multiplier *= getTypeEffectiveness(attackingType, defType, ruleset)
   }
   return multiplier
 }
@@ -31,14 +56,18 @@ export function applyAbilityDefense(baseMultiplier, attackingType, ability) {
   return baseMultiplier
 }
 
-export function getSpecialMoveEffectiveness(moveName, defenderType) {
+export function getSpecialMoveEffectiveness(
+  moveName,
+  defenderType,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
   const move = SPECIAL_MOVES[moveName]
   if (!move) return 1
 
   // Flying Press: multiply effectiveness of both types
   if (move.types.length > 1) {
     return move.types.reduce((mult, type) => {
-      return mult * getTypeEffectiveness(type, defenderType)
+      return mult * getTypeEffectiveness(type, defenderType, ruleset)
     }, 1)
   }
 
@@ -47,7 +76,7 @@ export function getSpecialMoveEffectiveness(moveName, defenderType) {
     return 2
   }
 
-  return getTypeEffectiveness(move.types[0], defenderType)
+  return getTypeEffectiveness(move.types[0], defenderType, ruleset)
 }
 
 // Convert defensive multiplier to score points (full conversion)
@@ -67,10 +96,19 @@ function resistanceOnlyPoints(multiplier) {
   return 0
 }
 
-export function hasEffectiveMove(moves, gymType, specialMove = null) {
+export function hasEffectiveMove(
+  moves,
+  gymType,
+  specialMove = null,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
   // Check special move first
   if (specialMove) {
-    const effectiveness = getSpecialMoveEffectiveness(specialMove, gymType)
+    const effectiveness = getSpecialMoveEffectiveness(
+      specialMove,
+      gymType,
+      ruleset,
+    )
     if (effectiveness > 1) {
       return true
     }
@@ -78,19 +116,25 @@ export function hasEffectiveMove(moves, gymType, specialMove = null) {
 
   // Check regular move types
   for (const moveType of moves) {
-    if (moveType && getTypeEffectiveness(moveType, gymType) > 1) {
+    if (moveType && getTypeEffectiveness(moveType, gymType, ruleset) > 1) {
       return true
     }
   }
   return false
 }
 
-export function calculateScore(gymType, team) {
+export function calculateScore(
+  gymType,
+  team,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
   let score = 0
 
   for (const member of team) {
+    const memberTypes = getMemberTypesForRules(member, ruleset)
+
     // Calculate defensive multiplier
-    let multiplier = getDefensiveMultiplier(gymType, member.types)
+    let multiplier = getDefensiveMultiplier(gymType, memberTypes, ruleset)
     multiplier = applyAbilityDefense(multiplier, gymType, member.ability)
     score += multiplierToPoints(multiplier)
 
@@ -99,8 +143,8 @@ export function calculateScore(gymType, team) {
     if (abilityData?.protean && member.moves?.length) {
       for (const moveType of member.moves) {
         // Skip empty moves and types already covered by base types
-        if (!moveType || member.types.includes(moveType)) continue
-        const moveMultiplier = getTypeEffectiveness(gymType, moveType)
+        if (!moveType || memberTypes.includes(moveType)) continue
+        const moveMultiplier = getTypeEffectiveness(gymType, moveType, ruleset)
         // Only count resistances, not weaknesses - user can choose not to use that move
         score += resistanceOnlyPoints(moveMultiplier)
       }
@@ -109,42 +153,55 @@ export function calculateScore(gymType, team) {
     // Mega evolution: extra types = resistances only (like Protean)
     if (member.megaTypes?.length) {
       for (const megaType of member.megaTypes) {
-        if (member.types.includes(megaType)) continue
-        const megaMultiplier = getTypeEffectiveness(gymType, megaType)
+        if (memberTypes.includes(megaType)) continue
+        const megaMultiplier = getTypeEffectiveness(gymType, megaType, ruleset)
         score += resistanceOnlyPoints(megaMultiplier)
       }
     }
 
     // Check offensive coverage
-    if (hasEffectiveMove(member.moves, gymType, member.specialMove)) score += 1
+    if (hasEffectiveMove(member.moves, gymType, member.specialMove, ruleset)) {
+      score += 1
+    }
   }
 
   return score
 }
 
-export function calculateScoreChanges(team, draftMember) {
-  return ALL_TYPES.map((type) => {
-    const oldScore = calculateScore(type, team)
-    const newScore = calculateScore(type, [...team, draftMember])
-    return {
-      type,
-      oldScore,
-      newScore,
-      diff: newScore - oldScore,
-    }
-  }).filter((c) => c.diff !== 0)
+export function calculateScoreChanges(
+  team,
+  draftMember,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
+  return getAllTypesForRules(ruleset)
+    .map((type) => {
+      const oldScore = calculateScore(type, team, ruleset)
+      const newScore = calculateScore(type, [...team, draftMember], ruleset)
+      return {
+        type,
+        oldScore,
+        newScore,
+        diff: newScore - oldScore,
+      }
+    })
+    .filter((c) => c.diff !== 0)
 }
 
 const SCORE_CAP = 3
 
-function teamScoreProfile(team, defeatedGyms, pinnedGym = null) {
+function teamScoreProfile(
+  team,
+  defeatedGyms,
+  pinnedGym = null,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
   const pinnedScore = []
   const undefeatedScores = []
   const allCapped = []
   const allUncapped = []
 
-  for (const type of ALL_TYPES) {
-    const raw = calculateScore(type, team)
+  for (const type of getAllTypesForRules(ruleset)) {
+    const raw = calculateScore(type, team, ruleset)
     const capped = Math.min(raw, SCORE_CAP)
     if (type === pinnedGym) {
       pinnedScore.push(raw)
@@ -188,10 +245,16 @@ export function findBestSwap(
   pool,
   defeatedGyms,
   pinnedGym = null,
+  ruleset = DEFAULT_GENERATION_RULESET,
 ) {
   if (pool.length === 0) return null
 
-  const currentProfile = teamScoreProfile(team, defeatedGyms, pinnedGym)
+  const currentProfile = teamScoreProfile(
+    team,
+    defeatedGyms,
+    pinnedGym,
+    ruleset,
+  )
 
   let best = null
   let bestProfile = null
@@ -204,7 +267,7 @@ export function findBestSwap(
       newTeam = team.map((p) => (p.id === candidate.id ? editingMember : p))
     }
 
-    const profile = teamScoreProfile(newTeam, defeatedGyms, pinnedGym)
+    const profile = teamScoreProfile(newTeam, defeatedGyms, pinnedGym, ruleset)
 
     if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
       bestProfile = profile
@@ -216,15 +279,31 @@ export function findBestSwap(
   return { candidate: best, improvement }
 }
 
-export function findGlobalBestSwap(team, box, defeatedGyms, pinnedGym = null) {
+export function findGlobalBestSwap(
+  team,
+  box,
+  defeatedGyms,
+  pinnedGym = null,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
   if (team.length === 0 || box.length === 0) return null
-  const currentProfile = teamScoreProfile(team, defeatedGyms, pinnedGym)
+  const currentProfile = teamScoreProfile(
+    team,
+    defeatedGyms,
+    pinnedGym,
+    ruleset,
+  )
   let best = null
   let bestProfile = null
   for (const teamMember of team) {
     for (const boxMember of box) {
       const newTeam = team.map((p) => (p.id === teamMember.id ? boxMember : p))
-      const profile = teamScoreProfile(newTeam, defeatedGyms, pinnedGym)
+      const profile = teamScoreProfile(
+        newTeam,
+        defeatedGyms,
+        pinnedGym,
+        ruleset,
+      )
       if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
         bestProfile = profile
         best = { teamMember, boxMember }
@@ -240,6 +319,7 @@ export function calculateTypeSuggestionScore(
   team,
   defeatedGyms,
   pinnedGym = null,
+  ruleset = DEFAULT_GENERATION_RULESET,
 ) {
   if (team.length === 0) return 0
 
@@ -253,7 +333,12 @@ export function calculateTypeSuggestionScore(
     megaTypes: [],
   }
 
-  const currentProfile = teamScoreProfile(team, defeatedGyms, pinnedGym)
+  const currentProfile = teamScoreProfile(
+    team,
+    defeatedGyms,
+    pinnedGym,
+    ruleset,
+  )
   let bestProfile = null
 
   if (team.length < 6) {
@@ -261,13 +346,19 @@ export function calculateTypeSuggestionScore(
       [...team, hypothetical],
       defeatedGyms,
       pinnedGym,
+      ruleset,
     )
   } else {
     for (const teamMember of team) {
       const newTeam = team.map((p) =>
         p.id === teamMember.id ? hypothetical : p,
       )
-      const profile = teamScoreProfile(newTeam, defeatedGyms, pinnedGym)
+      const profile = teamScoreProfile(
+        newTeam,
+        defeatedGyms,
+        pinnedGym,
+        ruleset,
+      )
       if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
         bestProfile = profile
       }
@@ -277,13 +368,21 @@ export function calculateTypeSuggestionScore(
   return compareProfiles(bestProfile, currentProfile)
 }
 
-export function calculateBerryTiebreaker(gymType, team) {
+export function calculateBerryTiebreaker(
+  gymType,
+  team,
+  ruleset = DEFAULT_GENERATION_RULESET,
+) {
   let count = 0
   for (const member of team) {
     const berryType = BERRIES[member.berry] ?? ITEMS[member.berry]
     if (member.berry && berryType === gymType) {
       // Only count berry if the gym type deals super effective damage
-      let multiplier = getDefensiveMultiplier(gymType, member.types)
+      let multiplier = getDefensiveMultiplier(
+        gymType,
+        getMemberTypesForRules(member, ruleset),
+        ruleset,
+      )
       multiplier = applyAbilityDefense(multiplier, gymType, member.ability)
       if (multiplier > 1) {
         count++

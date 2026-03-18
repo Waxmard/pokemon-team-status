@@ -1,5 +1,14 @@
 import { ref } from 'vue'
 import {
+  DEFAULT_GENERATION_RULESET,
+  GENERATION_RULESETS,
+} from '../data/types.js'
+import {
+  sanitizeDefeatedGymsForRules,
+  sanitizePinnedGymForRules,
+  sanitizePokemonCollectionForRules,
+} from '../utils/generationRules.js'
+import {
   prefetchAllSprites,
   prefetchBerrySprites,
   prefetchTypeIcons,
@@ -102,16 +111,65 @@ const team = ref([])
 const defeatedGyms = ref([])
 const box = ref([])
 const pinnedGym = ref(null)
+const generationRules = ref(DEFAULT_GENERATION_RULESET)
 const loadError = ref(false)
+
+function hasStateChanged(a, b) {
+  return JSON.stringify(a) !== JSON.stringify(b)
+}
 
 export function useStorage() {
   async function loadData() {
     try {
-      team.value = await loadArrayFromStore('team')
-      defeatedGyms.value = await loadSetting('defeatedGyms', [])
-      box.value = await loadArrayFromStore('box')
-      pinnedGym.value = await loadSetting('pinnedGym', null)
+      generationRules.value = await loadSetting(
+        'generationRules',
+        DEFAULT_GENERATION_RULESET,
+      )
+
+      const loadedTeam = await loadArrayFromStore('team')
+      const loadedDefeatedGyms = await loadSetting('defeatedGyms', [])
+      const loadedBox = await loadArrayFromStore('box')
+      const loadedPinnedGym = await loadSetting('pinnedGym', null)
+
+      const sanitizedTeam = sanitizePokemonCollectionForRules(
+        loadedTeam,
+        generationRules.value,
+      )
+      const sanitizedDefeatedGyms = sanitizeDefeatedGymsForRules(
+        loadedDefeatedGyms,
+        generationRules.value,
+      )
+      const sanitizedBox = sanitizePokemonCollectionForRules(
+        loadedBox,
+        generationRules.value,
+      )
+      const sanitizedPinnedGym = sanitizePinnedGymForRules(
+        loadedPinnedGym,
+        generationRules.value,
+      )
+
+      team.value = sanitizedTeam
+      defeatedGyms.value = sanitizedDefeatedGyms
+      box.value = sanitizedBox
+      pinnedGym.value = sanitizedPinnedGym
       loadError.value = false
+
+      const persistOperations = []
+      if (hasStateChanged(loadedTeam, sanitizedTeam)) {
+        persistOperations.push(saveArrayToStore('team', sanitizedTeam))
+      }
+      if (hasStateChanged(loadedDefeatedGyms, sanitizedDefeatedGyms)) {
+        persistOperations.push(
+          saveSetting('defeatedGyms', sanitizedDefeatedGyms),
+        )
+      }
+      if (hasStateChanged(loadedBox, sanitizedBox)) {
+        persistOperations.push(saveArrayToStore('box', sanitizedBox))
+      }
+      if (loadedPinnedGym !== sanitizedPinnedGym) {
+        persistOperations.push(saveSetting('pinnedGym', sanitizedPinnedGym))
+      }
+      await Promise.all(persistOperations)
 
       // Pre-cache sprites (fire-and-forget)
       prefetchAllSprites()
@@ -146,16 +204,53 @@ export function useStorage() {
     await saveSetting('pinnedGym', gymType)
   }
 
+  async function persistGenerationRules(newRules) {
+    const nextRules =
+      newRules === GENERATION_RULESETS.PRE_GEN_6
+        ? GENERATION_RULESETS.PRE_GEN_6
+        : DEFAULT_GENERATION_RULESET
+
+    const sanitizedTeam = sanitizePokemonCollectionForRules(
+      team.value,
+      nextRules,
+    )
+    const sanitizedBox = sanitizePokemonCollectionForRules(box.value, nextRules)
+    const sanitizedDefeatedGyms = sanitizeDefeatedGymsForRules(
+      defeatedGyms.value,
+      nextRules,
+    )
+    const sanitizedPinnedGym = sanitizePinnedGymForRules(
+      pinnedGym.value,
+      nextRules,
+    )
+
+    generationRules.value = nextRules
+    team.value = sanitizedTeam
+    box.value = sanitizedBox
+    defeatedGyms.value = sanitizedDefeatedGyms
+    pinnedGym.value = sanitizedPinnedGym
+
+    await Promise.all([
+      saveSetting('generationRules', nextRules),
+      saveArrayToStore('team', sanitizedTeam),
+      saveArrayToStore('box', sanitizedBox),
+      saveSetting('defeatedGyms', sanitizedDefeatedGyms),
+      saveSetting('pinnedGym', sanitizedPinnedGym),
+    ])
+  }
+
   return {
     team,
     defeatedGyms,
     box,
     pinnedGym,
+    generationRules,
     loadError,
     loadData,
     persistTeam,
     persistDefeatedGyms,
     persistBox,
     persistPinnedGym,
+    persistGenerationRules,
   }
 }
