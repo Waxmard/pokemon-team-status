@@ -76,7 +76,7 @@
         </div>
 
         <!-- Step: Pokemon -->
-        <div v-if="wizardStep === 'pokemon'" class="wizard-step">
+        <div v-if="wizardStep === 'pokemon'" class="wizard-step pokemon-step">
           <n-auto-complete
             ref="pokemonInputRef"
             v-model:value="searchQuery"
@@ -96,6 +96,17 @@
             >
               ⇄
             </button>
+            <div v-if="previewTypes.length" class="preview-type-list">
+              <span
+                v-for="(type, index) in previewTypes"
+                :key="type"
+                class="preview-type-label"
+              >
+                <span :style="getTypeTextColor(type)">
+                  {{ capitalize(type) }}<span v-if="index < previewTypes.length - 1">,</span>
+                </span>
+              </span>
+            </div>
             <SpriteImg
               v-if="selectedSpriteUrl"
               :src="selectedSpriteUrl"
@@ -164,7 +175,7 @@
         <div v-if="wizardStep === 'moves'" class="wizard-step">
           <div class="moves-type-grid">
             <button
-              v-for="type in ALL_TYPES"
+              v-for="type in activeTypes"
               :key="type"
               @click="toggleMoveType(type)"
               class="move-type-option"
@@ -227,10 +238,18 @@ import { useStorage } from '../composables/useStorage.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
 import { getMegaOptions } from '../data/megaEvolutions.js'
-import { POKEMON_DATA } from '../data/pokemon.js'
+import {
+  getPokemonByName,
+  getPokemonDataForRules,
+  POKEMON_DATA,
+} from '../data/pokemon.js'
 import { SPECIAL_MOVE_NAMES } from '../data/specialMoves.js'
-import { ALL_TYPES, getTypeIcon, TYPE_COLORS } from '../data/types.js'
+import { getAllTypesForRules, getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { hexToRgba } from '../utils/colors.js'
+import {
+  getMemberTypesForRules,
+  sanitizeDraftActionForRules,
+} from '../utils/generationRules.js'
 import {
   buildPokemonMember,
   getBerrySprite,
@@ -269,7 +288,13 @@ const {
   updateSpriteVariant,
 } = useDraftAction()
 
-const { team: storageTeam, box, defeatedGyms, pinnedGym } = useStorage()
+const {
+  team: storageTeam,
+  box,
+  defeatedGyms,
+  pinnedGym,
+  generationRules,
+} = useStorage()
 
 // Suggestion state
 const showSuggestion = ref(false)
@@ -306,6 +331,7 @@ const swapSuggestion = computed(() => {
       box.value,
       defeatedGyms.value,
       pinnedGym.value,
+      generationRules.value,
     )
   } else {
     // Editing box member: find best team member to replace
@@ -316,6 +342,7 @@ const swapSuggestion = computed(() => {
       props.team,
       defeatedGyms.value,
       pinnedGym.value,
+      generationRules.value,
     )
   }
 })
@@ -367,6 +394,24 @@ const showSpecialMoveDropdown = ref(false)
 const specialMoveQuery = ref('')
 const abilityQuery = ref('')
 
+const activeTypes = computed(() => getAllTypesForRules(generationRules.value))
+
+const effectiveDraftPokemon = computed(() => {
+  if (!draftAction.value?.pokemon?.name) return null
+  return getPokemonDataForRules(
+    draftAction.value.pokemon.name,
+    generationRules.value,
+  )
+})
+
+const previewTypes = computed(() => {
+  if (draftAction.value?.megaTypes?.length) {
+    return draftAction.value.megaTypes
+  }
+
+  return effectiveDraftPokemon.value?.types || []
+})
+
 // Initialize form state when draftAction changes
 watch(
   draftAction,
@@ -377,6 +422,15 @@ watch(
   },
   { immediate: true, deep: true },
 )
+
+watch(generationRules, (ruleset) => {
+  if (!draftAction.value?.pokemon?.name) return
+
+  const sanitizedDraft = sanitizeDraftActionForRules(draftAction.value, ruleset)
+  draftAction.value = sanitizedDraft
+
+  abilityQuery.value = sanitizedDraft.ability || ''
+})
 
 // Auto-focus Pokemon name field on open only if empty
 onMounted(() => {
@@ -477,16 +531,18 @@ const autocompleteOptions = computed(() => {
 })
 
 const megaOptions = computed(() => {
-  if (!draftAction.value?.pokemon) return []
-  return getMegaOptions(draftAction.value.pokemon.name)
+  if (!effectiveDraftPokemon.value) return []
+  return getMegaOptions(effectiveDraftPokemon.value.name, generationRules.value)
 })
 
 const canEvolve = computed(() => {
-  return !!draftAction.value?.pokemon?.evolvesTo || megaOptions.value.length > 0
+  return (
+    !!effectiveDraftPokemon.value?.evolvesTo || megaOptions.value.length > 0
+  )
 })
 
 const evolutionOptions = computed(() => {
-  const evo = draftAction.value?.pokemon?.evolvesTo
+  const evo = effectiveDraftPokemon.value?.evolvesTo
   const evoList = evo ? (Array.isArray(evo) ? evo : [evo]) : []
   // Add mega options as special entries
   const megas = megaOptions.value.map((mega) => ({
@@ -542,7 +598,7 @@ function evolveTo(option) {
   }
 
   // Handle regular evolution (option is just a string name)
-  const pokemon = POKEMON_DATA.find((p) => p.name === option)
+  const pokemon = getPokemonDataForRules(option, generationRules.value)
   if (pokemon) {
     updatePokemon(pokemon)
     searchQuery.value = pokemon.name
@@ -574,12 +630,45 @@ function getTypeBackground(type, selected = false) {
   }
 }
 
+function getTypeTextColor(type) {
+  return {
+    color: PREVIEW_TYPE_COLORS[type] || TYPE_COLORS[type].bg,
+  }
+}
+
+const PREVIEW_TYPE_COLORS = {
+  normal: '#7d7d4f',
+  fire: '#d94708',
+  water: '#2d6fe6',
+  electric: '#c79600',
+  grass: '#3f9f2a',
+  ice: '#2d9fb0',
+  fighting: '#9f1f19',
+  poison: '#812c98',
+  ground: '#b88a1c',
+  flying: '#6c63db',
+  psychic: '#e03274',
+  bug: '#7d9100',
+  rock: '#90761c',
+  ghost: '#53408c',
+  dragon: '#4c16d1',
+  dark: '#4c3b30',
+  steel: '#7b86a8',
+  fairy: '#d75f85',
+}
+
 // Wizard-related computed properties
 const relevantBerries = computed(() => {
-  if (!draftAction.value?.pokemon) return []
-  const pokemon = draftAction.value.pokemon
-  const weakTypes = ALL_TYPES.filter((attackType) => {
-    let mult = getDefensiveMultiplier(attackType, pokemon.types)
+  if (!effectiveDraftPokemon.value) return []
+  const weakTypes = activeTypes.value.filter((attackType) => {
+    let mult = getDefensiveMultiplier(
+      attackType,
+      getMemberTypesForRules(
+        effectiveDraftPokemon.value,
+        generationRules.value,
+      ),
+      generationRules.value,
+    )
     mult = applyAbilityDefense(mult, attackType, draftAction.value.ability)
     return mult > 1
   })
@@ -732,7 +821,7 @@ watch(
 )
 
 function onSelectPokemon(value) {
-  const pokemon = POKEMON_DATA.find((p) => p.name === value)
+  const pokemon = getPokemonDataForRules(value, generationRules.value)
   if (pokemon) {
     clearSelections()
     updatePokemon(pokemon)
@@ -744,7 +833,7 @@ function onSelectPokemon(value) {
 function onSearchInput(value) {
   // Only reset if the input doesn't match a valid Pokemon name
   // This prevents resetting after selection when searchQuery is set programmatically
-  const matchesPokemon = POKEMON_DATA.some((p) => p.name === value)
+  const matchesPokemon = !!getPokemonByName(value)
   if (!matchesPokemon) {
     updatePokemon(null)
   }
@@ -792,7 +881,7 @@ function onSearchInput(value) {
   flex: 1;
   min-height: 300px;
   max-height: 400px;
-  padding-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
 }
 
 .wizard-actions-fixed {
@@ -845,6 +934,11 @@ function onSearchInput(value) {
   flex: 1;
   overflow-x: hidden;
   overflow-y: auto;
+  padding-bottom: var(--space-4);
+}
+
+.pokemon-step {
+  overflow: visible;
 }
 
 .wizard-header {
@@ -1053,6 +1147,7 @@ function onSearchInput(value) {
   align-items: center;
   justify-content: center;
   margin: var(--space-4) 0;
+  overflow: visible;
 }
 
 .variant-btn {
@@ -1075,6 +1170,30 @@ function onSearchInput(value) {
 
 .variant-btn.active {
   color: rgba(139, 92, 246, 1);
+}
+
+.preview-type-list {
+  position: absolute;
+  bottom: -2rem;
+  left: var(--space-3);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.14rem;
+  padding-bottom: 0.2rem;
+  overflow: visible;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.preview-type-label {
+  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.28;
+  opacity: 0.92;
 }
 
 .evolve-btn {

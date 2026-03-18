@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { GENERATION_RULESETS } from '../../data/types.js'
 import {
   applyAbilityDefense,
   calculateBerryTiebreaker,
@@ -108,6 +109,15 @@ describe('getTypeEffectiveness', () => {
 
   it('returns 1 for neutral matchups (fire -> normal)', () => {
     expect(getTypeEffectiveness('fire', 'normal')).toBe(1)
+  })
+
+  it('restores steel resistance to dark and ghost before Gen 6', () => {
+    expect(
+      getTypeEffectiveness('dark', 'steel', GENERATION_RULESETS.PRE_GEN_6),
+    ).toBe(0.5)
+    expect(
+      getTypeEffectiveness('ghost', 'steel', GENERATION_RULESETS.PRE_GEN_6),
+    ).toBe(0.5)
   })
 })
 
@@ -252,6 +262,23 @@ describe('calculateScore', () => {
   it('combines resistance and offense', () => {
     const team = [member({ types: ['water'], moves: ['water'] })]
     expect(calculateScore('fire', team)).toBe(2)
+  })
+
+  it('uses pre-Gen 6 typing rules when requested', () => {
+    const team = [member({ name: 'Clefairy', types: ['fairy'] })]
+
+    expect(calculateScore('fighting', team)).toBe(1)
+    expect(
+      calculateScore('fighting', team, GENERATION_RULESETS.PRE_GEN_6),
+    ).toBe(-1)
+  })
+
+  it('uses non-fairy fallback typing for Gen 6+ fairy species pre-Gen 6', () => {
+    const team = [member({ name: 'Xerneas', types: ['fairy'] })]
+
+    expect(
+      calculateScore('fighting', team, GENERATION_RULESETS.PRE_GEN_6),
+    ).toBe(-1)
   })
 
   it('applies ability immunity (Levitate vs ground)', () => {

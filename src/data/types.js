@@ -127,6 +127,13 @@ export const TYPE_CHART = {
   },
 }
 
+export const GENERATION_RULESETS = {
+  PRE_GEN_6: 'pre-gen-6',
+  POST_GEN_6: 'post-gen-6',
+}
+
+export const DEFAULT_GENERATION_RULESET = GENERATION_RULESETS.POST_GEN_6
+
 export const ALL_TYPES = [
   'normal',
   'fire',
@@ -147,6 +154,16 @@ export const ALL_TYPES = [
   'steel',
   'fairy',
 ]
+
+export const PRE_GEN_6_TYPES = ALL_TYPES.filter((type) => type !== 'fairy')
+
+export function getAllTypesForRules(ruleset = DEFAULT_GENERATION_RULESET) {
+  return ruleset === GENERATION_RULESETS.PRE_GEN_6 ? PRE_GEN_6_TYPES : ALL_TYPES
+}
+
+export function isTypeAvailable(type, ruleset = DEFAULT_GENERATION_RULESET) {
+  return getAllTypesForRules(ruleset).includes(type)
+}
 
 export const TYPE_COLORS = {
   normal: { bg: '#A8A878', text: '#fff' },

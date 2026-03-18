@@ -65,7 +65,14 @@ import {
 import GymColumn from './GymColumn.vue'
 import SpriteImg from './SpriteImg.vue'
 
-const { team, box, defeatedGyms, pinnedGym, persistPinnedGym } = useStorage()
+const {
+  team,
+  box,
+  defeatedGyms,
+  pinnedGym,
+  persistPinnedGym,
+  generationRules,
+} = useStorage()
 
 const props = defineProps({
   remainingGyms: {
@@ -111,6 +118,7 @@ const globalSwap = computed(() => {
     box.value,
     defeatedGyms.value,
     pinnedGym.value,
+    generationRules.value,
   )
 })
 
@@ -180,6 +188,7 @@ const unifiedGymsList = computed(() => {
         team.value,
         defeatedGyms.value,
         pinnedGym.value,
+        generationRules.value,
       ),
     }))
     // Sort by improvement descending, then current score ascending as tiebreaker
