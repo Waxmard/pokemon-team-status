@@ -52,27 +52,19 @@
           <button class="reset-option" @click="toggleGenerationRules">
             {{ generationRulesLabel }}
           </button>
-          <div v-if="!isSoloMode" class="reset-option-section">
-            <p class="reset-option-section-label">Viewing Player</p>
-            <div class="reset-option-group reset-option-group-inline">
-              <button
-                v-for="player in soulLinkPlayerSummaries"
-                :key="player.id"
-                class="reset-option"
-                :class="{ 'reset-option-active': player.isViewed }"
-                type="button"
-                @click="handleViewSoulLinkPlayer(player.id)"
-              >
-                {{ player.name }}
-              </button>
-            </div>
+          <div v-if="!isSoloMode" class="reset-option-group">
+            <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
+              View {{ otherSoulLinkPlayerName }}
+            </button>
           </div>
-          <button class="reset-option" :disabled="!isSoloMode" @click="resetPokemon">
-            Reset Team & Box
-          </button>
-          <button class="reset-option" :disabled="!isSoloMode" @click="resetGyms">
-            Reset Gyms
-          </button>
+          <div class="reset-option-group">
+            <button class="reset-option" @click="resetPokemon">
+              Reset Team & Box
+            </button>
+            <button class="reset-option" @click="resetGyms">
+              Reset Gyms
+            </button>
+          </div>
           <div class="reset-option-group">
             <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
               New Solo Run
@@ -141,6 +133,8 @@ const {
   setCachedPlayerSlot,
   updatePlayer: updateSoulLinkPlayer,
   startNewLocalSoulLinkRun,
+  resetPlayerRoster,
+  resetPlayerGymProgress,
 } = useSoulLinkStore()
 
 const {
@@ -171,17 +165,21 @@ function retryLoad() {
 }
 
 function resetPokemon() {
-  if (!isSoloMode.value) return
-
-  resetTeamAndBox()
-  cancel()
+  if (isSoloMode.value) {
+    resetTeamAndBox()
+    cancel()
+  } else {
+    resetPlayerRoster(viewedSoulLinkPlayerId.value)
+  }
   showResetDialog.value = false
 }
 
 function resetGyms() {
-  if (!isSoloMode.value) return
-
-  resetGymsInStore()
+  if (isSoloMode.value) {
+    resetGymsInStore()
+  } else {
+    resetPlayerGymProgress(viewedSoulLinkPlayerId.value)
+  }
   showResetDialog.value = false
 }
 
@@ -227,25 +225,11 @@ const viewedSoulLinkPlayerName = computed(
   () => viewedSoulLinkPlayer.value?.name ?? 'Unknown Player',
 )
 
-const soulLinkPlayerSummaries = computed(() => {
-  return soulLinkPlayers.value.map((player) => {
-    const roster = soulLinkRosters.value[player.id] ?? { team: [], box: [] }
-    const progress = soulLinkGymProgress.value[player.id] ?? {
-      defeatedGyms: [],
-      pinnedGym: null,
-    }
-
-    return {
-      id: player.id,
-      name: player.name,
-      isViewed: player.id === viewedSoulLinkPlayerId.value,
-      roleLabel: player.isLocal ? 'Local' : 'Partner',
-      teamCount: roster.team.length,
-      boxCount: roster.box.length,
-      defeatedGymCount: progress.defeatedGyms.length,
-      pinnedGymLabel: progress.pinnedGym ?? 'None',
-    }
-  })
+const otherSoulLinkPlayerName = computed(() => {
+  const other = soulLinkPlayers.value.find(
+    (player) => player.id !== viewedSoulLinkPlayerId.value,
+  )
+  return other?.name ?? 'Other Player'
 })
 
 const viewedSoulLinkPlayerBoard = computed(() => {
@@ -267,8 +251,14 @@ const viewedSoulLinkPlayerBoard = computed(() => {
   )
 })
 
-function handleViewSoulLinkPlayer(playerId) {
-  setCachedPlayerSlot(playerId)
+function handleViewOtherSoulLinkPlayer() {
+  const other = soulLinkPlayers.value.find(
+    (player) => player.id !== viewedSoulLinkPlayerId.value,
+  )
+  if (other) {
+    setCachedPlayerSlot(other.id)
+  }
+  showResetDialog.value = false
 }
 
 function handleRenameViewedSoulLinkPlayer(nextName) {
@@ -958,40 +948,6 @@ onMounted(() => {
   border-top: 1px solid var(--color-border);
 }
 
-.reset-option-group-inline {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: 0;
-}
-
-.reset-option-section {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  text-align: left;
-}
-
-.reset-option-section-label {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.reset-option-active {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.reset-option:disabled {
-  color: var(--color-text-muted);
-  cursor: not-allowed;
-  opacity: 0.7;
-}
 
 @media (hover: hover) and (pointer: fine) {
   .reset-option:hover:not(:disabled) {

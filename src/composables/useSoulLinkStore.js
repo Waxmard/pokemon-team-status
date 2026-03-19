@@ -649,6 +649,22 @@ export function useSoulLinkStore() {
     }))
   }
 
+  function resetPlayerRoster(playerId) {
+    updatePlayerRecord(
+      'rosters',
+      assertKnownPlayerId(playerId, 'Resetting a Soul Link roster'),
+      createDefaultSoulLinkPlayerRoster(),
+    )
+  }
+
+  function resetPlayerGymProgress(playerId) {
+    updatePlayerRecord(
+      'progress',
+      assertKnownPlayerId(playerId, 'Resetting Soul Link gym progress'),
+      createDefaultSoulLinkPlayerProgress(),
+    )
+  }
+
   function getPlayerRoster(playerId) {
     const nextPlayerId = assertKnownPlayerId(
       playerId,
@@ -714,5 +730,7 @@ export function useSoulLinkStore() {
     getPlayerTeam,
     getPlayerBox,
     getPlayerGymProgress,
+    resetPlayerRoster,
+    resetPlayerGymProgress,
   }
 }
