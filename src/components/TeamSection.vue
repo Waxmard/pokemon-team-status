@@ -99,7 +99,7 @@
 import { computed, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { useLongPress } from '../composables/useLongPress.js'
-import { useStorage } from '../composables/useStorage.js'
+import { useRunStore } from '../composables/useRunStore.js'
 import { getPokemonDataForRules } from '../data/pokemon.js'
 import { getMegaSpriteUrl, getSpriteUrl } from '../utils/pokemon.js'
 import DraftPanel from './DraftPanel.vue'
@@ -139,7 +139,7 @@ const {
   cancel,
 } = useDraftAction()
 
-const { generationRules } = useStorage()
+const { generationRules } = useRunStore()
 
 function getRulesetPokemonData(name) {
   return getPokemonDataForRules(name, generationRules.value)

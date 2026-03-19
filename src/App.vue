@@ -41,7 +41,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import GymColumns from './components/GymColumns.vue'
 import TeamSection from './components/TeamSection.vue'
 import { useDraftAction } from './composables/useDraftAction.js'
-import { useStorage } from './composables/useStorage.js'
+import { useRunStore } from './composables/useRunStore.js'
 import { getPokemonDataForRules } from './data/pokemon.js'
 import { GENERATION_RULESETS, getAllTypesForRules } from './data/types.js'
 import { themeOverrides } from './theme/colors.js'
@@ -59,11 +59,16 @@ const {
   loadData,
   loadError,
   persistTeam,
-  persistDefeatedGyms,
   persistBox,
   generationRules,
   persistGenerationRules,
-} = useStorage()
+  resetTeamAndBox,
+  resetGyms: resetGymsInStore,
+  deleteTeamPokemon,
+  deleteBoxPokemon,
+  defeatGym,
+  undefeatGym,
+} = useRunStore()
 
 const {
   draftAction,
@@ -81,14 +86,13 @@ function retryLoad() {
 }
 
 function resetPokemon() {
-  persistTeam([])
-  persistBox([])
+  resetTeamAndBox()
   cancel()
   showResetDialog.value = false
 }
 
 function resetGyms() {
-  persistDefeatedGyms([])
+  resetGymsInStore()
   showResetDialog.value = false
 }
 
@@ -410,15 +414,13 @@ function confirmDraft() {
   if (!draftAction.value.pokemon) {
     if (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) {
       // Delete team Pokemon
-      persistTeam(team.value.filter((p) => p.id !== draftAction.value.editId))
+      deleteTeamPokemon(draftAction.value.editId)
     } else if (
       draftAction.value.type === 'edit' &&
       draftAction.value.isBoxPokemon
     ) {
       // Delete box Pokemon
-      persistBox(
-        box.value.filter((p) => p.id !== draftAction.value.boxPokemonId),
-      )
+      deleteBoxPokemon(draftAction.value.boxPokemonId)
     }
     // For 'add' type with no pokemon, just cancel
     cancel()
@@ -534,14 +536,6 @@ function confirmDraft() {
   cancel()
 }
 
-function deleteTeamPokemon(id) {
-  persistTeam(team.value.filter((p) => p.id !== id))
-}
-
-function deleteBoxPokemon(id) {
-  persistBox(box.value.filter((p) => p.id !== id))
-}
-
 function handleDeleteFromDraft() {
   if (!draftAction.value) return
 
@@ -551,14 +545,6 @@ function handleDeleteFromDraft() {
     deleteTeamPokemon(draftAction.value.editId)
   }
   cancel()
-}
-
-function defeatGym(type) {
-  persistDefeatedGyms([...defeatedGyms.value, type])
-}
-
-function undefeatGym(type) {
-  persistDefeatedGyms(defeatedGyms.value.filter((t) => t !== type))
 }
 
 onMounted(() => {

@@ -65,7 +65,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useStorage } from '../composables/useStorage.js'
+import { useRunStore } from '../composables/useRunStore.js'
 import { ABILITIES } from '../data/abilities.js'
 import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { hexToRgba } from '../utils/colors.js'
@@ -86,7 +86,7 @@ const props = defineProps({
 
 defineEmits(['edit', 'add'])
 
-const { generationRules } = useStorage()
+const { generationRules } = useRunStore()
 
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null

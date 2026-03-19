@@ -56,7 +56,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useStorage } from '../composables/useStorage.js'
+import { useRunStore } from '../composables/useRunStore.js'
 import { getMegaSpriteUrl, getSmallSpriteUrl } from '../utils/pokemon.js'
 import {
   calculateTypeSuggestionScore,
@@ -72,7 +72,7 @@ const {
   pinnedGym,
   persistPinnedGym,
   generationRules,
-} = useStorage()
+} = useRunStore()
 
 const props = defineProps({
   remainingGyms: {

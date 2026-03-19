@@ -234,7 +234,7 @@
 import { NAutoComplete } from 'naive-ui'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
-import { useStorage } from '../composables/useStorage.js'
+import { useRunStore } from '../composables/useRunStore.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
 import { getMegaOptions } from '../data/megaEvolutions.js'
@@ -294,7 +294,7 @@ const {
   defeatedGyms,
   pinnedGym,
   generationRules,
-} = useStorage()
+} = useRunStore()
 
 // Suggestion state
 const showSuggestion = ref(false)
