@@ -16,7 +16,7 @@ reuses the existing app shell instead of introducing a separate app surface.
 
 ## Completed
 
-The Soul Link shell and state management layer are in place:
+### Shell + State Management
 
 - **Options dialog entry points** — Solo Run / Soul Link Run actions in
   `src/App.vue` let the user pick a run mode
@@ -32,29 +32,25 @@ The Soul Link shell and state management layer are in place:
 - **Read-only mode** — `TeamSection` and `GymColumns` accept props to disable
   editing, used when viewing the remote player
 
-## Remaining Phases
-
 ### Phase 1: Local Editing + Options Menu
 
-Finalize the options menu layout:
+- **Options menu** — Finalized layout with generation rules toggle, view other
+  player button, reset actions, and new run actions
+- **Local player editing** — Removed read-only restriction; all editing
+  interactions (add/edit/delete/swap Pokemon, defeat/undefeat/pin gyms) flow
+  through `useSoulLinkStore` when in Soul Link mode
+- **Reverse adapters** — `adaptUiMemberToSoulLinkMember` and
+  `buildSoulLinkMemberFromDraft` in `soulLinkUi.js` convert between UI and
+  soul link member formats
+- **`setPlayerRoster`** — Atomic full-roster replacement in the store for swap
+  operations that update team + box simultaneously
+- **DraftPanel swap suggestions** — Added `box`, `defeatedGyms`, `pinnedGym`
+  props so DraftPanel works in Soul Link mode (falls back to solo store)
+- **Pin touch fix** — `GymColumn.vue` now calls `event.preventDefault()` on
+  `touchend` when a pin occurs, preventing a synthetic click from
+  defeating/undefeating the gym underneath
 
-- Solo mode: add a divider between the generation rules toggle and the reset
-  buttons
-- Soul Link mode: same menu as solo, plus a "View {other player name}" button
-  at the top in its own divider section; remove the current multi-button
-  "Viewing Player" section and replace with a single toggle-style button
-  showing the other player's name
-- Enable Reset Team & Box and Reset Gyms in Soul Link mode (currently disabled)
-
-Wire up local player editing:
-
-- Remove read-only restriction for the local player's view
-- Reuse existing DraftPanel wizard and gym defeat flow as-is, scoped to local
-  player
-- Wire add/edit/swap Pokemon and gym toggles through `useSoulLinkStore`
-
-Key files: `src/App.vue` (options dialog), `SoulLinkPlayerView.vue`,
-`useSoulLinkStore.js`, `TeamSection.vue`
+## Remaining Phases
 
 ### Phase 2: Paired Pokemon
 
