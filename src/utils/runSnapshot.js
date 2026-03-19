@@ -8,19 +8,40 @@ import {
   sanitizePokemonCollectionForRules,
 } from './generationRules.js'
 
-export function createDefaultRunState() {
+export const RUN_MODES = {
+  SOLO: 'solo',
+  SOUL_LINK: 'soul-link',
+}
+
+const DEFAULT_SOUL_LINK_PLAYER_IDS = {
+  LOCAL: 'player-1',
+  PARTNER: 'player-2',
+}
+
+function createDefaultSoloProgress() {
   return {
-    mode: 'solo',
+    defeatedGyms: [],
+    pinnedGym: null,
+  }
+}
+
+function createDefaultSoulLinkPlayer(id, name, isLocal) {
+  return {
+    id,
+    name,
+    isLocal,
+  }
+}
+
+function createDefaultSoulLinkPlayerMembers() {
+  return {
     team: [],
     box: [],
-    progress: {
-      defeatedGyms: [],
-      pinnedGym: null,
-    },
-    rules: {
-      generation: DEFAULT_GENERATION_RULESET,
-    },
   }
+}
+
+function createDefaultSoulLinkPlayerProgress() {
+  return createDefaultSoloProgress()
 }
 
 export function normalizeGenerationRules(ruleset) {
@@ -29,7 +50,81 @@ export function normalizeGenerationRules(ruleset) {
     : DEFAULT_GENERATION_RULESET
 }
 
-export function sanitizePersistedRunSnapshot(snapshot) {
+export function createDefaultSoloRunState(
+  generationRules = DEFAULT_GENERATION_RULESET,
+) {
+  return {
+    mode: RUN_MODES.SOLO,
+    team: [],
+    box: [],
+    progress: createDefaultSoloProgress(),
+    rules: {
+      generation: normalizeGenerationRules(generationRules),
+    },
+  }
+}
+
+export function createDefaultSoulLinkRunState(
+  generationRules = DEFAULT_GENERATION_RULESET,
+) {
+  const localPlayerId = DEFAULT_SOUL_LINK_PLAYER_IDS.LOCAL
+  const partnerPlayerId = DEFAULT_SOUL_LINK_PLAYER_IDS.PARTNER
+
+  return {
+    mode: RUN_MODES.SOUL_LINK,
+    rules: {
+      generation: normalizeGenerationRules(generationRules),
+    },
+    soulLink: {
+      metadata: {
+        sessionId: null,
+        inviteCode: null,
+        name: null,
+      },
+      players: [
+        createDefaultSoulLinkPlayer(localPlayerId, 'Player 1', true),
+        createDefaultSoulLinkPlayer(partnerPlayerId, 'Player 2', false),
+      ],
+      members: {
+        [localPlayerId]: createDefaultSoulLinkPlayerMembers(),
+        [partnerPlayerId]: createDefaultSoulLinkPlayerMembers(),
+      },
+      progress: {
+        [localPlayerId]: createDefaultSoulLinkPlayerProgress(),
+        [partnerPlayerId]: createDefaultSoulLinkPlayerProgress(),
+      },
+      activity: {
+        syncState: 'local-only',
+        lastUpdatedAt: null,
+      },
+      local: {
+        devicePlayerId: localPlayerId,
+        preferredPlayerId: localPlayerId,
+        sessionPreference: 'soul-link',
+      },
+    },
+  }
+}
+
+export function createDefaultRunState() {
+  return createDefaultSoloRunState()
+}
+
+export function createUnsupportedRunModeError(context, mode) {
+  return new Error(
+    `${context} only supports solo runs right now. Received mode: ${mode}.`,
+  )
+}
+
+export function assertSoloRunState(runState, context = 'This operation') {
+  if (runState?.mode !== RUN_MODES.SOLO) {
+    throw createUnsupportedRunModeError(context, runState?.mode ?? 'unknown')
+  }
+
+  return runState
+}
+
+export function sanitizePersistedSoloRunSnapshot(snapshot) {
   const generationRules = normalizeGenerationRules(snapshot.generationRules)
 
   return {
@@ -44,29 +139,31 @@ export function sanitizePersistedRunSnapshot(snapshot) {
   }
 }
 
-export function mapPersistedSnapshotToRunState(snapshot) {
-  const sanitizedSnapshot = sanitizePersistedRunSnapshot(snapshot)
+export function mapPersistedSoloSnapshotToRunState(snapshot) {
+  const sanitizedSnapshot = sanitizePersistedSoloRunSnapshot(snapshot)
 
   return {
-    mode: 'solo',
+    ...createDefaultSoloRunState(sanitizedSnapshot.generationRules),
     team: sanitizedSnapshot.team,
     box: sanitizedSnapshot.box,
     progress: {
       defeatedGyms: sanitizedSnapshot.defeatedGyms,
       pinnedGym: sanitizedSnapshot.pinnedGym,
     },
-    rules: {
-      generation: sanitizedSnapshot.generationRules,
-    },
   }
 }
 
-export function mapRunStateToPersistedSnapshot(runState) {
+export function mapSoloRunStateToPersistedSnapshot(runState) {
+  const soloRunState = assertSoloRunState(
+    runState,
+    'Mapping a run state to a persisted snapshot',
+  )
+
   return {
-    team: runState.team,
-    box: runState.box,
-    defeatedGyms: runState.progress.defeatedGyms,
-    pinnedGym: runState.progress.pinnedGym,
-    generationRules: runState.rules.generation,
+    team: soloRunState.team,
+    box: soloRunState.box,
+    defeatedGyms: soloRunState.progress.defeatedGyms,
+    pinnedGym: soloRunState.progress.pinnedGym,
+    generationRules: soloRunState.rules.generation,
   }
 }

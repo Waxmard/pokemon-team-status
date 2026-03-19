@@ -5,16 +5,19 @@ import {
 } from '../../data/types.js'
 import {
   createDefaultRunState,
-  mapPersistedSnapshotToRunState,
-  mapRunStateToPersistedSnapshot,
+  createDefaultSoloRunState,
+  createDefaultSoulLinkRunState,
+  mapPersistedSoloSnapshotToRunState,
+  mapSoloRunStateToPersistedSnapshot,
   normalizeGenerationRules,
-  sanitizePersistedRunSnapshot,
+  RUN_MODES,
+  sanitizePersistedSoloRunSnapshot,
 } from '../runSnapshot.js'
 
 describe('runSnapshot helpers', () => {
   it('creates the default normalized run state shape', () => {
     expect(createDefaultRunState()).toEqual({
-      mode: 'solo',
+      mode: RUN_MODES.SOLO,
       team: [],
       box: [],
       progress: {
@@ -38,7 +41,7 @@ describe('runSnapshot helpers', () => {
 
   it('sanitizes a persisted snapshot before use', () => {
     expect(
-      sanitizePersistedRunSnapshot({
+      sanitizePersistedSoloRunSnapshot({
         team: [
           {
             id: '1',
@@ -73,7 +76,7 @@ describe('runSnapshot helpers', () => {
   })
 
   it('maps between persisted snapshots and normalized run state', () => {
-    const runState = mapPersistedSnapshotToRunState({
+    const runState = mapPersistedSoloSnapshotToRunState({
       team: [],
       box: [],
       defeatedGyms: ['fire'],
@@ -82,7 +85,7 @@ describe('runSnapshot helpers', () => {
     })
 
     expect(runState).toEqual({
-      mode: 'solo',
+      mode: RUN_MODES.SOLO,
       team: [],
       box: [],
       progress: {
@@ -94,12 +97,106 @@ describe('runSnapshot helpers', () => {
       },
     })
 
-    expect(mapRunStateToPersistedSnapshot(runState)).toEqual({
+    expect(mapSoloRunStateToPersistedSnapshot(runState)).toEqual({
       team: [],
       box: [],
       defeatedGyms: ['fire'],
       pinnedGym: 'water',
       generationRules: DEFAULT_GENERATION_RULESET,
     })
+  })
+
+  it('keeps solo snapshots round-tripping through the normalized shape', () => {
+    const soloRunState = createDefaultSoloRunState(
+      GENERATION_RULESETS.PRE_GEN_6,
+    )
+
+    soloRunState.team.push({
+      id: '1',
+      name: 'Gengar',
+      types: ['ghost', 'poison'],
+      moves: [],
+      berry: null,
+      megaForm: null,
+      megaTypes: null,
+      megaSpriteId: null,
+    })
+    soloRunState.box.push({
+      id: '2',
+      name: 'Snorlax',
+      types: ['normal'],
+      moves: [],
+      berry: null,
+      megaForm: null,
+      megaTypes: null,
+      megaSpriteId: null,
+    })
+    soloRunState.progress.defeatedGyms.push('poison')
+    soloRunState.progress.pinnedGym = 'ghost'
+
+    expect(
+      mapPersistedSoloSnapshotToRunState(
+        mapSoloRunStateToPersistedSnapshot(soloRunState),
+      ),
+    ).toEqual(soloRunState)
+  })
+
+  it('creates a valid default Soul Link run shape', () => {
+    const runState = createDefaultSoulLinkRunState(
+      GENERATION_RULESETS.PRE_GEN_6,
+    )
+
+    expect(runState).toEqual({
+      mode: RUN_MODES.SOUL_LINK,
+      rules: {
+        generation: GENERATION_RULESETS.PRE_GEN_6,
+      },
+      soulLink: {
+        metadata: {
+          sessionId: null,
+          inviteCode: null,
+          name: null,
+        },
+        players: [
+          { id: 'player-1', name: 'Player 1', isLocal: true },
+          { id: 'player-2', name: 'Player 2', isLocal: false },
+        ],
+        members: {
+          'player-1': {
+            team: [],
+            box: [],
+          },
+          'player-2': {
+            team: [],
+            box: [],
+          },
+        },
+        progress: {
+          'player-1': {
+            defeatedGyms: [],
+            pinnedGym: null,
+          },
+          'player-2': {
+            defeatedGyms: [],
+            pinnedGym: null,
+          },
+        },
+        activity: {
+          syncState: 'local-only',
+          lastUpdatedAt: null,
+        },
+        local: {
+          devicePlayerId: 'player-1',
+          preferredPlayerId: 'player-1',
+          sessionPreference: 'soul-link',
+        },
+      },
+    })
+  })
+
+  it('rejects persisting non-solo run states through the solo mapper', () => {
+    expect(() =>
+      mapSoloRunStateToPersistedSnapshot(createDefaultSoulLinkRunState()),
+    ).toThrow(/only supports solo runs/i)
   })
 })

@@ -90,9 +90,9 @@ async function loadSetting(name, defaultValue = null) {
   })
 }
 
-export function createLocalRunRepository() {
+export function createLocalSoloRunRepository() {
   return {
-    async loadRunSnapshot(defaultGenerationRules) {
+    async loadSoloRunSnapshot(defaultGenerationRules) {
       const [team, defeatedGyms, box, pinnedGym, generationRules] =
         await Promise.all([
           loadArrayFromStore('team'),
@@ -111,23 +111,23 @@ export function createLocalRunRepository() {
       }
     },
 
-    persistTeam(team) {
+    persistSoloTeam(team) {
       return saveArrayToStore('team', team)
     },
 
-    persistBox(box) {
+    persistSoloBox(box) {
       return saveArrayToStore('box', box)
     },
 
-    persistDefeatedGyms(defeatedGyms) {
+    persistSoloDefeatedGyms(defeatedGyms) {
       return saveSetting('defeatedGyms', defeatedGyms)
     },
 
-    persistPinnedGym(pinnedGym) {
+    persistSoloPinnedGym(pinnedGym) {
       return saveSetting('pinnedGym', pinnedGym)
     },
 
-    persistGenerationRules(generationRules) {
+    persistSoloGenerationRules(generationRules) {
       return saveSetting('generationRules', generationRules)
     },
   }
