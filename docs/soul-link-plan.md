@@ -14,70 +14,87 @@ For v1, scope the feature to exactly two players sharing one session, linked
 catches, death state, separate gym progress per player, and a UI that mostly
 reuses the existing app shell instead of introducing a separate app surface.
 
-## UI and Flow
+## Completed
 
-- Enter Soul Link from a new action area in the Options dialog in `src/App.vue`
-- Plan the dialog around mutually exclusive run types, with `New Solo Run` and
-  `New Soul Link Run` actions spaced apart from safer options
-- Do not add extra reset-warning copy for those actions; `New` is sufficient
-- Keep generation rules in the shared options flow so they apply regardless of
-  run type, rather than making Soul Link own a nested session-specific rules
-  field
-- Reuse the shell title area by showing the currently viewed player name instead
-  of `Weakness Calculator`, with a pencil icon to edit the name and a swap icon
-  to switch which player's roster is in view
-- Represent paired Pokemon in `TeamSlot` and `DraftPanel` when the UI work
-  starts, so linked state appears inside the existing team editing surfaces
+The Soul Link shell and state management layer are in place:
 
-## Recommended Approach
+- **Options dialog entry points** — Solo Run / Soul Link Run actions in
+  `src/App.vue` let the user pick a run mode
+- **Title area** — Shows the currently viewed player name (editable via click)
+  with swap controls to switch between players
+- **`useSoulLinkStore.js`** — Full state management composable handling players,
+  rosters (team + box), and gym progress for both players
+- **`soulLinkModel.js`** — Data model for Soul Link members including `pairId`,
+  `isDead`, `catchLocation`, and related fields
+- **`SoulLinkShell.vue` and `SoulLinkPlayerView.vue`** — View components that
+  compose the Soul Link UI using the existing app shell
+- **`useRunModeStore.js`** — Persists the selected run mode across sessions
+- **Read-only mode** — `TeamSection` and `GymColumns` accept props to disable
+  editing, used when viewing the remote player
 
-Use Supabase for a lightweight backend in v1, with join codes and no required
-accounts, but keep sync local-first and explicit.
+## Remaining Phases
 
-- Store each Soul Link run as a shared session record plus related state for
-  exactly two players
-- Keep v1 member data focused on species, optional nickname, catch location,
-  owner, `pair_id`, death state, and separate per-player gym progress while
-  fitting into the existing team/box-oriented UI patterns
-- Cache the local player's slot per session on each device, with a manual
-  override in case a device needs to switch players
-- Let the session creator act as the v1 owner for share/recovery actions, using a
-  join code to add the second player and keeping recovery intentionally manual
-  rather than adding account-based auth
-- Use one visible `Sync` action for manual reconciliation, plus background
-  polling on app open and at intervals after key changes
-- Keep v1 sync feedback focused on in-app activity and notifications; browser or
-  phone notifications, plus broader passive offline messaging, are out of scope
-  for now
-- Sync in change sets rather than single-field writes, and treat each change set
-  as the unit of local save, sync, fetch, and reconciliation
-- Apply a local player's own roster or gym edits immediately, but require a
-  confirmation dialog before applying a change set that edits the other
-  player's roster or gym progress
-- Use that owner-based confirmation in place of a generic conflict-resolution UI
-  for v1; deaths still take precedence, notify the partner, and treat undoing a
-  death as an explicit action
-- Add in-app activity/notifications for partner updates and store per-device
-  notification settings in local cached app settings; keep the feed short and
-  focused on recent sync-relevant events rather than full history
-- Stay with the web app for v1; native iPhone conversion is out of scope, with
-  web push as a possible later enhancement
+### Phase 1: Local Editing + Options Menu
 
-This fits the current architecture because most state already flows through
-shared Vue composables. The main change is evolving `useStorage.js` from purely
-local persistence into a layer that can load, save, and reconcile a shared run.
+Finalize the options menu layout:
 
-## Phases
+- Solo mode: add a divider between the generation rules toggle and the reset
+  buttons
+- Soul Link mode: same menu as solo, plus a "View {other player name}" button
+  at the top in its own divider section; remove the current multi-button
+  "Viewing Player" section and replace with a single toggle-style button
+  showing the other player's name
+- Enable Reset Team & Box and Reset Gyms in Soul Link mode (currently disabled)
 
-1. Add the Options-dialog entry points in `src/App.vue`, including separate
-   `New Solo Run` and `New Soul Link Run` actions and shared generation rules.
-2. Add Supabase tables and a small data access layer for creating a session,
-   joining by code, fetching latest state, and syncing local changes.
-3. Update `useStorage.js` to cache shared session data locally, remember the
-   device's player slot, and keep local notification preferences per device.
-4. Rework the main shell to show the viewed player name in the title area, add
-   edit/swap controls there, and surface paired Pokemon inside `TeamSlot` and
-   `DraftPanel`.
-5. Add the manual `Sync` action, background polling, change-set reconciliation,
-   owner-based confirmation for cross-player edits, and lightweight in-app
-   activity for partner updates.
+Wire up local player editing:
+
+- Remove read-only restriction for the local player's view
+- Reuse existing DraftPanel wizard and gym defeat flow as-is, scoped to local
+  player
+- Wire add/edit/swap Pokemon and gym toggles through `useSoulLinkStore`
+
+Key files: `src/App.vue` (options dialog), `SoulLinkPlayerView.vue`,
+`useSoulLinkStore.js`, `TeamSection.vue`
+
+### Phase 2: Paired Pokemon
+
+- Display paired partner Pokemon in TeamSlot (visual indicator of linked catch)
+- Add pair management in DraftPanel (link/unlink pairs)
+
+Key files: `TeamSlot.vue`, `DraftPanel.vue`, `soulLinkModel.js`
+
+### Phase 3: Local Persistence
+
+- Add IndexedDB persistence for Soul Link state, mirroring `useStorage.js`
+  patterns
+- Save/restore rosters, gym progress, and player config between sessions
+
+Key files: `useSoulLinkStore.js`, `useStorage.js` (reference patterns)
+
+### Phase 4: Supabase Backend
+
+- Tables for sessions, players, rosters, gym progress
+- Data access layer: create session, join by invite code, fetch/push state
+- No accounts required — session creator is v1 owner, join via code
+
+Key files: new `src/services/supabase.js` or similar
+
+### Phase 5: Sync
+
+- Manual Sync action + background polling on app open and after key changes
+- Change-set based sync — each change set is the unit of save, sync, fetch,
+  and reconciliation (not single-field writes)
+- Local player edits apply immediately; cross-player edits require
+  owner-based confirmation before applying
+- Deaths take precedence, notify partner, undo death is an explicit action
+- Web app only for v1 — no native conversion
+
+Key files: `useSoulLinkStore.js`, Supabase service layer
+
+### Phase 6: Activity Feed
+
+- In-app activity notifications for partner updates (roster changes, gym
+  progress)
+- Short recent-events feed, not full history
+- Per-device notification settings stored locally
+- Browser/phone push notifications out of scope for v1
