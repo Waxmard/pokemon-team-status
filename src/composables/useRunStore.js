@@ -1,14 +1,13 @@
 import { computed, ref } from 'vue'
-import {
-  DEFAULT_GENERATION_RULESET,
-  GENERATION_RULESETS,
-} from '../data/types.js'
+import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
 import { createLocalRunRepository } from '../services/localRunRepository.js'
 import {
-  sanitizeDefeatedGymsForRules,
-  sanitizePinnedGymForRules,
-  sanitizePokemonCollectionForRules,
-} from '../utils/generationRules.js'
+  createDefaultRunState,
+  mapPersistedSnapshotToRunState,
+  mapRunStateToPersistedSnapshot,
+  normalizeGenerationRules,
+  sanitizePersistedRunSnapshot,
+} from '../utils/runSnapshot.js'
 import {
   prefetchAllSprites,
   prefetchBerrySprites,
@@ -17,66 +16,12 @@ import {
 
 const repository = createLocalRunRepository()
 
-function createDefaultRunState() {
-  return {
-    mode: 'solo',
-    team: [],
-    box: [],
-    progress: {
-      defeatedGyms: [],
-      pinnedGym: null,
-    },
-    rules: {
-      generation: DEFAULT_GENERATION_RULESET,
-    },
-  }
-}
-
-function normalizeGenerationRules(ruleset) {
-  return ruleset === GENERATION_RULESETS.PRE_GEN_6
-    ? GENERATION_RULESETS.PRE_GEN_6
-    : DEFAULT_GENERATION_RULESET
-}
-
-function sanitizeRunSnapshot(snapshot) {
-  const generationRules = normalizeGenerationRules(snapshot.generationRules)
-  const team = sanitizePokemonCollectionForRules(snapshot.team, generationRules)
-  const box = sanitizePokemonCollectionForRules(snapshot.box, generationRules)
-  const defeatedGyms = sanitizeDefeatedGymsForRules(
-    snapshot.defeatedGyms,
-    generationRules,
-  )
-  const pinnedGym = sanitizePinnedGymForRules(
-    snapshot.pinnedGym,
-    generationRules,
-  )
-
-  return {
-    team,
-    box,
-    defeatedGyms,
-    pinnedGym,
-    generationRules,
-  }
-}
-
 function hasStateChanged(a, b) {
   return JSON.stringify(a) !== JSON.stringify(b)
 }
 
 function setRunState(snapshot) {
-  runState.value = {
-    mode: 'solo',
-    team: snapshot.team,
-    box: snapshot.box,
-    progress: {
-      defeatedGyms: snapshot.defeatedGyms,
-      pinnedGym: snapshot.pinnedGym,
-    },
-    rules: {
-      generation: snapshot.generationRules,
-    },
-  }
+  runState.value = mapPersistedSnapshotToRunState(snapshot)
 }
 
 const runState = ref(createDefaultRunState())
@@ -94,7 +39,7 @@ export function useRunStore() {
       const loadedSnapshot = await repository.loadRunSnapshot(
         DEFAULT_GENERATION_RULESET,
       )
-      const sanitizedSnapshot = sanitizeRunSnapshot(loadedSnapshot)
+      const sanitizedSnapshot = sanitizePersistedRunSnapshot(loadedSnapshot)
 
       setRunState(sanitizedSnapshot)
       loadError.value = false
@@ -180,11 +125,8 @@ export function useRunStore() {
 
   async function persistGenerationRules(newRules) {
     const nextRules = normalizeGenerationRules(newRules)
-    const sanitizedSnapshot = sanitizeRunSnapshot({
-      team: runState.value.team,
-      box: runState.value.box,
-      defeatedGyms: runState.value.progress.defeatedGyms,
-      pinnedGym: runState.value.progress.pinnedGym,
+    const sanitizedSnapshot = sanitizePersistedRunSnapshot({
+      ...mapRunStateToPersistedSnapshot(runState.value),
       generationRules: nextRules,
     })
 
