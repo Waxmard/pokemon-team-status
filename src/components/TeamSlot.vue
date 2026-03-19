@@ -3,10 +3,10 @@
     class="team-slot"
     :class="{
       empty: !pokemon,
-      clickable: true,
+      clickable: interactive,
     }"
     :style="cardBackgroundStyle"
-    @click="pokemon ? $emit('edit', pokemon.id) : $emit('add')"
+    @click="handleClick"
   >
         <Transition name="slot-content" mode="out-in">
           <div v-if="pokemon" key="filled" class="slot-inner">
@@ -82,11 +82,34 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  generationRules: {
+    type: String,
+    default: null,
+  },
+  interactive: {
+    type: Boolean,
+    default: true,
+  },
 })
 
-defineEmits(['edit', 'add'])
+const emit = defineEmits(['edit', 'add'])
 
 const { generationRules } = useRunStore()
+
+const effectiveGenerationRules = computed(
+  () => props.generationRules ?? generationRules.value,
+)
+
+function handleClick() {
+  if (!props.interactive) return
+
+  if (props.pokemon) {
+    emit('edit', props.pokemon.id)
+    return
+  }
+
+  emit('add')
+}
 
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null
@@ -103,7 +126,7 @@ const cardBackgroundStyle = computed(() => {
 
   const opacity = 0.15
   const types = [
-    ...getMemberTypesForRules(props.pokemon, generationRules.value),
+    ...getMemberTypesForRules(props.pokemon, effectiveGenerationRules.value),
   ]
 
   if (!types.length) return {}

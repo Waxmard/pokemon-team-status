@@ -431,6 +431,27 @@ export function useSoulLinkStore() {
     }
   }
 
+  function updatePlayer(playerId, updates) {
+    const nextPlayerId = assertKnownPlayerId(
+      playerId,
+      'Updating a Soul Link player',
+    )
+
+    updateSoulLinkState((soulLinkState) => ({
+      ...soulLinkState,
+      players: soulLinkState.players.map((player) =>
+        player.id === nextPlayerId
+          ? {
+              ...player,
+              ...cloneValue(updates),
+              id: nextPlayerId,
+              isLocal: player.isLocal,
+            }
+          : player,
+      ),
+    }))
+  }
+
   function setCachedPlayerSlot(playerId) {
     assertKnownPlayerId(playerId, 'Setting the cached Soul Link player slot')
 
@@ -678,6 +699,7 @@ export function useSoulLinkStore() {
     startNewLocalSoulLinkRun,
     updateSessionMetadata,
     setGenerationRules,
+    updatePlayer,
     setCachedPlayerSlot,
     setLocalPreferences,
     addRosterMember,

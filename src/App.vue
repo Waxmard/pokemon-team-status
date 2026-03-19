@@ -6,24 +6,46 @@
       </div>
       <button class="reset-btn" @click="showResetDialog = true" aria-label="Reset">✦</button>
       <h1 class="app-title">
-        <span class="title-accent">Weakness Calculator</span>
+        <span v-if="isSoloMode" class="title-accent">{{ appTitle }}</span>
+        <span v-else class="title-player-row">
+          <label class="title-player-field">
+            <input
+              ref="playerNameInput"
+              :value="viewedSoulLinkPlayerName"
+              class="title-player-input"
+              type="text"
+              maxlength="32"
+              aria-label="Viewed Soul Link player name"
+              @change="handleRenameViewedSoulLinkPlayerInput"
+            />
+          </label>
+          <button
+            class="title-rename-button"
+            type="button"
+            aria-label="Rename viewed player"
+            @click="focusPlayerNameInput"
+          >
+            ✎
+          </button>
+        </span>
       </h1>
 
       <template v-if="isSoloMode">
         <TeamSection :team="team" :box="box" @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap"
+          :generation-rules="generationRules"
           @deleteTeamPokemon="deleteTeamPokemon" @deleteBoxPokemon="deleteBoxPokemon" @cancelSwap="handleCancelSwap"
           @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion" />
 
-        <GymColumns :remainingGyms="remainingGyms" :defeatedGymsList="defeatedGymsList" :draftActive="hasDraft"
+        <GymColumns :team="team" :box="box" :remainingGyms="remainingGyms" :defeatedGymsList="defeatedGymsList"
+          :defeated-gym-types="defeatedGyms" :pinned-type="pinnedGym" :persist-pinned-gym="persistPinnedGym" :generation-rules="generationRules"
+          :draftActive="hasDraft"
           @defeatGym="defeatGym" @undefeatGym="undefeatGym" @swapSuggestion="handleSwapSuggestion" />
       </template>
 
       <SoulLinkShell
         v-else
-        :title="soulLinkShellTitle"
-        :viewed-player-name="viewedSoulLinkPlayerName"
-        :generation-label="generationRulesLabel"
-        :player-summaries="soulLinkPlayerSummaries"
+        :generation-rules="soulLinkGenerationRules"
+        :viewed-player-board="viewedSoulLinkPlayerBoard"
       />
     </div>
   </n-config-provider>
@@ -36,6 +58,21 @@
           <button class="reset-option" @click="toggleGenerationRules">
             {{ generationRulesLabel }}
           </button>
+          <div v-if="!isSoloMode" class="reset-option-section">
+            <p class="reset-option-section-label">Viewing Player</p>
+            <div class="reset-option-group reset-option-group-inline">
+              <button
+                v-for="player in soulLinkPlayerSummaries"
+                :key="player.id"
+                class="reset-option"
+                :class="{ 'reset-option-active': player.isViewed }"
+                type="button"
+                @click="handleViewSoulLinkPlayer(player.id)"
+              >
+                {{ player.name }}
+              </button>
+            </div>
+          </div>
           <button class="reset-option" :disabled="!isSoloMode" @click="resetPokemon">
             Reset Team & Box
           </button>
@@ -76,6 +113,7 @@ import {
 } from './utils/generationRules.js'
 import { buildPokemonMember, generatePokemonId } from './utils/pokemon.js'
 import { RUN_MODES } from './utils/runSnapshot.js'
+import { buildSoulLinkPlayerBoard } from './utils/soulLinkUi.js'
 import { calculateBerryTiebreaker, calculateScore } from './utils/typeCalc.js'
 
 const {
@@ -91,10 +129,12 @@ const {
   startNewSoloRun,
   resetTeamAndBox,
   resetGyms: resetGymsInStore,
+  pinnedGym,
   deleteTeamPokemon,
   deleteBoxPokemon,
   defeatGym,
   undefeatGym,
+  persistPinnedGym,
 } = useRunStore()
 
 const {
@@ -102,9 +142,10 @@ const {
   rosters: soulLinkRosters,
   gymProgress: soulLinkGymProgress,
   generationRules: soulLinkGenerationRules,
-  sessionMetadata: soulLinkSessionMetadata,
   localPreferences: soulLinkLocalPreferences,
   setGenerationRules: setSoulLinkGenerationRules,
+  setCachedPlayerSlot,
+  updatePlayer: updateSoulLinkPlayer,
   startNewLocalSoulLinkRun,
 } = useSoulLinkStore()
 
@@ -121,7 +162,11 @@ const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
   useRunModeStore()
 
 const showResetDialog = ref(false)
+const playerNameInput = ref(null)
 const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
+const appTitle = computed(() =>
+  isSoloMode.value ? 'Weakness Calculator' : viewedSoulLinkPlayerName.value,
+)
 
 const activeGenerationRules = computed(() =>
   isSoloMode.value ? generationRules.value : soulLinkGenerationRules.value,
@@ -188,10 +233,6 @@ const viewedSoulLinkPlayerName = computed(
   () => viewedSoulLinkPlayer.value?.name ?? 'Unknown Player',
 )
 
-const soulLinkShellTitle = computed(() => {
-  return soulLinkSessionMetadata.value.name || 'Local Soul Link Run'
-})
-
 const soulLinkPlayerSummaries = computed(() => {
   return soulLinkPlayers.value.map((player) => {
     const roster = soulLinkRosters.value[player.id] ?? { team: [], box: [] }
@@ -212,6 +253,47 @@ const soulLinkPlayerSummaries = computed(() => {
     }
   })
 })
+
+const viewedSoulLinkPlayerBoard = computed(() => {
+  if (!viewedSoulLinkPlayer.value) {
+    return {
+      team: [],
+      box: [],
+      remainingGyms: [],
+      defeatedGymsList: [],
+      pinnedGym: null,
+    }
+  }
+
+  return buildSoulLinkPlayerBoard(
+    viewedSoulLinkPlayer.value.id,
+    soulLinkRosters.value,
+    soulLinkGymProgress.value,
+    soulLinkGenerationRules.value,
+  )
+})
+
+function handleViewSoulLinkPlayer(playerId) {
+  setCachedPlayerSlot(playerId)
+}
+
+function handleRenameViewedSoulLinkPlayer(nextName) {
+  const player = viewedSoulLinkPlayer.value
+  const trimmedName = nextName.trim()
+
+  if (!player || !trimmedName || trimmedName === player.name) return
+
+  updateSoulLinkPlayer(player.id, { name: trimmedName })
+}
+
+function handleRenameViewedSoulLinkPlayerInput(event) {
+  handleRenameViewedSoulLinkPlayer(event.target.value)
+}
+
+function focusPlayerNameInput() {
+  playerNameInput.value?.focus()
+  playerNameInput.value?.select()
+}
 
 function getRulesetPokemonData(name) {
   return getPokemonDataForRules(name, generationRules.value)
@@ -695,10 +777,22 @@ onMounted(() => {
 
 .app-title {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 2px;
   margin-bottom: var(--space-6);
+}
+
+.title-player-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  max-width: min(100%, 28rem);
+}
+
+.title-player-field {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .title-accent {
@@ -708,6 +802,53 @@ onMounted(() => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.title-player-input {
+  width: auto;
+  max-width: min(100%, 24rem);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  background-image: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.title-player-input:focus {
+  outline: none;
+}
+
+.title-player-input::selection {
+  -webkit-text-fill-color: var(--color-text-primary);
+}
+
+.title-rename-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--transition-base);
+}
+
+.title-rename-button:hover,
+.title-rename-button:focus-visible {
+  color: var(--color-primary);
+  outline: none;
 }
 
 .reset-btn {
@@ -842,6 +983,35 @@ onMounted(() => {
   margin-top: var(--space-4);
   padding-top: var(--space-4);
   border-top: 1px solid var(--color-border);
+}
+
+.reset-option-group-inline {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.reset-option-section {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: left;
+}
+
+.reset-option-section-label {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.reset-option-active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .reset-option:disabled {

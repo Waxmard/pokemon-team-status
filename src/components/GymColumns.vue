@@ -43,8 +43,9 @@
         :title="gymColumnTitle"
         :gyms="unifiedGymsList"
         :draftActive="draftActive"
-        :pinnedType="pinnedGym"
+        :pinnedType="effectivePinnedGym"
         :suggestionMode="showSuggestions"
+        :readOnly="readOnly"
         transitionName="slide-right"
         emptyMessage="No gyms"
         @gymClick="handleGymClick"
@@ -56,7 +57,6 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useRunStore } from '../composables/useRunStore.js'
 import { getMegaSpriteUrl, getSmallSpriteUrl } from '../utils/pokemon.js'
 import {
   calculateTypeSuggestionScore,
@@ -65,16 +65,15 @@ import {
 import GymColumn from './GymColumn.vue'
 import SpriteImg from './SpriteImg.vue'
 
-const {
-  team,
-  box,
-  defeatedGyms,
-  pinnedGym,
-  persistPinnedGym,
-  generationRules,
-} = useRunStore()
-
 const props = defineProps({
+  team: {
+    type: Array,
+    default: () => [],
+  },
+  box: {
+    type: Array,
+    default: () => [],
+  },
   remainingGyms: {
     type: Array,
     required: true,
@@ -83,7 +82,27 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  defeatedGymTypes: {
+    type: Array,
+    default: () => [],
+  },
   draftActive: {
+    type: Boolean,
+    default: false,
+  },
+  pinnedType: {
+    type: String,
+    default: null,
+  },
+  generationRules: {
+    type: String,
+    required: true,
+  },
+  persistPinnedGym: {
+    type: Function,
+    default: null,
+  },
+  readOnly: {
     type: Boolean,
     default: false,
   },
@@ -103,8 +122,10 @@ watch(showSuggestions, () => {
 })
 
 const canShowSuggestion = computed(
-  () => team.value.length > 0 && !props.draftActive,
+  () => !props.readOnly && props.team.length > 0 && !props.draftActive,
 )
+
+const effectivePinnedGym = computed(() => props.pinnedType)
 
 watch(canShowSuggestion, (canShow) => {
   if (!canShow) showSuggestions.value = false
@@ -112,13 +133,13 @@ watch(canShowSuggestion, (canShow) => {
 
 const globalSwap = computed(() => {
   if (!showSuggestions.value || !canShowSuggestion.value) return null
-  if (box.value.length === 0) return null
+  if (props.box.length === 0) return null
   return findGlobalBestSwap(
-    team.value,
-    box.value,
-    defeatedGyms.value,
-    pinnedGym.value,
-    generationRules.value,
+    props.team,
+    props.box,
+    props.defeatedGymTypes,
+    effectivePinnedGym.value,
+    props.generationRules,
   )
 })
 
@@ -185,10 +206,10 @@ const unifiedGymsList = computed(() => {
       defeated: false,
       improvementScore: calculateTypeSuggestionScore(
         gym.type,
-        team.value,
-        defeatedGyms.value,
-        pinnedGym.value,
-        generationRules.value,
+        props.team,
+        props.defeatedGymTypes,
+        effectivePinnedGym.value,
+        props.generationRules,
       ),
     }))
     // Sort by improvement descending, then current score ascending as tiebreaker
@@ -206,9 +227,9 @@ const unifiedGymsList = computed(() => {
     return (a.berryCount || 0) - (b.berryCount || 0)
   })
   // Move pinned gym to first position if it exists
-  if (pinnedGym.value) {
+  if (effectivePinnedGym.value) {
     const pinnedIndex = combined.findIndex(
-      (gym) => gym.type === pinnedGym.value,
+      (gym) => gym.type === effectivePinnedGym.value,
     )
     if (pinnedIndex > 0) {
       const [pinned] = combined.splice(pinnedIndex, 1)
@@ -221,8 +242,10 @@ const unifiedGymsList = computed(() => {
 // Handle gym click - toggle between defeated and remaining
 // Also unpin if the clicked gym was pinned
 function handleGymClick(type) {
-  if (pinnedGym.value === type) {
-    persistPinnedGym(null)
+  if (props.readOnly) return
+
+  if (effectivePinnedGym.value === type) {
+    props.persistPinnedGym?.(null)
   }
   if (defeatedTypes.value.has(type)) {
     emit('undefeatGym', type)
@@ -233,10 +256,12 @@ function handleGymClick(type) {
 
 // Handle pin - toggle pinned state
 function handlePin(type) {
-  if (pinnedGym.value === type) {
-    persistPinnedGym(null)
+  if (props.readOnly) return
+
+  if (effectivePinnedGym.value === type) {
+    props.persistPinnedGym?.(null)
   } else {
-    persistPinnedGym(type)
+    props.persistPinnedGym?.(type)
   }
 }
 </script>
