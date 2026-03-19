@@ -5,6 +5,7 @@
       :generation-rules="generationRules"
       :draft-active="draftActive"
       :persist-pinned-gym="persistPinnedGym"
+      :partner-roster="partnerRoster"
       @confirmDraft="$emit('confirmDraft')"
       @immediateSwap="$emit('immediateSwap', $event)"
       @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
@@ -36,6 +37,10 @@ defineProps({
   },
   persistPinnedGym: {
     type: Function,
+    default: null,
+  },
+  partnerRoster: {
+    type: Array,
     default: null,
   },
 })

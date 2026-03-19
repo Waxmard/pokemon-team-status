@@ -98,6 +98,8 @@
         :box="box"
         :defeated-gyms="defeatedGyms"
         :pinned-gym="pinnedGym"
+        :partner-roster="partnerRoster"
+        :is-soul-link-mode="isSoulLinkMode"
         @confirm="$emit('confirmDraft')"
         @cancel="cancel"
         @swapSuggestion="handleSwapSuggestion"
@@ -142,6 +144,14 @@ const props = defineProps({
   pinnedGym: {
     type: String,
     default: undefined,
+  },
+  partnerRoster: {
+    type: Array,
+    default: null,
+  },
+  isSoulLinkMode: {
+    type: Boolean,
+    default: false,
   },
 })
 
@@ -304,10 +314,12 @@ function handleEditPokemon(id) {
     berry: pokemon.berry || null,
     moves: pokemon.moves,
     specialMove: pokemon.specialMove,
+    pairId: pokemon.pairId || null,
     megaForm: pokemon.megaForm || null,
     megaTypes: pokemon.megaTypes || null,
     megaSpriteId: pokemon.megaSpriteId || null,
     spriteVariant: pokemon.spriteVariant || 'default',
+    catchLocation: pokemon.catchLocation || null,
   })
 }
 
@@ -323,10 +335,12 @@ function handleEditBoxPokemon(boxPokemonId) {
     berry: pokemon.berry || null,
     moves: pokemon.moves,
     specialMove: pokemon.specialMove,
+    pairId: pokemon.pairId || null,
     megaForm: pokemon.megaForm || null,
     megaTypes: pokemon.megaTypes || null,
     megaSpriteId: pokemon.megaSpriteId || null,
     spriteVariant: pokemon.spriteVariant || 'default',
+    catchLocation: pokemon.catchLocation || null,
   })
 }
 

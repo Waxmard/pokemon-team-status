@@ -1,65 +1,44 @@
 <template>
-  <div
-    class="team-slot"
-    :class="{
-      empty: !pokemon,
-      clickable: interactive,
-    }"
-    :style="cardBackgroundStyle"
-    @click="handleClick"
-  >
-        <Transition name="slot-content" mode="out-in">
-          <div v-if="pokemon" key="filled" class="slot-inner">
-            <div class="slot-content">
-              <div class="sprite-container">
-                <SpriteImg
-                  v-if="spriteUrl"
-                  :src="spriteUrl"
-                  :alt="pokemon.name"
-                  :width="80"
-                  :height="80"
-                />
-              </div>
-              <div class="pokemon-info">
-                <div v-if="pokemon.moves.length" class="pokemon-moves">
-                  <img
-                    v-for="move in pokemon.moves"
-                    :key="move"
-                    :src="getTypeIcon(move)"
-                    :alt="move"
-                    :title="move"
-                    class="move-type-icon"
-                  />
-                </div>
-                <div class="pokemon-badges">
-                  <SpriteImg
-                    v-if="pokemon.berry"
-                    class="berry-icon"
-                    :src="getBerrySprite(pokemon.berry)"
-                    :alt="pokemon.berry"
-                    :title="pokemon.berry"
-                    :width="24"
-                    :height="24"
-                  />
-                  <span v-if="pokemon.specialMove" class="special-move-badge">
-                    {{ pokemon.specialMove }}
-                  </span>
-                  <span v-if="pokemon.ability" class="ability-badge">
-                    {{ pokemon.ability }}
-                  </span>
-                </div>
-              </div>
+  <div class="team-slot" :class="{
+    empty: !pokemon,
+    clickable: interactive,
+  }" :style="cardBackgroundStyle" @click="handleClick">
+    <Transition name="slot-content" mode="out-in">
+      <div v-if="pokemon" key="filled" class="slot-inner">
+        <div class="slot-content">
+          <div class="sprite-container">
+            <SpriteImg v-if="spriteUrl" :src="spriteUrl" :alt="pokemon.name" :width="80" :height="80" />
+          </div>
+          <div class="pokemon-info">
+            <div v-if="pokemon.moves.length" class="pokemon-moves">
+              <img v-for="move in pokemon.moves" :key="move" :src="getTypeIcon(move)" :alt="move" :title="move"
+                class="move-type-icon" />
+            </div>
+            <div class="pokemon-badges">
+              <SpriteImg v-if="pokemon.berry" class="berry-icon" :src="getBerrySprite(pokemon.berry)"
+                :alt="pokemon.berry" :title="pokemon.berry" :width="24" :height="24" />
+              <span v-if="pokemon.specialMove" class="special-move-badge">
+                {{ pokemon.specialMove }}
+              </span>
+              <span v-if="pokemon.ability" class="ability-badge">
+                {{ pokemon.ability }}
+              </span>
             </div>
           </div>
-          <div v-else key="empty" class="empty-content">
-            <svg class="empty-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="16"/>
-              <line x1="8" y1="12" x2="16" y2="12"/>
-            </svg>
-            <span class="empty-text">Empty Slot</span>
-          </div>
-        </Transition>
+        </div>
+        <SpriteImg v-if="pokemon.pairedPartner" :src="partnerSpriteUrl" :alt="pokemon.pairedPartner.name" :width="24"
+          :height="24" class="partner-sprite" />
+      </div>
+      <div v-else key="empty" class="empty-content">
+        <svg class="empty-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="16" />
+          <line x1="8" y1="12" x2="16" y2="12" />
+        </svg>
+        <span class="empty-text">Empty Slot</span>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -73,6 +52,7 @@ import { getMemberTypesForRules } from '../utils/generationRules.js'
 import {
   getBerrySprite,
   getMegaSpriteUrl,
+  getSmallSpriteUrl,
   getSpriteUrl,
 } from '../utils/pokemon.js'
 import SpriteImg from './SpriteImg.vue'
@@ -119,6 +99,16 @@ const spriteUrl = computed(() => {
     return getMegaSpriteUrl(props.pokemon.megaSpriteId, variant)
   }
   return getSpriteUrl(props.pokemon.name, variant)
+})
+
+const partnerSpriteUrl = computed(() => {
+  if (!props.pokemon?.pairedPartner) return null
+  const partner = props.pokemon.pairedPartner
+  const variant = partner.spriteVariant || 'default'
+  if (partner.megaSpriteId) {
+    return getMegaSpriteUrl(partner.megaSpriteId, variant)
+  }
+  return getSmallSpriteUrl(partner.name, variant)
 })
 
 const cardBackgroundStyle = computed(() => {
@@ -278,6 +268,13 @@ const cardBackgroundStyle = computed(() => {
   margin-right: var(--space-1);
 }
 
+.partner-sprite {
+  position: absolute;
+  bottom: var(--space-1);
+  right: var(--space-1);
+  opacity: 0.85;
+}
+
 .special-move-badge,
 .ability-badge {
   font-size: 0.7rem;
@@ -286,6 +283,4 @@ const cardBackgroundStyle = computed(() => {
   background: rgba(255, 255, 255, 0.1);
   white-space: nowrap;
 }
-
-
 </style>

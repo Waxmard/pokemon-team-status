@@ -114,6 +114,10 @@
               :width="144"
               :height="144"
             />
+            <!-- Catch location display on pokemon step -->
+            <span v-if="draftAction.catchLocation" class="preview-catch-location">
+              {{ draftAction.catchLocation }}
+            </span>
             <!-- Evolve button positioned inside preview -->
             <button v-if="canEvolve" class="evolve-btn" @click="handleEvolveClick">
               ⬆
@@ -130,6 +134,48 @@
                 <SpriteImg :src="getEvoSpriteUrl(option)" :alt="option.isMega ? option.name : option" :width="40" :height="40" />
               </button>
             </div>
+          </div>
+        </div>
+
+        <!-- Step: Catch Location -->
+        <div v-if="wizardStep === 'catchLocation'" class="wizard-step catch-location-step">
+          <div class="catch-location-input-row">
+            <n-auto-complete
+              v-model:value="catchLocationQuery"
+              :options="catchLocationOptions"
+              placeholder="Enter location..."
+              @select="onSelectCatchLocation"
+              @update:value="onCatchLocationInput"
+              clearable
+            />
+            <button
+              v-if="!matchedPartnerForLocation && catchLocationQuery.trim() && catchLocationQuery.trim() !== draftAction.catchLocation"
+              class="save-location-btn"
+              @click="saveCatchLocation"
+              aria-label="Save location"
+            >
+              ✓
+            </button>
+            <button
+              v-if="draftAction.pairId || draftAction.catchLocation"
+              class="unlink-location-btn"
+              @click="unlinkCatchLocation"
+              aria-label="Unlink location"
+            >
+              ✕
+            </button>
+          </div>
+          <div class="pokemon-preview">
+            <SpriteImg
+              v-if="matchedPartnerForLocation"
+              :src="getPartnerPreviewSpriteUrl(matchedPartnerForLocation)"
+              :alt="matchedPartnerForLocation.name"
+              :width="144"
+              :height="144"
+            />
+            <span v-if="draftAction.catchLocation" class="preview-catch-location">
+              {{ matchedPartnerForLocation ? draftAction.catchLocation : 'Not Yet Linked' }}
+            </span>
           </div>
         </div>
 
@@ -285,6 +331,14 @@ const props = defineProps({
     type: String,
     default: undefined,
   },
+  partnerRoster: {
+    type: Array,
+    default: null,
+  },
+  isSoulLinkMode: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 defineEmits(['confirm', 'cancel', 'swapSuggestion'])
@@ -296,6 +350,7 @@ const {
   updateBerry,
   updateMoves,
   updateSpecialMove,
+  updateCatchLocation,
   updateMegaForm,
   updateSpriteVariant,
 } = useDraftAction()
@@ -378,6 +433,13 @@ const suggestionIndicator = computed(() => {
 
 function toggleSuggestion() {
   showSuggestion.value = !showSuggestion.value
+}
+
+function getPartnerPreviewSpriteUrl(partner) {
+  const variant = partner.spriteVariant || 'default'
+  if (partner.megaSpriteId)
+    return getMegaSpriteUrl(partner.megaSpriteId, variant)
+  return getSpriteUrl(partner.name, variant)
 }
 
 function getSuggestionSpriteUrl(pokemonName, spriteVariant, megaSpriteId) {
@@ -486,6 +548,7 @@ const canConfirm = computed(() => {
 const wizardStepTitle = computed(() => {
   const titles = {
     pokemon: 'Choose Pokemon',
+    catchLocation: 'Catch Location',
     ability: 'Choose Ability',
     berry: 'Choose Item',
     moves: 'Move Types',
@@ -799,8 +862,81 @@ function clearSpecialMove() {
   updateSpecialMove(null)
 }
 
+// Catch location state
+const catchLocationQuery = ref('')
+
+watch(
+  () => draftAction.value?.catchLocation,
+  (catchLocation) => {
+    catchLocationQuery.value = catchLocation || ''
+  },
+  { immediate: true },
+)
+
+const partnerUnlinkedLocations = computed(() => {
+  if (!props.partnerRoster) return []
+  const locations = new Set()
+  for (const m of props.partnerRoster) {
+    if (m.catchLocation && !m.pairId) {
+      locations.add(m.catchLocation)
+    }
+  }
+  return [...locations]
+})
+
+const catchLocationOptions = computed(() => {
+  const query = catchLocationQuery.value.toLowerCase()
+  return partnerUnlinkedLocations.value
+    .filter((loc) => !query || loc.toLowerCase().includes(query))
+    .map((loc) => ({ label: loc, value: loc }))
+})
+
+const matchedPartnerForLocation = computed(() => {
+  if (!props.partnerRoster || !catchLocationQuery.value) return null
+  const query = catchLocationQuery.value.toLowerCase()
+  // Include already-paired partner (same location, or directly paired by id)
+  return props.partnerRoster.find(
+    (m) =>
+      m.catchLocation &&
+      m.catchLocation.toLowerCase() === query &&
+      (!m.pairId || m.id === draftAction.value?.pairId),
+  )
+})
+
+function onSelectCatchLocation(value) {
+  catchLocationQuery.value = value
+  updateCatchLocation(value)
+}
+
+function onCatchLocationInput(value) {
+  catchLocationQuery.value = value
+  // Only auto-set if it matches a partner location
+  const match = partnerUnlinkedLocations.value.find(
+    (loc) => loc.toLowerCase() === value.toLowerCase(),
+  )
+  if (match) {
+    updateCatchLocation(match)
+  }
+}
+
+function saveCatchLocation() {
+  if (catchLocationQuery.value.trim()) {
+    updateCatchLocation(catchLocationQuery.value.trim())
+  }
+}
+
+function unlinkCatchLocation() {
+  catchLocationQuery.value = ''
+  updateCatchLocation(null)
+}
+
 // Wizard navigation functions
-const wizardSteps = ['pokemon', 'moves', 'berry', 'ability']
+const wizardSteps = computed(() => {
+  if (props.isSoulLinkMode) {
+    return ['pokemon', 'catchLocation', 'moves', 'berry', 'ability']
+  }
+  return ['pokemon', 'moves', 'berry', 'ability']
+})
 
 const canGoPrevious = computed(() => wizardStep.value !== 'pokemon')
 
@@ -811,16 +947,18 @@ const canGoNext = computed(() => {
 })
 
 function goToNextStep() {
-  const currentIndex = wizardSteps.indexOf(wizardStep.value)
-  if (currentIndex < wizardSteps.length - 1) {
-    wizardStep.value = wizardSteps[currentIndex + 1]
+  const steps = wizardSteps.value
+  const currentIndex = steps.indexOf(wizardStep.value)
+  if (currentIndex < steps.length - 1) {
+    wizardStep.value = steps[currentIndex + 1]
   }
 }
 
 function goToPreviousStep() {
-  const currentIndex = wizardSteps.indexOf(wizardStep.value)
+  const steps = wizardSteps.value
+  const currentIndex = steps.indexOf(wizardStep.value)
   if (currentIndex > 0) {
-    wizardStep.value = wizardSteps[currentIndex - 1]
+    wizardStep.value = steps[currentIndex - 1]
   }
 }
 
@@ -1261,6 +1399,54 @@ function onSearchInput(value) {
 
 .evolve-option-pill.mega-selected {
   filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.6));
+}
+
+.preview-catch-location {
+  position: absolute;
+  bottom: -2rem;
+  right: var(--space-3);
+  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.28;
+  opacity: 0.92;
+  color: var(--color-text-primary);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.catch-location-step {
+  overflow: visible;
+}
+
+.catch-location-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.catch-location-input-row .n-auto-complete {
+  flex: 1;
+}
+
+.save-location-btn,
+.unlink-location-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  font-weight: 900;
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: color var(--transition-base);
+}
+
+.save-location-btn {
+  color: var(--color-success);
+}
+
+.unlink-location-btn {
+  color: var(--color-danger);
 }
 
 @keyframes fadeSlideIn {

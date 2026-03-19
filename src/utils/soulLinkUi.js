@@ -19,8 +19,8 @@ export function adaptUiMemberToSoulLinkMember(uiMember, playerId) {
     megaSpriteId: uiMember.megaSpriteId ?? null,
     spriteVariant: uiMember.spriteVariant ?? 'default',
     nickname: null,
-    catchLocation: null,
-    pairId: null,
+    catchLocation: uiMember.catchLocation ?? null,
+    pairId: uiMember.pairId ?? null,
     isDead: false,
   }
 }
@@ -46,8 +46,8 @@ export function buildSoulLinkMemberFromDraft(
     megaSpriteId: draftAction.megaSpriteId ?? null,
     spriteVariant: draftAction.spriteVariant ?? 'default',
     nickname: null,
-    catchLocation: null,
-    pairId: null,
+    catchLocation: draftAction.catchLocation ?? null,
+    pairId: draftAction.pairId ?? null,
     isDead: false,
   }
 }
@@ -67,6 +67,8 @@ export function adaptSoulLinkMemberToUiMember(member) {
     megaTypes: member.megaTypes ?? null,
     megaSpriteId: member.megaSpriteId ?? null,
     spriteVariant: member.spriteVariant ?? 'default',
+    catchLocation: member.catchLocation ?? null,
+    pairId: member.pairId ?? null,
   }
 }
 
@@ -83,11 +85,23 @@ function sortGyms(a, b) {
   return (a.berryCount ?? 0) - (b.berryCount ?? 0)
 }
 
+function resolvePairedPartner(uiMember, partnerRoster) {
+  if (!uiMember.pairId || !partnerRoster) return null
+  const partner = partnerRoster.find((m) => m.id === uiMember.pairId)
+  if (!partner) return null
+  return {
+    name: partner.name,
+    spriteVariant: partner.spriteVariant,
+    megaSpriteId: partner.megaSpriteId,
+  }
+}
+
 export function buildSoulLinkPlayerBoard(
   playerId,
   rosters,
   gymProgress,
   generationRules,
+  partnerRoster = null,
 ) {
   const roster = rosters[playerId] ?? { team: [], box: [] }
   const progress = gymProgress[playerId] ?? {
@@ -96,8 +110,20 @@ export function buildSoulLinkPlayerBoard(
   }
   const defeatedGymSet = new Set(progress.defeatedGyms)
 
-  const team = roster.team.map(adaptSoulLinkMemberToUiMember).filter(Boolean)
-  const box = roster.box.map(adaptSoulLinkMemberToUiMember).filter(Boolean)
+  const team = roster.team
+    .map(adaptSoulLinkMemberToUiMember)
+    .filter(Boolean)
+    .map((m) => ({
+      ...m,
+      pairedPartner: resolvePairedPartner(m, partnerRoster),
+    }))
+  const box = roster.box
+    .map(adaptSoulLinkMemberToUiMember)
+    .filter(Boolean)
+    .map((m) => ({
+      ...m,
+      pairedPartner: resolvePairedPartner(m, partnerRoster),
+    }))
 
   const allGyms = getAllTypesForRules(generationRules)
     .map((type) => buildGymScore(type, team, generationRules))

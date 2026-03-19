@@ -6,6 +6,8 @@
       :generation-rules="generationRules"
       :defeated-gyms="board.defeatedGymsList.map((gym) => gym.type)"
       :pinned-gym="board.pinnedGym"
+      :partner-roster="partnerRoster"
+      :is-soul-link-mode="true"
       @confirmDraft="$emit('confirmDraft')"
       @immediateSwap="$emit('immediateSwap', $event)"
       @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
@@ -51,6 +53,10 @@ defineProps({
   },
   persistPinnedGym: {
     type: Function,
+    default: null,
+  },
+  partnerRoster: {
+    type: Array,
     default: null,
   },
 })

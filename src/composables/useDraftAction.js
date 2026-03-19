@@ -23,6 +23,7 @@ export function useDraftAction() {
       megaTypes: null,
       megaSpriteId: null,
       spriteVariant: 'default',
+      catchLocation: null,
     }
   }
 
@@ -43,10 +44,12 @@ export function useDraftAction() {
       berry: member.berry,
       moves: [...(member.moves || [])],
       specialMove: member.specialMove || null,
+      pairId: member.pairId || null,
       megaForm: member.megaForm || null,
       megaTypes: member.megaTypes || null,
       megaSpriteId: member.megaSpriteId || null,
       spriteVariant: member.spriteVariant || 'default',
+      catchLocation: member.catchLocation || null,
     }
   }
 
@@ -66,11 +69,13 @@ export function useDraftAction() {
       berry: boxMember.berry,
       moves: [...(boxMember.moves || [])],
       specialMove: boxMember.specialMove || null,
+      pairId: boxMember.pairId || null,
       replaceTarget: null,
       megaForm: boxMember.megaForm || null,
       megaTypes: boxMember.megaTypes || null,
       megaSpriteId: boxMember.megaSpriteId || null,
       spriteVariant: boxMember.spriteVariant || 'default',
+      catchLocation: boxMember.catchLocation || null,
     }
   }
 
@@ -89,6 +94,7 @@ export function useDraftAction() {
       megaTypes: null,
       megaSpriteId: null,
       spriteVariant: 'default',
+      catchLocation: null,
     }
   }
 
@@ -119,6 +125,12 @@ export function useDraftAction() {
   function updateSpecialMove(specialMove) {
     if (draftAction.value) {
       draftAction.value.specialMove = specialMove
+    }
+  }
+
+  function updateCatchLocation(location) {
+    if (draftAction.value) {
+      draftAction.value.catchLocation = location
     }
   }
 
@@ -196,6 +208,7 @@ export function useDraftAction() {
     updateBerry,
     updateMoves,
     updateSpecialMove,
+    updateCatchLocation,
     updateMegaForm,
     updateReplaceTarget,
     updateSpriteVariant,
