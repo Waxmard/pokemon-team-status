@@ -132,9 +132,11 @@ function onTouchMove(event) {
   isPinSlotHover.value = !!pinSlot
 }
 
-function onTouchEnd() {
+function onTouchEnd(event) {
   if (props.readOnly) return
   if (touchDragType.value && isPinSlotHover.value) {
+    // Prevent synthetic click from firing on whatever is under the finger
+    event.preventDefault()
     emit('pin', touchDragType.value)
   }
   // Reset all state

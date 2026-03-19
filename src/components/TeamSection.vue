@@ -95,6 +95,9 @@
         v-else
         key="panel"
         :team="team"
+        :box="box"
+        :defeated-gyms="defeatedGyms"
+        :pinned-gym="pinnedGym"
         @confirm="$emit('confirmDraft')"
         @cancel="cancel"
         @swapSuggestion="handleSwapSuggestion"
@@ -131,6 +134,14 @@ const props = defineProps({
   readOnly: {
     type: Boolean,
     default: false,
+  },
+  defeatedGyms: {
+    type: Array,
+    default: null,
+  },
+  pinnedGym: {
+    type: String,
+    default: undefined,
   },
 })
 

@@ -1,5 +1,56 @@
 import { getAllTypesForRules } from '../data/types.js'
+import { generatePokemonId } from './pokemon.js'
 import { calculateBerryTiebreaker, calculateScore } from './typeCalc.js'
+
+export function adaptUiMemberToSoulLinkMember(uiMember, playerId) {
+  if (!uiMember?.name) return null
+
+  return {
+    id: uiMember.id,
+    speciesName: uiMember.name,
+    ownerPlayerId: playerId,
+    types: uiMember.types ?? [],
+    ability: uiMember.ability ?? null,
+    berry: uiMember.berry ?? null,
+    moves: uiMember.moves ?? [],
+    specialMove: uiMember.specialMove ?? null,
+    megaForm: uiMember.megaForm ?? null,
+    megaTypes: uiMember.megaTypes ?? null,
+    megaSpriteId: uiMember.megaSpriteId ?? null,
+    spriteVariant: uiMember.spriteVariant ?? 'default',
+    nickname: null,
+    catchLocation: null,
+    pairId: null,
+    isDead: false,
+  }
+}
+
+export function buildSoulLinkMemberFromDraft(
+  draftAction,
+  playerId,
+  idSource = 'team',
+) {
+  if (!draftAction?.pokemon) return null
+
+  return {
+    id: generatePokemonId(idSource),
+    speciesName: draftAction.pokemon.name,
+    ownerPlayerId: playerId,
+    types: draftAction.pokemon.types ?? [],
+    ability: draftAction.ability ?? null,
+    berry: draftAction.berry ?? null,
+    moves: (draftAction.moves ?? []).filter((m) => m),
+    specialMove: draftAction.specialMove ?? null,
+    megaForm: draftAction.megaForm ?? null,
+    megaTypes: draftAction.megaTypes ?? null,
+    megaSpriteId: draftAction.megaSpriteId ?? null,
+    spriteVariant: draftAction.spriteVariant ?? 'default',
+    nickname: null,
+    catchLocation: null,
+    pairId: null,
+    isDead: false,
+  }
+}
 
 export function adaptSoulLinkMemberToUiMember(member) {
   if (!member?.speciesName) return null

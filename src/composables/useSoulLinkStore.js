@@ -649,6 +649,14 @@ export function useSoulLinkStore() {
     }))
   }
 
+  function setPlayerRoster(playerId, roster) {
+    const pid = assertKnownPlayerId(playerId, 'Setting a Soul Link roster')
+    updatePlayerRecord('rosters', pid, {
+      team: normalizeRosterMembers(roster.team, pid),
+      box: normalizeRosterMembers(roster.box, pid),
+    })
+  }
+
   function resetPlayerRoster(playerId) {
     updatePlayerRecord(
       'rosters',
@@ -730,6 +738,7 @@ export function useSoulLinkStore() {
     getPlayerTeam,
     getPlayerBox,
     getPlayerGymProgress,
+    setPlayerRoster,
     resetPlayerRoster,
     resetPlayerGymProgress,
   }

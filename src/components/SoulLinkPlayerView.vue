@@ -4,7 +4,15 @@
       :team="board.team"
       :box="board.box"
       :generation-rules="generationRules"
-      read-only
+      :defeated-gyms="board.defeatedGymsList.map((gym) => gym.type)"
+      :pinned-gym="board.pinnedGym"
+      @confirmDraft="$emit('confirmDraft')"
+      @immediateSwap="$emit('immediateSwap', $event)"
+      @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
+      @deleteBoxPokemon="$emit('deleteBoxPokemon', $event)"
+      @cancelSwap="$emit('cancelSwap')"
+      @deletePokemon="$emit('deletePokemon')"
+      @swapSuggestion="$emit('swapSuggestion', $event)"
     />
 
     <GymColumns
@@ -15,7 +23,11 @@
       :defeated-gym-types="board.defeatedGymsList.map((gym) => gym.type)"
       :pinned-type="board.pinnedGym"
       :generation-rules="generationRules"
-      read-only
+      :draft-active="draftActive"
+      :persist-pinned-gym="persistPinnedGym"
+      @defeatGym="$emit('defeatGym', $event)"
+      @undefeatGym="$emit('undefeatGym', $event)"
+      @swapSuggestion="$emit('swapSuggestion', $event)"
     />
   </section>
 </template>
@@ -33,7 +45,27 @@ defineProps({
     type: String,
     required: true,
   },
+  draftActive: {
+    type: Boolean,
+    default: false,
+  },
+  persistPinnedGym: {
+    type: Function,
+    default: null,
+  },
 })
+
+defineEmits([
+  'confirmDraft',
+  'immediateSwap',
+  'deleteTeamPokemon',
+  'deleteBoxPokemon',
+  'cancelSwap',
+  'deletePokemon',
+  'swapSuggestion',
+  'defeatGym',
+  'undefeatGym',
+])
 </script>
 
 <style scoped>

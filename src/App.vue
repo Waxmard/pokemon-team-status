@@ -40,6 +40,17 @@
         v-else
         :generation-rules="soulLinkGenerationRules"
         :viewed-player-board="viewedSoulLinkPlayerBoard"
+        :draft-active="hasDraft"
+        :persist-pinned-gym="handleSoulLinkPersistPinnedGym"
+        @confirmDraft="handleSoulLinkConfirmDraft"
+        @immediateSwap="handleSoulLinkImmediateSwap"
+        @deleteTeamPokemon="handleSoulLinkDeleteTeamPokemon"
+        @deleteBoxPokemon="handleSoulLinkDeleteBoxPokemon"
+        @cancelSwap="handleSoulLinkCancelSwap"
+        @deletePokemon="handleSoulLinkDeleteFromDraft"
+        @swapSuggestion="handleSoulLinkSwapSuggestion"
+        @defeatGym="handleSoulLinkDefeatGym"
+        @undefeatGym="handleSoulLinkUndefeatGym"
       />
     </div>
   </n-config-provider>
@@ -99,7 +110,11 @@ import {
 } from './utils/generationRules.js'
 import { buildPokemonMember, generatePokemonId } from './utils/pokemon.js'
 import { RUN_MODES } from './utils/runSnapshot.js'
-import { buildSoulLinkPlayerBoard } from './utils/soulLinkUi.js'
+import {
+  adaptUiMemberToSoulLinkMember,
+  buildSoulLinkMemberFromDraft,
+  buildSoulLinkPlayerBoard,
+} from './utils/soulLinkUi.js'
 import { calculateBerryTiebreaker, calculateScore } from './utils/typeCalc.js'
 
 const {
@@ -133,6 +148,13 @@ const {
   setCachedPlayerSlot,
   updatePlayer: updateSoulLinkPlayer,
   startNewLocalSoulLinkRun,
+  getPlayerRoster,
+  getPlayerGymProgress,
+  setPlayerRoster,
+  addRosterMember,
+  updateRosterMember,
+  removeRosterMember: removeSoulLinkRosterMember,
+  updatePlayerGymProgress,
   resetPlayerRoster,
   resetPlayerGymProgress,
 } = useSoulLinkStore()
@@ -170,6 +192,7 @@ function resetPokemon() {
     cancel()
   } else {
     resetPlayerRoster(viewedSoulLinkPlayerId.value)
+    cancel()
   }
   showResetDialog.value = false
 }
@@ -284,6 +307,7 @@ function getRulesetPokemonData(name) {
 
 // Store original state when swap mode starts
 const swapOriginalState = ref(null)
+const soulLinkSwapOriginalRoster = ref(null)
 
 watch(swapMode, (isSwapMode) => {
   if (isSwapMode) {
@@ -340,12 +364,17 @@ async function handleCancelSwap() {
 
 async function clearTransientUiState() {
   if (swapMode.value) {
-    await handleCancelSwap()
+    if (isSoloMode.value) {
+      await handleCancelSwap()
+    } else {
+      handleSoulLinkCancelSwap()
+    }
     return
   }
 
   cancel()
   swapOriginalState.value = null
+  soulLinkSwapOriginalRoster.value = null
 }
 
 async function startNewRun(mode) {
@@ -736,6 +765,406 @@ function handleDeleteFromDraft() {
     deleteTeamPokemon(draftAction.value.editId)
   }
   cancel()
+}
+
+// --- Soul Link helpers ---
+
+function getSoulLinkRoster() {
+  return getPlayerRoster(viewedSoulLinkPlayerId.value)
+}
+
+function getSoulLinkGenRulesPokemonData(name) {
+  return getPokemonDataForRules(name, soulLinkGenerationRules.value)
+}
+
+// --- Soul Link gym handlers ---
+
+function handleSoulLinkDefeatGym(type) {
+  const pid = viewedSoulLinkPlayerId.value
+  const progress = getPlayerGymProgress(pid)
+  updatePlayerGymProgress(pid, {
+    defeatedGyms: [...progress.defeatedGyms, type],
+  })
+}
+
+function handleSoulLinkUndefeatGym(type) {
+  const pid = viewedSoulLinkPlayerId.value
+  const progress = getPlayerGymProgress(pid)
+  updatePlayerGymProgress(pid, {
+    defeatedGyms: progress.defeatedGyms.filter((g) => g !== type),
+  })
+}
+
+function handleSoulLinkPersistPinnedGym(type) {
+  updatePlayerGymProgress(viewedSoulLinkPlayerId.value, { pinnedGym: type })
+}
+
+// --- Soul Link delete handlers ---
+
+function handleSoulLinkDeleteTeamPokemon(id) {
+  removeSoulLinkRosterMember(viewedSoulLinkPlayerId.value, 'team', id)
+}
+
+function handleSoulLinkDeleteBoxPokemon(id) {
+  removeSoulLinkRosterMember(viewedSoulLinkPlayerId.value, 'box', id)
+}
+
+function handleSoulLinkDeleteFromDraft() {
+  if (!draftAction.value) return
+  const pid = viewedSoulLinkPlayerId.value
+
+  if (draftAction.value.isBoxPokemon) {
+    removeSoulLinkRosterMember(pid, 'box', draftAction.value.boxPokemonId)
+  } else if (draftAction.value.editId) {
+    removeSoulLinkRosterMember(pid, 'team', draftAction.value.editId)
+  }
+  cancel()
+}
+
+// --- Soul Link confirm draft handler ---
+
+function handleSoulLinkConfirmDraft() {
+  if (!draftAction.value) return
+  const pid = viewedSoulLinkPlayerId.value
+
+  // Handle deletion (wizard mode: confirmed with no pokemon)
+  if (!draftAction.value.pokemon) {
+    if (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) {
+      removeSoulLinkRosterMember(pid, 'team', draftAction.value.editId)
+    } else if (
+      draftAction.value.type === 'edit' &&
+      draftAction.value.isBoxPokemon
+    ) {
+      removeSoulLinkRosterMember(pid, 'box', draftAction.value.boxPokemonId)
+    }
+    cancel()
+    return
+  }
+
+  const newMember = buildSoulLinkMemberFromDraft(draftAction.value, pid, 'team')
+
+  if (draftAction.value.type === 'add') {
+    const roster = getSoulLinkRoster()
+    if (roster.team.length < 6) {
+      addRosterMember(pid, 'team', newMember)
+    } else {
+      // Team full — enter replace mode
+      soulLinkSwapOriginalRoster.value = getSoulLinkRoster()
+
+      const tempMember = buildSoulLinkMemberFromDraft(
+        draftAction.value,
+        pid,
+        'temp',
+      )
+      addRosterMember(pid, 'box', tempMember)
+
+      draftAction.value = {
+        ...draftAction.value,
+        type: 'edit',
+        isBoxPokemon: true,
+        isAddReplace: true,
+        boxPokemonId: tempMember.id,
+      }
+
+      enterSwapMode()
+      return
+    }
+  } else if (draftAction.value.type === 'addToBox') {
+    const boxMember = buildSoulLinkMemberFromDraft(
+      draftAction.value,
+      pid,
+      'box',
+    )
+    addRosterMember(pid, 'box', boxMember)
+  } else if (draftAction.value.type === 'edit') {
+    if (draftAction.value.isBoxPokemon) {
+      if (draftAction.value.replaceTarget) {
+        const roster = getSoulLinkRoster()
+        if (draftAction.value.replaceTarget.startsWith('empty-')) {
+          if (roster.team.length < 6) {
+            addRosterMember(pid, 'team', newMember)
+            removeSoulLinkRosterMember(
+              pid,
+              'box',
+              draftAction.value.boxPokemonId,
+            )
+          }
+        } else {
+          // Replace existing team member — atomic via setPlayerRoster
+          const replacedTeamMember = roster.team.find(
+            (m) => m.id === draftAction.value.replaceTarget,
+          )
+          if (replacedTeamMember) {
+            const uiReplaced = {
+              id: generatePokemonId('box'),
+              name: replacedTeamMember.speciesName,
+              types: replacedTeamMember.types,
+              ability: replacedTeamMember.ability,
+              berry: replacedTeamMember.berry,
+              moves: replacedTeamMember.moves,
+              specialMove: replacedTeamMember.specialMove,
+              megaForm: replacedTeamMember.megaForm,
+              megaTypes: replacedTeamMember.megaTypes,
+              megaSpriteId: replacedTeamMember.megaSpriteId,
+              spriteVariant: replacedTeamMember.spriteVariant,
+            }
+            const boxMember = adaptUiMemberToSoulLinkMember(uiReplaced, pid)
+
+            setPlayerRoster(pid, {
+              team: roster.team.map((m) =>
+                m.id === draftAction.value.replaceTarget ? newMember : m,
+              ),
+              box: [
+                ...roster.box.filter(
+                  (m) => m.id !== draftAction.value.boxPokemonId,
+                ),
+                boxMember,
+              ],
+            })
+          }
+        }
+      } else {
+        // Just update in box
+        const uiMember = buildPokemonMember(draftAction.value, {
+          id: draftAction.value.boxPokemonId,
+        })
+        const slMember = adaptUiMemberToSoulLinkMember(uiMember, pid)
+        const { id: _id, ownerPlayerId: _ownerId, ...updates } = slMember
+        updateRosterMember(pid, 'box', draftAction.value.boxPokemonId, updates)
+      }
+    } else {
+      // Editing a team Pokemon
+      const uiMember = buildPokemonMember(draftAction.value, {
+        id: draftAction.value.editId,
+      })
+      const slMember = adaptUiMemberToSoulLinkMember(uiMember, pid)
+      const { id: _id, ownerPlayerId: _ownerId, ...updates } = slMember
+      updateRosterMember(pid, 'team', draftAction.value.editId, updates)
+    }
+  }
+
+  cancel()
+}
+
+// --- Soul Link swap handlers ---
+
+function handleSoulLinkCancelSwap() {
+  if (soulLinkSwapOriginalRoster.value) {
+    setPlayerRoster(
+      viewedSoulLinkPlayerId.value,
+      soulLinkSwapOriginalRoster.value,
+    )
+  }
+  exitSwapMode()
+  soulLinkSwapOriginalRoster.value = null
+}
+
+function handleSoulLinkImmediateSwap(targetId) {
+  if (!draftAction.value?.pokemon) return
+
+  const pid = viewedSoulLinkPlayerId.value
+  const roster = getSoulLinkRoster()
+  const inHandMember = buildSoulLinkMemberFromDraft(
+    draftAction.value,
+    pid,
+    'team',
+  )
+
+  if (draftAction.value.isBoxPokemon) {
+    const boxPokemonId = draftAction.value.boxPokemonId
+
+    if (targetId === null) {
+      if (roster.team.length >= 6) return
+      addRosterMember(pid, 'team', inHandMember)
+      removeSoulLinkRosterMember(pid, 'box', boxPokemonId)
+      exitSwapMode()
+      return
+    }
+
+    const targetMember = roster.team.find((m) => m.id === targetId)
+    if (!targetMember) return
+
+    const replacedPokemonData = getSoulLinkGenRulesPokemonData(
+      targetMember.speciesName,
+    )
+
+    const newBoxMember = adaptUiMemberToSoulLinkMember(
+      {
+        id: generatePokemonId('box'),
+        name: targetMember.speciesName,
+        types: targetMember.types,
+        ability: targetMember.ability,
+        berry: targetMember.berry,
+        moves: targetMember.moves,
+        specialMove: targetMember.specialMove,
+        megaForm: targetMember.megaForm,
+        megaTypes: targetMember.megaTypes,
+        megaSpriteId: targetMember.megaSpriteId,
+        spriteVariant: targetMember.spriteVariant,
+      },
+      pid,
+    )
+
+    setPlayerRoster(pid, {
+      team: roster.team.map((m) =>
+        m.id === targetId
+          ? { ...inHandMember, id: generatePokemonId('team') }
+          : m,
+      ),
+      box: [...roster.box.filter((m) => m.id !== boxPokemonId), newBoxMember],
+    })
+
+    updateInHandPokemon(
+      replacedPokemonData,
+      targetMember.ability,
+      targetMember.berry,
+      targetMember.moves,
+      targetMember.specialMove,
+      targetMember.megaForm,
+      targetMember.megaTypes,
+      targetMember.megaSpriteId,
+      targetMember.spriteVariant,
+    )
+    draftAction.value.boxPokemonId = newBoxMember.id
+  } else if (draftAction.value.isTeamPokemon) {
+    const teamPokemonId = draftAction.value.editId
+
+    if (targetId === null) {
+      const boxMember = buildSoulLinkMemberFromDraft(
+        draftAction.value,
+        pid,
+        'box',
+      )
+      addRosterMember(pid, 'box', boxMember)
+      removeSoulLinkRosterMember(pid, 'team', teamPokemonId)
+      exitSwapMode()
+    } else {
+      const targetMember = roster.box.find((m) => m.id === targetId)
+      if (!targetMember) return
+
+      const replacedPokemonData = getSoulLinkGenRulesPokemonData(
+        targetMember.speciesName,
+      )
+
+      const newTeamMember = adaptUiMemberToSoulLinkMember(
+        {
+          id: generatePokemonId('team'),
+          name: targetMember.speciesName,
+          types: targetMember.types,
+          ability: targetMember.ability,
+          berry: targetMember.berry,
+          moves: targetMember.moves,
+          specialMove: targetMember.specialMove,
+          megaForm: targetMember.megaForm,
+          megaTypes: targetMember.megaTypes,
+          megaSpriteId: targetMember.megaSpriteId,
+          spriteVariant: targetMember.spriteVariant,
+        },
+        pid,
+      )
+
+      setPlayerRoster(pid, {
+        team: roster.team.map((m) =>
+          m.id === teamPokemonId ? newTeamMember : m,
+        ),
+        box: roster.box.map((m) =>
+          m.id === targetId
+            ? { ...inHandMember, id: generatePokemonId('box') }
+            : m,
+        ),
+      })
+
+      updateInHandPokemon(
+        replacedPokemonData,
+        targetMember.ability,
+        targetMember.berry,
+        targetMember.moves,
+        targetMember.specialMove,
+        targetMember.megaForm,
+        targetMember.megaTypes,
+        targetMember.megaSpriteId,
+        targetMember.spriteVariant,
+      )
+      draftAction.value.editId = newTeamMember.id
+    }
+  }
+}
+
+function handleSoulLinkSwapSuggestion({
+  currentId,
+  candidateId,
+  isTeamMember,
+}) {
+  const pid = viewedSoulLinkPlayerId.value
+  const roster = getSoulLinkRoster()
+  soulLinkSwapOriginalRoster.value = roster
+
+  if (isTeamMember) {
+    const teamMember = roster.team.find((m) => m.id === currentId)
+    const boxMember = roster.box.find((m) => m.id === candidateId)
+    if (!teamMember || !boxMember) return
+
+    const newTeamMember = adaptUiMemberToSoulLinkMember(
+      {
+        id: generatePokemonId('team'),
+        name: boxMember.speciesName,
+        types: boxMember.types,
+        ability: boxMember.ability,
+        berry: boxMember.berry,
+        moves: boxMember.moves,
+        specialMove: boxMember.specialMove,
+        megaForm: boxMember.megaForm,
+        megaTypes: boxMember.megaTypes,
+        megaSpriteId: boxMember.megaSpriteId,
+        spriteVariant: boxMember.spriteVariant,
+      },
+      pid,
+    )
+
+    const newBoxMember = adaptUiMemberToSoulLinkMember(
+      {
+        id: generatePokemonId('box'),
+        name: teamMember.speciesName,
+        types: teamMember.types,
+        ability: teamMember.ability,
+        berry: teamMember.berry,
+        moves: teamMember.moves,
+        specialMove: teamMember.specialMove,
+        megaForm: teamMember.megaForm,
+        megaTypes: teamMember.megaTypes,
+        megaSpriteId: teamMember.megaSpriteId,
+        spriteVariant: teamMember.spriteVariant,
+      },
+      pid,
+    )
+
+    setPlayerRoster(pid, {
+      team: roster.team.map((m) => (m.id === currentId ? newTeamMember : m)),
+      box: roster.box.map((m) => (m.id === candidateId ? newBoxMember : m)),
+    })
+
+    const pokemonData = getSoulLinkGenRulesPokemonData(teamMember.speciesName)
+    draftAction.value = {
+      type: 'edit',
+      isBoxPokemon: true,
+      isTeamPokemon: false,
+      boxPokemonId: newBoxMember.id,
+      pokemon: pokemonData,
+      ability: teamMember.ability,
+      berry: teamMember.berry,
+      moves: [...(teamMember.moves || [])],
+      specialMove: teamMember.specialMove || null,
+      megaForm: teamMember.megaForm || null,
+      megaTypes: teamMember.megaTypes || null,
+      megaSpriteId: teamMember.megaSpriteId || null,
+      spriteVariant: teamMember.spriteVariant || 'default',
+    }
+  } else {
+    handleSoulLinkImmediateSwap(candidateId)
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  enterSwapMode()
 }
 
 onMounted(() => {

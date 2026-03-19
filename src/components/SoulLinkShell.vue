@@ -3,6 +3,17 @@
     <SoulLinkPlayerView
       :board="viewedPlayerBoard"
       :generation-rules="generationRules"
+      :draft-active="draftActive"
+      :persist-pinned-gym="persistPinnedGym"
+      @confirmDraft="$emit('confirmDraft')"
+      @immediateSwap="$emit('immediateSwap', $event)"
+      @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
+      @deleteBoxPokemon="$emit('deleteBoxPokemon', $event)"
+      @cancelSwap="$emit('cancelSwap')"
+      @deletePokemon="$emit('deletePokemon')"
+      @swapSuggestion="$emit('swapSuggestion', $event)"
+      @defeatGym="$emit('defeatGym', $event)"
+      @undefeatGym="$emit('undefeatGym', $event)"
     />
   </section>
 </template>
@@ -19,7 +30,27 @@ defineProps({
     type: Object,
     required: true,
   },
+  draftActive: {
+    type: Boolean,
+    default: false,
+  },
+  persistPinnedGym: {
+    type: Function,
+    default: null,
+  },
 })
+
+defineEmits([
+  'confirmDraft',
+  'immediateSwap',
+  'deleteTeamPokemon',
+  'deleteBoxPokemon',
+  'cancelSwap',
+  'deletePokemon',
+  'swapSuggestion',
+  'defeatGym',
+  'undefeatGym',
+])
 </script>
 
 <style scoped>

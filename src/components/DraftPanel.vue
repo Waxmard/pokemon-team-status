@@ -273,6 +273,18 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  box: {
+    type: Array,
+    default: null,
+  },
+  defeatedGyms: {
+    type: Array,
+    default: null,
+  },
+  pinnedGym: {
+    type: String,
+    default: undefined,
+  },
 })
 
 defineEmits(['confirm', 'cancel', 'swapSuggestion'])
@@ -290,11 +302,20 @@ const {
 
 const {
   team: storageTeam,
-  box,
-  defeatedGyms,
-  pinnedGym,
+  box: storageBox,
+  defeatedGyms: storageDefeatedGyms,
+  pinnedGym: storagePinnedGym,
   generationRules,
 } = useRunStore()
+
+// Use props when provided, fall back to solo store
+const effectiveBox = computed(() => props.box ?? storageBox.value)
+const effectiveDefeatedGyms = computed(
+  () => props.defeatedGyms ?? storageDefeatedGyms.value,
+)
+const effectivePinnedGym = computed(() =>
+  props.pinnedGym !== undefined ? props.pinnedGym : storagePinnedGym.value,
+)
 
 // Suggestion state
 const showSuggestion = ref(false)
@@ -305,8 +326,8 @@ const canShowSuggestion = computed(() => {
     draftAction.value.isTeamPokemon || draftAction.value.isBoxPokemon
   if (!isEditing) return false
   // The opposite pool must have at least one member
-  if (draftAction.value.isTeamPokemon) return box.value.length > 0
-  return storageTeam.value.length > 0
+  if (draftAction.value.isTeamPokemon) return effectiveBox.value.length > 0
+  return props.team.length > 0
 })
 
 const swapSuggestion = computed(() => {
@@ -328,9 +349,9 @@ const swapSuggestion = computed(() => {
       draftTeam,
       currentMember,
       true,
-      box.value,
-      defeatedGyms.value,
-      pinnedGym.value,
+      effectiveBox.value,
+      effectiveDefeatedGyms.value,
+      effectivePinnedGym.value,
       generationRules.value,
     )
   } else {
@@ -340,8 +361,8 @@ const swapSuggestion = computed(() => {
       currentMember,
       false,
       props.team,
-      defeatedGyms.value,
-      pinnedGym.value,
+      effectiveDefeatedGyms.value,
+      effectivePinnedGym.value,
       generationRules.value,
     )
   }
