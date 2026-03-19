@@ -65,9 +65,26 @@ export function createUnsupportedRunModeError(context, mode) {
   )
 }
 
+export function createUnsupportedSoulLinkRunModeError(context, mode) {
+  return new Error(
+    `${context} only supports soul-link runs right now. Received mode: ${mode}.`,
+  )
+}
+
 export function assertSoloRunState(runState, context = 'This operation') {
   if (runState?.mode !== RUN_MODES.SOLO) {
     throw createUnsupportedRunModeError(context, runState?.mode ?? 'unknown')
+  }
+
+  return runState
+}
+
+export function assertSoulLinkRunState(runState, context = 'This operation') {
+  if (runState?.mode !== RUN_MODES.SOUL_LINK) {
+    throw createUnsupportedSoulLinkRunModeError(
+      context,
+      runState?.mode ?? 'unknown',
+    )
   }
 
   return runState
