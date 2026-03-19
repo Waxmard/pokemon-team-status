@@ -12,21 +12,15 @@
             <input
               ref="playerNameInput"
               :value="viewedSoulLinkPlayerName"
+              :size="Math.max(viewedSoulLinkPlayerName.length, 1)"
               class="title-player-input"
               type="text"
               maxlength="32"
               aria-label="Viewed Soul Link player name"
-              @change="handleRenameViewedSoulLinkPlayerInput"
+              @blur="handleRenameViewedSoulLinkPlayerInput"
+              @focus="selectPlayerNameInput"
             />
           </label>
-          <button
-            class="title-rename-button"
-            type="button"
-            aria-label="Rename viewed player"
-            @click="focusPlayerNameInput"
-          >
-            ✎
-          </button>
         </span>
       </h1>
 
@@ -290,8 +284,7 @@ function handleRenameViewedSoulLinkPlayerInput(event) {
   handleRenameViewedSoulLinkPlayer(event.target.value)
 }
 
-function focusPlayerNameInput() {
-  playerNameInput.value?.focus()
+function selectPlayerNameInput() {
   playerNameInput.value?.select()
 }
 
@@ -786,11 +779,11 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
   max-width: min(100%, 28rem);
 }
 
 .title-player-field {
+  display: inline-flex;
   flex: 0 1 auto;
   min-width: 0;
 }
@@ -816,6 +809,7 @@ onMounted(() => {
   font-size: 1.5rem;
   font-weight: 700;
   text-align: center;
+  cursor: text;
   background-image: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -828,27 +822,6 @@ onMounted(() => {
 
 .title-player-input::selection {
   -webkit-text-fill-color: var(--color-text-primary);
-}
-
-.title-rename-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font: inherit;
-  line-height: 1;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: color var(--transition-base);
-}
-
-.title-rename-button:hover,
-.title-rename-button:focus-visible {
-  color: var(--color-primary);
-  outline: none;
 }
 
 .reset-btn {
