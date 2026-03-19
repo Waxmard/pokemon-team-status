@@ -156,12 +156,13 @@ describe('runSnapshot helpers', () => {
           sessionId: null,
           inviteCode: null,
           name: null,
+          createdAt: null,
         },
         players: [
           { id: 'player-1', name: 'Player 1', isLocal: true },
           { id: 'player-2', name: 'Player 2', isLocal: false },
         ],
-        members: {
+        rosters: {
           'player-1': {
             team: [],
             box: [],
@@ -181,14 +182,27 @@ describe('runSnapshot helpers', () => {
             pinnedGym: null,
           },
         },
+        sync: {
+          version: 1,
+          pendingChangeSets: [],
+          lastAppliedChangeSetId: null,
+        },
         activity: {
           syncState: 'local-only',
           lastUpdatedAt: null,
+          recentEntries: [],
         },
         local: {
           devicePlayerId: 'player-1',
           preferredPlayerId: 'player-1',
+          cachedPlayerSlot: 'player-1',
           sessionPreference: 'soul-link',
+          notifications: {
+            enabled: true,
+            partnerUpdates: true,
+            gymProgress: true,
+            memberChanges: true,
+          },
         },
       },
     })

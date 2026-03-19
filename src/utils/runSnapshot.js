@@ -7,15 +7,11 @@ import {
   sanitizePinnedGymForRules,
   sanitizePokemonCollectionForRules,
 } from './generationRules.js'
+import { createDefaultSoulLinkState } from './soulLinkModel.js'
 
 export const RUN_MODES = {
   SOLO: 'solo',
   SOUL_LINK: 'soul-link',
-}
-
-const DEFAULT_SOUL_LINK_PLAYER_IDS = {
-  LOCAL: 'player-1',
-  PARTNER: 'player-2',
 }
 
 function createDefaultSoloProgress() {
@@ -23,25 +19,6 @@ function createDefaultSoloProgress() {
     defeatedGyms: [],
     pinnedGym: null,
   }
-}
-
-function createDefaultSoulLinkPlayer(id, name, isLocal) {
-  return {
-    id,
-    name,
-    isLocal,
-  }
-}
-
-function createDefaultSoulLinkPlayerMembers() {
-  return {
-    team: [],
-    box: [],
-  }
-}
-
-function createDefaultSoulLinkPlayerProgress() {
-  return createDefaultSoloProgress()
 }
 
 export function normalizeGenerationRules(ruleset) {
@@ -67,42 +44,14 @@ export function createDefaultSoloRunState(
 export function createDefaultSoulLinkRunState(
   generationRules = DEFAULT_GENERATION_RULESET,
 ) {
-  const localPlayerId = DEFAULT_SOUL_LINK_PLAYER_IDS.LOCAL
-  const partnerPlayerId = DEFAULT_SOUL_LINK_PLAYER_IDS.PARTNER
+  const normalizedGenerationRules = normalizeGenerationRules(generationRules)
 
   return {
     mode: RUN_MODES.SOUL_LINK,
     rules: {
-      generation: normalizeGenerationRules(generationRules),
+      generation: normalizedGenerationRules,
     },
-    soulLink: {
-      metadata: {
-        sessionId: null,
-        inviteCode: null,
-        name: null,
-      },
-      players: [
-        createDefaultSoulLinkPlayer(localPlayerId, 'Player 1', true),
-        createDefaultSoulLinkPlayer(partnerPlayerId, 'Player 2', false),
-      ],
-      members: {
-        [localPlayerId]: createDefaultSoulLinkPlayerMembers(),
-        [partnerPlayerId]: createDefaultSoulLinkPlayerMembers(),
-      },
-      progress: {
-        [localPlayerId]: createDefaultSoulLinkPlayerProgress(),
-        [partnerPlayerId]: createDefaultSoulLinkPlayerProgress(),
-      },
-      activity: {
-        syncState: 'local-only',
-        lastUpdatedAt: null,
-      },
-      local: {
-        devicePlayerId: localPlayerId,
-        preferredPlayerId: localPlayerId,
-        sessionPreference: 'soul-link',
-      },
-    },
+    soulLink: createDefaultSoulLinkState(),
   }
 }
 
