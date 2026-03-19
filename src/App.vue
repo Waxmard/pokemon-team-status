@@ -117,7 +117,8 @@ const {
   cancel,
 } = useDraftAction()
 
-const { currentRunMode, setCurrentRunMode } = useRunModeStore()
+const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
+  useRunModeStore()
 
 const showResetDialog = ref(false)
 const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
@@ -673,9 +674,14 @@ function handleDeleteFromDraft() {
 }
 
 onMounted(() => {
-  if (currentRunMode.value === RUN_MODES.SOLO) {
+  const initialRunMode = loadCurrentRunMode()
+
+  if (initialRunMode === RUN_MODES.SOLO) {
     loadData()
+    return
   }
+
+  startNewLocalSoulLinkRun(soulLinkGenerationRules.value)
 })
 </script>
 
