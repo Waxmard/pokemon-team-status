@@ -1,6 +1,11 @@
 import { computed, ref, toRaw } from 'vue'
 import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
 import {
+  sanitizeDefeatedGymsForRules,
+  sanitizePinnedGymForRules,
+  sanitizePokemonMemberForRules,
+} from '../utils/generationRules.js'
+import {
   assertSoulLinkRunState,
   createDefaultSoulLinkRunState,
   normalizeGenerationRules,
@@ -169,6 +174,61 @@ function normalizeRosterMembers(members, playerId) {
   }))
 }
 
+function sanitizeSoulLinkRosterMemberForRules(member, ruleset) {
+  if (!member?.speciesName) {
+    return member == null ? member : cloneValue(member)
+  }
+
+  const sanitizedMember = sanitizePokemonMemberForRules(
+    {
+      ...member,
+      name: member.speciesName,
+    },
+    ruleset,
+  )
+
+  const nextMember = { ...sanitizedMember }
+  delete nextMember.name
+
+  return {
+    ...nextMember,
+    speciesName: member.speciesName,
+    ownerPlayerId: member.ownerPlayerId,
+  }
+}
+
+function sanitizeSoulLinkRostersForRules(rosters, ruleset) {
+  return Object.fromEntries(
+    Object.entries(rosters).map(([playerId, roster]) => [
+      playerId,
+      {
+        team: roster.team.map((member) =>
+          sanitizeSoulLinkRosterMemberForRules(member, ruleset),
+        ),
+        box: roster.box.map((member) =>
+          sanitizeSoulLinkRosterMemberForRules(member, ruleset),
+        ),
+      },
+    ]),
+  )
+}
+
+function sanitizeSoulLinkProgressForRules(progress, ruleset) {
+  return Object.fromEntries(
+    Object.entries(progress).map(([playerId, playerProgress]) => [
+      playerId,
+      {
+        ...playerProgress,
+        defeatedGyms: sanitizeDefeatedGymsForRules(
+          playerProgress.defeatedGyms,
+          ruleset,
+        ),
+        pinnedGym: sanitizePinnedGymForRules(playerProgress.pinnedGym, ruleset),
+      },
+    ]),
+  )
+}
+
 function normalizeRosters(rosters, playerIds, context) {
   const normalizedRosters = normalizePlayerScopedRecords(
     rosters,
@@ -331,6 +391,10 @@ export function useSoulLinkStore() {
     return createLocalRun({ generationRules: generation })
   }
 
+  function startNewLocalSoulLinkRun(generation = generationRules.value) {
+    return createLocalRun({ generationRules: generation })
+  }
+
   function updateSessionMetadata(updates) {
     updateSoulLinkState((soulLinkState) => ({
       ...soulLinkState,
@@ -345,12 +409,24 @@ export function useSoulLinkStore() {
     const soulLinkRunState = getSoulLinkRunState(
       'Setting Soul Link generation rules',
     )
+    const nextRules = normalizeGenerationRules(nextGenerationRules)
 
     internalRunState.value = {
       ...soulLinkRunState,
       rules: {
         ...soulLinkRunState.rules,
-        generation: normalizeGenerationRules(nextGenerationRules),
+        generation: nextRules,
+      },
+      soulLink: {
+        ...soulLinkRunState.soulLink,
+        rosters: sanitizeSoulLinkRostersForRules(
+          soulLinkRunState.soulLink.rosters,
+          nextRules,
+        ),
+        progress: sanitizeSoulLinkProgressForRules(
+          soulLinkRunState.soulLink.progress,
+          nextRules,
+        ),
       },
     }
   }
@@ -599,6 +675,7 @@ export function useSoulLinkStore() {
     pendingChangeSets,
     createLocalRun,
     resetLocalRun,
+    startNewLocalSoulLinkRun,
     updateSessionMetadata,
     setGenerationRules,
     setCachedPlayerSlot,

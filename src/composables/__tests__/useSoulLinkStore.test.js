@@ -123,6 +123,77 @@ describe('useSoulLinkStore', () => {
     )
   })
 
+  it('starts a fresh local Soul Link run with the convenience initializer', () => {
+    const store = useSoulLinkStore()
+
+    store.updateSessionMetadata({ name: 'Existing Run' })
+    store.addRosterMember(
+      SOUL_LINK_PLAYER_IDS.LOCAL,
+      'team',
+      createDefaultSoulLinkMember({
+        id: 'member-reset-1',
+        speciesName: 'Torchic',
+      }),
+    )
+
+    store.startNewLocalSoulLinkRun(GENERATION_RULESETS.PRE_GEN_6)
+
+    expect(store.runState.value.mode).toBe(RUN_MODES.SOUL_LINK)
+    expect(store.generationRules.value).toBe(GENERATION_RULESETS.PRE_GEN_6)
+    expect(store.sessionMetadata.value.name).toBeNull()
+    expect(store.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([])
+  })
+
+  it('sanitizes Soul Link rosters and gym progress when rules change', () => {
+    const store = useSoulLinkStore()
+
+    store.createLocalRun({
+      generationRules: DEFAULT_GENERATION_RULESET,
+      rosters: {
+        [SOUL_LINK_PLAYER_IDS.LOCAL]: {
+          team: [
+            createDefaultSoulLinkMember({
+              id: 'member-fairy-1',
+              speciesName: 'Clefairy',
+              berry: 'Roseli Berry',
+              moves: ['fairy', 'normal'],
+              megaForm: 'Mega',
+              megaTypes: ['fairy'],
+              megaSpriteId: 'test-mega-sprite',
+            }),
+          ],
+          box: [],
+        },
+      },
+      progress: {
+        [SOUL_LINK_PLAYER_IDS.LOCAL]: {
+          defeatedGyms: ['fairy', 'rock'],
+          pinnedGym: 'fairy',
+        },
+      },
+    })
+
+    store.setGenerationRules(GENERATION_RULESETS.PRE_GEN_6)
+
+    expect(store.generationRules.value).toBe(GENERATION_RULESETS.PRE_GEN_6)
+    expect(store.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([
+      expect.objectContaining({
+        id: 'member-fairy-1',
+        speciesName: 'Clefairy',
+        types: ['normal'],
+        berry: null,
+        moves: ['normal'],
+        megaForm: null,
+        megaTypes: null,
+        megaSpriteId: null,
+      }),
+    ])
+    expect(store.getPlayerGymProgress(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual({
+      defeatedGyms: ['rock'],
+      pinnedGym: null,
+    })
+  })
+
   it('manages per-player rosters and gym progress', () => {
     const store = useSoulLinkStore()
     const localMember = createDefaultSoulLinkMember({

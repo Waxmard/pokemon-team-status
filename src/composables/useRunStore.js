@@ -4,6 +4,7 @@ import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
 import {
   assertSoloRunState,
   createDefaultRunState,
+  createDefaultSoloRunState,
   mapPersistedSoloSnapshotToRunState,
   mapSoloRunStateToPersistedSnapshot,
   normalizeGenerationRules,
@@ -173,6 +174,22 @@ export function useRunStore() {
     await persistDefeatedGyms([])
   }
 
+  async function startNewSoloRun(nextGenerationRules = generationRules.value) {
+    const snapshot = mapSoloRunStateToPersistedSnapshot(
+      createDefaultSoloRunState(nextGenerationRules),
+    )
+
+    setRunState(snapshot)
+
+    await Promise.all([
+      repository.persistSoloTeam(snapshot.team),
+      repository.persistSoloBox(snapshot.box),
+      repository.persistSoloDefeatedGyms(snapshot.defeatedGyms),
+      repository.persistSoloPinnedGym(snapshot.pinnedGym),
+      repository.persistSoloGenerationRules(snapshot.generationRules),
+    ])
+  }
+
   async function deleteTeamPokemon(id) {
     await persistTeam(team.value.filter((pokemon) => pokemon.id !== id))
   }
@@ -203,6 +220,7 @@ export function useRunStore() {
     persistDefeatedGyms,
     persistPinnedGym,
     persistGenerationRules,
+    startNewSoloRun,
     resetTeamAndBox,
     resetGyms,
     deleteTeamPokemon,

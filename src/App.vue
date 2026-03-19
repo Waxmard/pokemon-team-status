@@ -9,12 +9,22 @@
         <span class="title-accent">Weakness Calculator</span>
       </h1>
 
-      <TeamSection :team="team" :box="box" @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap"
-        @deleteTeamPokemon="deleteTeamPokemon" @deleteBoxPokemon="deleteBoxPokemon" @cancelSwap="handleCancelSwap"
-        @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion" />
+      <template v-if="isSoloMode">
+        <TeamSection :team="team" :box="box" @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap"
+          @deleteTeamPokemon="deleteTeamPokemon" @deleteBoxPokemon="deleteBoxPokemon" @cancelSwap="handleCancelSwap"
+          @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion" />
 
-      <GymColumns :remainingGyms="remainingGyms" :defeatedGymsList="defeatedGymsList" :draftActive="hasDraft"
-        @defeatGym="defeatGym" @undefeatGym="undefeatGym" @swapSuggestion="handleSwapSuggestion" />
+        <GymColumns :remainingGyms="remainingGyms" :defeatedGymsList="defeatedGymsList" :draftActive="hasDraft"
+          @defeatGym="defeatGym" @undefeatGym="undefeatGym" @swapSuggestion="handleSwapSuggestion" />
+      </template>
+
+      <SoulLinkShell
+        v-else
+        :title="soulLinkShellTitle"
+        :viewed-player-name="viewedSoulLinkPlayerName"
+        :generation-label="generationRulesLabel"
+        :player-summaries="soulLinkPlayerSummaries"
+      />
     </div>
   </n-config-provider>
 
@@ -26,8 +36,20 @@
           <button class="reset-option" @click="toggleGenerationRules">
             {{ generationRulesLabel }}
           </button>
-          <button class="reset-option" @click="resetPokemon">Reset Team & Box</button>
-          <button class="reset-option" @click="resetGyms">Reset Gyms</button>
+          <button class="reset-option" :disabled="!isSoloMode" @click="resetPokemon">
+            Reset Team & Box
+          </button>
+          <button class="reset-option" :disabled="!isSoloMode" @click="resetGyms">
+            Reset Gyms
+          </button>
+          <div class="reset-option-group">
+            <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
+              New Solo Run
+            </button>
+            <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
+              New Soul Link Run
+            </button>
+          </div>
         </div>
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
       </div>
@@ -39,9 +61,12 @@
 import { NConfigProvider } from 'naive-ui'
 import { computed, onMounted, ref, watch } from 'vue'
 import GymColumns from './components/GymColumns.vue'
+import SoulLinkShell from './components/SoulLinkShell.vue'
 import TeamSection from './components/TeamSection.vue'
 import { useDraftAction } from './composables/useDraftAction.js'
+import { useRunModeStore } from './composables/useRunModeStore.js'
 import { useRunStore } from './composables/useRunStore.js'
+import { useSoulLinkStore } from './composables/useSoulLinkStore.js'
 import { getPokemonDataForRules } from './data/pokemon.js'
 import { GENERATION_RULESETS, getAllTypesForRules } from './data/types.js'
 import { themeOverrides } from './theme/colors.js'
@@ -50,6 +75,7 @@ import {
   sanitizePokemonCollectionForRules,
 } from './utils/generationRules.js'
 import { buildPokemonMember, generatePokemonId } from './utils/pokemon.js'
+import { RUN_MODES } from './utils/runSnapshot.js'
 import { calculateBerryTiebreaker, calculateScore } from './utils/typeCalc.js'
 
 const {
@@ -62,6 +88,7 @@ const {
   persistBox,
   generationRules,
   persistGenerationRules,
+  startNewSoloRun,
   resetTeamAndBox,
   resetGyms: resetGymsInStore,
   deleteTeamPokemon,
@@ -69,6 +96,17 @@ const {
   defeatGym,
   undefeatGym,
 } = useRunStore()
+
+const {
+  players: soulLinkPlayers,
+  rosters: soulLinkRosters,
+  gymProgress: soulLinkGymProgress,
+  generationRules: soulLinkGenerationRules,
+  sessionMetadata: soulLinkSessionMetadata,
+  localPreferences: soulLinkLocalPreferences,
+  setGenerationRules: setSoulLinkGenerationRules,
+  startNewLocalSoulLinkRun,
+} = useSoulLinkStore()
 
 const {
   draftAction,
@@ -79,39 +117,100 @@ const {
   cancel,
 } = useDraftAction()
 
+const { currentRunMode, setCurrentRunMode } = useRunModeStore()
+
 const showResetDialog = ref(false)
+const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
+
+const activeGenerationRules = computed(() =>
+  isSoloMode.value ? generationRules.value : soulLinkGenerationRules.value,
+)
 
 function retryLoad() {
   loadData()
 }
 
 function resetPokemon() {
+  if (!isSoloMode.value) return
+
   resetTeamAndBox()
   cancel()
   showResetDialog.value = false
 }
 
 function resetGyms() {
+  if (!isSoloMode.value) return
+
   resetGymsInStore()
   showResetDialog.value = false
 }
 
 function toggleGenerationRules() {
   const nextRuleset =
-    generationRules.value === GENERATION_RULESETS.PRE_GEN_6
+    activeGenerationRules.value === GENERATION_RULESETS.PRE_GEN_6
       ? GENERATION_RULESETS.POST_GEN_6
       : GENERATION_RULESETS.PRE_GEN_6
 
-  persistGenerationRules(nextRuleset)
+  if (isSoloMode.value) {
+    persistGenerationRules(nextRuleset)
+    return
+  }
+
+  setSoulLinkGenerationRules(nextRuleset)
 }
 
 const generationRulesLabel = computed(() => {
-  return generationRules.value === GENERATION_RULESETS.PRE_GEN_6
+  return activeGenerationRules.value === GENERATION_RULESETS.PRE_GEN_6
     ? 'Using Pre-Gen 6 Rules'
     : 'Using Post-Gen 6 Rules'
 })
 
 const activeTypes = computed(() => getAllTypesForRules(generationRules.value))
+
+const viewedSoulLinkPlayerId = computed(() => {
+  const preferredPlayerId = soulLinkLocalPreferences.value.preferredPlayerId
+  const cachedPlayerSlot = soulLinkLocalPreferences.value.cachedPlayerSlot
+  const devicePlayerId = soulLinkLocalPreferences.value.devicePlayerId
+
+  return preferredPlayerId ?? cachedPlayerSlot ?? devicePlayerId
+})
+
+const viewedSoulLinkPlayer = computed(() => {
+  return (
+    soulLinkPlayers.value.find(
+      (player) => player.id === viewedSoulLinkPlayerId.value,
+    ) ?? soulLinkPlayers.value[0]
+  )
+})
+
+const viewedSoulLinkPlayerName = computed(
+  () => viewedSoulLinkPlayer.value?.name ?? 'Unknown Player',
+)
+
+const soulLinkShellTitle = computed(() => {
+  return soulLinkSessionMetadata.value.name || 'Local Soul Link Run'
+})
+
+const soulLinkPlayerSummaries = computed(() => {
+  return soulLinkPlayers.value.map((player) => {
+    const roster = soulLinkRosters.value[player.id] ?? { team: [], box: [] }
+    const progress = soulLinkGymProgress.value[player.id] ?? {
+      defeatedGyms: [],
+      pinnedGym: null,
+    }
+
+    return {
+      id: player.id,
+      name: player.name,
+      isViewed: player.id === viewedSoulLinkPlayerId.value,
+      roleLabel: player.isLocal ? 'Local' : 'Partner',
+      teamCount: roster.team.length,
+      boxCount: roster.box.length,
+      defeatedGymCount: progress.defeatedGyms.length,
+      pinnedGymLabel: progress.pinnedGym ?? 'None',
+    }
+  })
+})
 
 function getRulesetPokemonData(name) {
   return getPokemonDataForRules(name, generationRules.value)
@@ -153,22 +252,48 @@ watch(generationRules, (ruleset) => {
   }
 })
 
-function handleCancelSwap() {
+async function handleCancelSwap() {
   if (swapOriginalState.value) {
-    persistTeam(
-      sanitizePokemonCollectionForRules(
-        swapOriginalState.value.team,
-        generationRules.value,
+    await Promise.all([
+      persistTeam(
+        sanitizePokemonCollectionForRules(
+          swapOriginalState.value.team,
+          generationRules.value,
+        ),
       ),
-    )
-    persistBox(
-      sanitizePokemonCollectionForRules(
-        swapOriginalState.value.box,
-        generationRules.value,
+      persistBox(
+        sanitizePokemonCollectionForRules(
+          swapOriginalState.value.box,
+          generationRules.value,
+        ),
       ),
-    )
+    ])
   }
   exitSwapMode()
+}
+
+async function clearTransientUiState() {
+  if (swapMode.value) {
+    await handleCancelSwap()
+    return
+  }
+
+  cancel()
+  swapOriginalState.value = null
+}
+
+async function startNewRun(mode) {
+  await clearTransientUiState()
+
+  if (mode === RUN_MODES.SOLO) {
+    await startNewSoloRun()
+    setCurrentRunMode(RUN_MODES.SOLO)
+  } else {
+    startNewLocalSoulLinkRun()
+    setCurrentRunMode(RUN_MODES.SOUL_LINK)
+  }
+
+  showResetDialog.value = false
 }
 
 // Helper to construct the hypothetical draft team
@@ -548,7 +673,9 @@ function handleDeleteFromDraft() {
 }
 
 onMounted(() => {
-  loadData()
+  if (currentRunMode.value === RUN_MODES.SOLO) {
+    loadData()
+  }
 })
 </script>
 
@@ -702,8 +829,23 @@ onMounted(() => {
   border-color: var(--color-danger);
 }
 
+.reset-option-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.reset-option:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .reset-option:hover {
+  .reset-option:hover:not(:disabled) {
     background: var(--color-surface-light);
     border-color: var(--color-text-muted);
   }

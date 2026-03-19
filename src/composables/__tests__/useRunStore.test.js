@@ -21,6 +21,7 @@ vi.mock('../../utils/spriteCache.js', () => ({
   prefetchTypeIcons: vi.fn(),
 }))
 
+import { GENERATION_RULESETS } from '../../data/types.js'
 import {
   createDefaultRunState,
   createDefaultSoulLinkRunState,
@@ -61,5 +62,34 @@ describe('useRunStore', () => {
 
     expect(repository.persistSoloTeam).not.toHaveBeenCalled()
     expect(repository.persistSoloGenerationRules).not.toHaveBeenCalled()
+  })
+
+  it('starts a fresh solo run and persists the reset snapshot', async () => {
+    const store = useRunStore()
+
+    store.runState.value = {
+      ...store.runState.value,
+      team: [{ id: 'team-1', name: 'Mudkip' }],
+      box: [{ id: 'box-1', name: 'Zigzagoon' }],
+      progress: {
+        defeatedGyms: ['rock'],
+        pinnedGym: 'electric',
+      },
+    }
+
+    await store.startNewSoloRun(GENERATION_RULESETS.PRE_GEN_6)
+
+    expect(store.team.value).toEqual([])
+    expect(store.box.value).toEqual([])
+    expect(store.defeatedGyms.value).toEqual([])
+    expect(store.pinnedGym.value).toBeNull()
+    expect(store.generationRules.value).toBe(GENERATION_RULESETS.PRE_GEN_6)
+    expect(repository.persistSoloTeam).toHaveBeenCalledWith([])
+    expect(repository.persistSoloBox).toHaveBeenCalledWith([])
+    expect(repository.persistSoloDefeatedGyms).toHaveBeenCalledWith([])
+    expect(repository.persistSoloPinnedGym).toHaveBeenCalledWith(null)
+    expect(repository.persistSoloGenerationRules).toHaveBeenCalledWith(
+      GENERATION_RULESETS.PRE_GEN_6,
+    )
   })
 })
