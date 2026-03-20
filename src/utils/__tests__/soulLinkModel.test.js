@@ -82,7 +82,6 @@ describe('soulLinkModel helpers', () => {
       catchLocation: null,
       ownerPlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
       pairId: null,
-      isDead: false,
     })
   })
 

@@ -90,6 +90,26 @@
       </div>
     </div>
   </Teleport>
+
+  <Teleport to="body">
+    <div v-if="linkedDeleteTarget" class="reset-overlay"
+         @click.self="linkedDeleteTarget = null">
+      <div class="reset-dialog">
+        <h3 class="reset-dialog-title">Delete Linked Pair</h3>
+        <p class="linked-delete-text">
+          This linked Pokemon and its partner will both be deleted.
+        </p>
+        <div class="reset-dialog-options">
+          <button class="reset-option reset-option-danger"
+                  @click="confirmLinkedDelete">
+            Delete Both
+          </button>
+        </div>
+        <button class="reset-dialog-cancel"
+                @click="linkedDeleteTarget = null">✕</button>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -174,6 +194,7 @@ const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
   useRunModeStore()
 
 const showResetDialog = ref(false)
+const linkedDeleteTarget = ref(null)
 const playerNameInput = ref(null)
 const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
 const appTitle = computed(() =>
@@ -815,13 +836,70 @@ function handleSoulLinkPersistPinnedGym(type) {
 
 // --- Soul Link delete handlers ---
 
+function findLinkedDeleteTarget(playerId, memberId, rosterKey) {
+  const roster = getPlayerRoster(playerId)
+  const member = roster[rosterKey].find((m) => m.id === memberId)
+  if (!member?.pairId) return null
+
+  const partnerId = findPartnerPlayerId()
+  if (!partnerId) return null
+
+  const partnerRoster = getPlayerRoster(partnerId)
+  const partnerMember = [...partnerRoster.team, ...partnerRoster.box].find(
+    (m) => m.id === member.pairId,
+  )
+  if (!partnerMember) return null
+
+  const partnerRosterKey = partnerRoster.team.some(
+    (m) => m.id === partnerMember.id,
+  )
+    ? 'team'
+    : 'box'
+
+  return {
+    memberId,
+    rosterKey,
+    partnerPlayerId: partnerId,
+    partnerMemberId: partnerMember.id,
+    partnerRosterKey,
+  }
+}
+
+function confirmLinkedDelete() {
+  if (!linkedDeleteTarget.value) return
+  const pid = viewedSoulLinkPlayerId.value
+  const t = linkedDeleteTarget.value
+
+  removeSoulLinkRosterMember(pid, t.rosterKey, t.memberId)
+  removeSoulLinkRosterMember(
+    t.partnerPlayerId,
+    t.partnerRosterKey,
+    t.partnerMemberId,
+  )
+
+  linkedDeleteTarget.value = null
+  cancel()
+}
+
 function handleSoulLinkDeleteTeamPokemon(id) {
-  clearPartnerPairId(viewedSoulLinkPlayerId.value, id)
+  const target = findLinkedDeleteTarget(
+    viewedSoulLinkPlayerId.value,
+    id,
+    'team',
+  )
+  if (target) {
+    linkedDeleteTarget.value = target
+    return
+  }
   removeSoulLinkRosterMember(viewedSoulLinkPlayerId.value, 'team', id)
 }
 
 function handleSoulLinkDeleteBoxPokemon(id) {
-  clearPartnerPairId(viewedSoulLinkPlayerId.value, id)
+  const target = findLinkedDeleteTarget(viewedSoulLinkPlayerId.value, id, 'box')
+  if (target) {
+    linkedDeleteTarget.value = target
+    return
+  }
   removeSoulLinkRosterMember(viewedSoulLinkPlayerId.value, 'box', id)
 }
 
@@ -830,10 +908,22 @@ function handleSoulLinkDeleteFromDraft() {
   const pid = viewedSoulLinkPlayerId.value
 
   if (draftAction.value.isBoxPokemon) {
-    clearPartnerPairId(pid, draftAction.value.boxPokemonId)
+    const target = findLinkedDeleteTarget(
+      pid,
+      draftAction.value.boxPokemonId,
+      'box',
+    )
+    if (target) {
+      linkedDeleteTarget.value = target
+      return
+    }
     removeSoulLinkRosterMember(pid, 'box', draftAction.value.boxPokemonId)
   } else if (draftAction.value.editId) {
-    clearPartnerPairId(pid, draftAction.value.editId)
+    const target = findLinkedDeleteTarget(pid, draftAction.value.editId, 'team')
+    if (target) {
+      linkedDeleteTarget.value = target
+      return
+    }
     removeSoulLinkRosterMember(pid, 'team', draftAction.value.editId)
   }
   cancel()
@@ -940,24 +1030,6 @@ function reconcileSoulLinkPairing(playerId, memberId, rosterKey) {
   } else {
     // No matching partner — clear own pairId
     updateRosterMember(playerId, rosterKey, memberId, { pairId: null })
-  }
-}
-
-function clearPartnerPairId(playerId, memberId) {
-  const partnerId = findPartnerPlayerId()
-  if (!partnerId) return
-
-  const roster = getPlayerRoster(playerId)
-  const allMembers = [...roster.team, ...roster.box]
-  const member = allMembers.find((m) => m.id === memberId)
-  if (!member?.pairId) return
-
-  const partnerRoster = getPlayerRoster(partnerId)
-  const allPartnerMembers = [...partnerRoster.team, ...partnerRoster.box]
-  const partner = allPartnerMembers.find((m) => m.id === member.pairId)
-  if (partner) {
-    const partnerKey = partnerRoster.team.includes(partner) ? 'team' : 'box'
-    updateRosterMember(partnerId, partnerKey, partner.id, { pairId: null })
   }
 }
 
@@ -1667,5 +1739,11 @@ onMounted(() => {
 
 .reset-dialog-cancel:hover {
   color: var(--color-text-primary);
+}
+
+.linked-delete-text {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-4);
 }
 </style>

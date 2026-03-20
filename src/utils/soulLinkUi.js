@@ -21,7 +21,6 @@ export function adaptUiMemberToSoulLinkMember(uiMember, playerId) {
     nickname: null,
     catchLocation: uiMember.catchLocation ?? null,
     pairId: uiMember.pairId ?? null,
-    isDead: false,
   }
 }
 
@@ -48,7 +47,6 @@ export function buildSoulLinkMemberFromDraft(
     nickname: null,
     catchLocation: draftAction.catchLocation ?? null,
     pairId: draftAction.pairId ?? null,
-    isDead: false,
   }
 }
 

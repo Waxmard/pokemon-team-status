@@ -56,7 +56,6 @@ export function createDefaultSoulLinkMember(overrides = {}) {
     catchLocation: null,
     ownerPlayerId: SOUL_LINK_PLAYER_IDS.LOCAL,
     pairId: null,
-    isDead: false,
     ...overrides,
   }
 }
