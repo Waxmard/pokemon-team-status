@@ -17,6 +17,7 @@
     "lint:duplication": "jscpd src/"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.3",
     "naive-ui": "^2.38.0",
     "vue": "^3.4.0",
     "vuedraggable": "^4.1.0"

@@ -69,15 +69,19 @@ reuses the existing app shell instead of introducing a separate app surface.
   bottleneck
 - `loadSoulLinkData` restores snapshot on mount, falls back to fresh run
 
-## Remaining Phases
-
 ### Phase 4: Supabase Backend
 
-- Tables for sessions, players, rosters, gym progress
-- Data access layer: create session, join by invite code, fetch/push state
-- No accounts required — session creator is v1 owner, join via code
+- Supabase client with graceful degradation when env vars are missing
+- `sessions` table with hybrid-lite schema: relational columns for joinable
+  fields (id, invite_code) plus JSONB `state` column for full snapshot
+- Row Level Security policies for anonymous access (gated by invite code)
+- `supabaseRepository.js` data access layer: create session, fetch by id or
+  invite code, push state with optimistic concurrency, delete session
+- `.env.example` documenting required environment variables
 
-Key files: new `src/services/supabase.js` or similar
+Key files: `src/services/supabaseClient.js`, `src/services/supabaseRepository.js`
+
+## Remaining Phases
 
 ### Phase 5: Sync
 
