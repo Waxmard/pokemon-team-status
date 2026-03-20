@@ -50,22 +50,26 @@ reuses the existing app shell instead of introducing a separate app surface.
   `touchend` when a pin occurs, preventing a synthetic click from
   defeating/undefeating the gym underneath
 
-## Remaining Phases
-
 ### Phase 2: Paired Pokemon
 
-- Display paired partner Pokemon in TeamSlot (visual indicator of linked catch)
-- Add pair management in DraftPanel (link/unlink pairs)
-
-Key files: `TeamSlot.vue`, `DraftPanel.vue`, `soulLinkModel.js`
+- Paired partner sprite display in TeamSlot (visual indicator of linked catch)
+- Catch location step in DraftPanel for auto-pairing by location
+- `reconcileSoulLinkPairing` in App.vue for bidirectional pair resolution
+- Linked-pair deletion with confirmation dialog
+- Removed unused `isDead` field from data model
+- Partner roster computed for cross-player pair resolution
 
 ### Phase 3: Local Persistence
 
-- Add IndexedDB persistence for Soul Link state, mirroring `useStorage.js`
-  patterns
-- Save/restore rosters, gym progress, and player config between sessions
+- IndexedDB persistence for Soul Link state via `localRunRepository.js`
+  settings store
+- Save/restore rosters, gym progress, player config, and generation rules
+  between sessions
+- Fire-and-forget persist on every mutation through `replaceSoulLinkState`
+  bottleneck
+- `loadSoulLinkData` restores snapshot on mount, falls back to fresh run
 
-Key files: `useSoulLinkStore.js`, `useStorage.js` (reference patterns)
+## Remaining Phases
 
 ### Phase 4: Supabase Backend
 

@@ -1,5 +1,6 @@
 import { computed, ref, toRaw } from 'vue'
 import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
+import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
 import {
   sanitizeDefeatedGymsForRules,
   sanitizePinnedGymForRules,
@@ -19,7 +20,9 @@ import {
   createDefaultSoulLinkState,
 } from '../utils/soulLinkModel.js'
 
+const repository = createLocalSoloRunRepository()
 const internalRunState = ref(createDefaultSoulLinkRunState())
+const loadError = ref(false)
 
 function cloneValue(value) {
   return deepFreeze(JSON.parse(JSON.stringify(toRaw(value))))
@@ -297,6 +300,19 @@ function normalizeCreateLocalRunOptions(options = {}) {
   }
 }
 
+function buildPersistableSnapshot() {
+  const runState = getSoulLinkRunState('Building persistable snapshot')
+  const sl = runState.soulLink
+  return {
+    generationRules: runState.rules.generation,
+    metadata: sl.metadata,
+    players: sl.players,
+    rosters: sl.rosters,
+    progress: sl.progress,
+    local: sl.local,
+  }
+}
+
 function replaceSoulLinkState(nextSoulLinkState) {
   const soulLinkRunState = getSoulLinkRunState('Updating Soul Link state')
 
@@ -304,6 +320,8 @@ function replaceSoulLinkState(nextSoulLinkState) {
     ...soulLinkRunState,
     soulLink: nextSoulLinkState,
   }
+
+  repository.persistSoulLinkSnapshot(buildPersistableSnapshot())
 }
 
 function updateSoulLinkState(updater) {
@@ -384,6 +402,8 @@ export function useSoulLinkStore() {
       },
     }
 
+    repository.persistSoulLinkSnapshot(buildPersistableSnapshot())
+
     return runState.value
   }
 
@@ -429,6 +449,8 @@ export function useSoulLinkStore() {
         ),
       },
     }
+
+    repository.persistSoulLinkSnapshot(buildPersistableSnapshot())
   }
 
   function updatePlayer(playerId, updates) {
@@ -706,6 +728,29 @@ export function useSoulLinkStore() {
     )
   }
 
+  async function loadSoulLinkData() {
+    try {
+      const snapshot = await repository.loadSoulLinkSnapshot()
+      if (!snapshot) {
+        createLocalRun()
+        loadError.value = false
+        return
+      }
+      createLocalRun({
+        generationRules: snapshot.generationRules,
+        metadata: snapshot.metadata,
+        players: snapshot.players,
+        rosters: snapshot.rosters,
+        progress: snapshot.progress,
+        local: snapshot.local,
+      })
+      loadError.value = false
+    } catch (error) {
+      console.error('Failed to load Soul Link data:', error)
+      loadError.value = true
+    }
+  }
+
   return {
     runState,
     sessionMetadata,
@@ -718,6 +763,8 @@ export function useSoulLinkStore() {
     activityFeed,
     sync,
     pendingChangeSets,
+    loadSoulLinkData,
+    loadError,
     createLocalRun,
     resetLocalRun,
     startNewLocalSoulLinkRun,

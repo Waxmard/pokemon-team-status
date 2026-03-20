@@ -130,5 +130,17 @@ export function createLocalSoloRunRepository() {
     persistSoloGenerationRules(generationRules) {
       return saveSetting('generationRules', generationRules)
     },
+
+    persistSoulLinkSnapshot(snapshot) {
+      return saveSetting('soulLinkSnapshot', snapshot)
+    },
+
+    loadSoulLinkSnapshot() {
+      return loadSetting('soulLinkSnapshot', null)
+    },
+
+    clearSoulLinkSnapshot() {
+      return saveSetting('soulLinkSnapshot', null)
+    },
   }
 }

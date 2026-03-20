@@ -1,7 +1,7 @@
 <template>
   <n-config-provider :theme-overrides="themeOverrides">
     <div class="app-container">
-      <div v-if="loadError" class="load-error-banner" @click="retryLoad">
+      <div v-if="activeLoadError" class="load-error-banner" @click="retryLoad">
         Failed to load saved data. Tap to retry.
       </div>
       <button class="reset-btn" @click="showResetDialog = true" aria-label="Reset">✦</button>
@@ -166,6 +166,8 @@ const {
   gymProgress: soulLinkGymProgress,
   generationRules: soulLinkGenerationRules,
   localPreferences: soulLinkLocalPreferences,
+  loadSoulLinkData,
+  loadError: soulLinkLoadError,
   setGenerationRules: setSoulLinkGenerationRules,
   setCachedPlayerSlot,
   updatePlayer: updateSoulLinkPlayer,
@@ -205,8 +207,16 @@ const activeGenerationRules = computed(() =>
   isSoloMode.value ? generationRules.value : soulLinkGenerationRules.value,
 )
 
+const activeLoadError = computed(() =>
+  isSoloMode.value ? loadError.value : soulLinkLoadError.value,
+)
+
 function retryLoad() {
-  loadData()
+  if (isSoloMode.value) {
+    loadData()
+  } else {
+    loadSoulLinkData()
+  }
 }
 
 function resetPokemon() {
@@ -1509,7 +1519,7 @@ onMounted(() => {
     return
   }
 
-  startNewLocalSoulLinkRun(soulLinkGenerationRules.value)
+  loadSoulLinkData()
 })
 </script>
 
