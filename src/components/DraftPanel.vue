@@ -156,14 +156,6 @@
             >
               ✓
             </button>
-            <button
-              v-if="draftAction.pairId || draftAction.catchLocation"
-              class="unlink-location-btn"
-              @click="unlinkCatchLocation"
-              aria-label="Unlink location"
-            >
-              ✕
-            </button>
           </div>
           <div class="pokemon-preview">
             <SpriteImg
@@ -173,6 +165,10 @@
               :width="144"
               :height="144"
             />
+            <svg v-else-if="draftAction.catchLocation" class="broken-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
             <span v-if="draftAction.catchLocation" class="preview-catch-location">
               {{ matchedPartnerForLocation ? draftAction.catchLocation : 'Not Yet Linked' }}
             </span>
@@ -1399,6 +1395,13 @@ function onSearchInput(value) {
 
 .evolve-option-pill.mega-selected {
   filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.6));
+}
+
+.broken-link-icon {
+  width: 80px;
+  height: 80px;
+  color: var(--color-text-muted);
+  opacity: 0.35;
 }
 
 .preview-catch-location {
