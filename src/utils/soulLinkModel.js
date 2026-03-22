@@ -175,7 +175,6 @@ export function buildRemoteState(soulLinkState) {
     metadata: soulLinkState.metadata,
     players: soulLinkState.players.map(({ id, name }) => ({ id, name })),
     rosters: soulLinkState.rosters,
-    progress: soulLinkState.progress,
   }
 }
 
@@ -200,17 +199,9 @@ export function mergeRemoteState(localSoulLinkState, remoteState) {
       localSoulLinkState.rosters[remotePlayerId],
   }
 
-  const mergedProgress = {
-    ...localSoulLinkState.progress,
-    [remotePlayerId]:
-      remoteState.progress?.[remotePlayerId] ??
-      localSoulLinkState.progress[remotePlayerId],
-  }
-
   return {
     ...localSoulLinkState,
     players: mergedPlayers,
     rosters: mergedRosters,
-    progress: mergedProgress,
   }
 }

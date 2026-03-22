@@ -146,7 +146,7 @@
               </button>
             </template>
           </div>
-          <button v-if="hasRemoteSession && isSupabaseAvailable" class="sync-now-link" @click="handleSyncNow" :disabled="isSyncing">
+          <button v-if="hasRemoteSession && isSupabaseAvailable" class="sync-now-link" @click="triggerSync" :disabled="isSyncing">
             {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
           </button>
         </div>
@@ -230,7 +230,6 @@ const {
   resetPlayerGymProgress,
   createSession: createSoulLinkSession,
   joinSession: joinSoulLinkSession,
-  pushState: pushSoulLinkState,
   syncSession: syncSoulLinkSession,
 } = useSoulLinkStore()
 
@@ -401,7 +400,7 @@ function handleRenameViewedSoulLinkPlayer(nextName) {
   if (!player || !trimmedName || trimmedName === player.name) return
 
   updateSoulLinkPlayer(player.id, { name: trimmedName })
-  scheduleSyncPush()
+  triggerSync()
 }
 
 function handleRenameViewedSoulLinkPlayerInput(event) {
@@ -414,13 +413,9 @@ function selectPlayerNameInput() {
 
 // --- Session management ---
 
-let syncPushTimer = null
-function scheduleSyncPush() {
+function triggerSync() {
   if (!hasRemoteSession.value) return
-  clearTimeout(syncPushTimer)
-  syncPushTimer = setTimeout(() => {
-    pushSoulLinkState().catch((err) => console.error('Auto-push failed:', err))
-  }, 5000)
+  syncSoulLinkSession().catch((err) => console.error('Sync failed:', err))
 }
 
 async function handleJoinSession() {
@@ -436,11 +431,6 @@ async function handleJoinSession() {
   } finally {
     sessionActionPending.value = false
   }
-}
-
-async function handleSyncNow() {
-  clearTimeout(syncPushTimer)
-  await syncSoulLinkSession()
 }
 
 function copyInviteCode() {
@@ -977,7 +967,6 @@ function handleSoulLinkDefeatGym(type) {
   updatePlayerGymProgress(pid, {
     defeatedGyms: [...progress.defeatedGyms, type],
   })
-  scheduleSyncPush()
 }
 
 function handleSoulLinkUndefeatGym(type) {
@@ -986,12 +975,10 @@ function handleSoulLinkUndefeatGym(type) {
   updatePlayerGymProgress(pid, {
     defeatedGyms: progress.defeatedGyms.filter((g) => g !== type),
   })
-  scheduleSyncPush()
 }
 
 function handleSoulLinkPersistPinnedGym(type) {
   updatePlayerGymProgress(viewedSoulLinkPlayerId.value, { pinnedGym: type })
-  scheduleSyncPush()
 }
 
 // --- Soul Link delete handlers ---
@@ -1039,7 +1026,7 @@ function confirmLinkedDelete() {
 
   linkedDeleteTarget.value = null
   cancel()
-  scheduleSyncPush()
+  triggerSync()
 }
 
 function handleSoulLinkDeleteTeamPokemon(id) {
@@ -1053,7 +1040,7 @@ function handleSoulLinkDeleteTeamPokemon(id) {
     return
   }
   removeSoulLinkRosterMember(viewedSoulLinkPlayerId.value, 'team', id)
-  scheduleSyncPush()
+  triggerSync()
 }
 
 function handleSoulLinkDeleteBoxPokemon(id) {
@@ -1063,7 +1050,7 @@ function handleSoulLinkDeleteBoxPokemon(id) {
     return
   }
   removeSoulLinkRosterMember(viewedSoulLinkPlayerId.value, 'box', id)
-  scheduleSyncPush()
+  triggerSync()
 }
 
 function handleSoulLinkDeleteFromDraft() {
@@ -1414,7 +1401,7 @@ function handleSoulLinkConfirmDraft() {
   }
 
   cancel()
-  scheduleSyncPush()
+  triggerSync()
 }
 
 // --- Soul Link swap handlers ---
