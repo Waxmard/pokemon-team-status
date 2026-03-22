@@ -426,9 +426,11 @@ async function handleJoinSession() {
   try {
     unsubscribeSoulLink()
     await joinSoulLinkSession(code)
+    setCurrentRunMode(RUN_MODES.SOUL_LINK)
     subscribeSoulLink()
     showJoinInput.value = false
     joinCodeValue.value = ''
+    showResetDialog.value = false
   } catch (error) {
     console.error('Failed to join session:', error)
   } finally {
