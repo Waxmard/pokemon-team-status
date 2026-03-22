@@ -146,9 +146,6 @@
               </button>
             </template>
           </div>
-          <button v-if="hasRemoteSession && isSupabaseAvailable" class="sync-now-link" @click="triggerSync" :disabled="isSyncing">
-            {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
-          </button>
         </div>
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
       </div>
@@ -231,6 +228,8 @@ const {
   createSession: createSoulLinkSession,
   joinSession: joinSoulLinkSession,
   syncSession: syncSoulLinkSession,
+  subscribeToSessionUpdates: subscribeSoulLink,
+  unsubscribeFromSession: unsubscribeSoulLink,
 } = useSoulLinkStore()
 
 const {
@@ -258,9 +257,6 @@ const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
 const isSupabaseAvailable = !!supabase
 const hasRemoteSession = computed(
   () => !isSoloMode.value && !!soulLinkSessionMetadata.value?.sessionId,
-)
-const isSyncing = computed(
-  () => soulLinkActivity.value?.syncState === 'syncing',
 )
 const appTitle = computed(() =>
   isSoloMode.value ? 'Weakness Calculator' : viewedSoulLinkPlayerName.value,
@@ -423,7 +419,9 @@ async function handleJoinSession() {
   if (!code) return
   sessionActionPending.value = true
   try {
+    unsubscribeSoulLink()
     await joinSoulLinkSession(code)
+    subscribeSoulLink()
     showJoinInput.value = false
     joinCodeValue.value = ''
   } catch (error) {
@@ -553,6 +551,7 @@ async function clearTransientUiState() {
 
 async function startNewRun(mode) {
   await clearTransientUiState()
+  unsubscribeSoulLink()
 
   if (mode === RUN_MODES.SOLO) {
     await startNewSoloRun()
@@ -563,6 +562,7 @@ async function startNewRun(mode) {
     if (isSupabaseAvailable) {
       try {
         await createSoulLinkSession()
+        subscribeSoulLink()
       } catch (err) {
         console.error('Failed to create session for new Soul Link run:', err)
       }
@@ -1663,9 +1663,9 @@ onMounted(async () => {
   await loadSoulLinkData()
 
   if (soulLinkSessionMetadata.value?.sessionId) {
-    syncSoulLinkSession().catch((err) =>
-      console.error('Auto-sync on mount failed:', err),
-    )
+    syncSoulLinkSession()
+      .then(() => subscribeSoulLink())
+      .catch((err) => console.error('Auto-sync on mount failed:', err))
   }
 })
 </script>

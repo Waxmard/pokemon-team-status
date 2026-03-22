@@ -44,6 +44,8 @@ function getSupabaseRepository() {
   return _supabaseRepo
 }
 
+let _unsubscribe = null
+
 function cloneValue(value) {
   return deepFreeze(JSON.parse(JSON.stringify(toRaw(value))))
 }
@@ -875,7 +877,7 @@ export function useSoulLinkStore() {
     const session = await repo.fetchSessionById(sessionId)
 
     if (!session) {
-      setSyncState(SOUL_LINK_SYNC_STATES.LOCAL_ONLY)
+      startNewLocalSoulLinkRun()
       return
     }
 
@@ -947,6 +949,29 @@ export function useSoulLinkStore() {
     setSyncState(SOUL_LINK_SYNC_STATES.LOCAL_ONLY)
   }
 
+  function subscribeToSessionUpdates() {
+    unsubscribeFromSession()
+
+    const soulLinkState = getSoulLinkState('Subscribing to session')
+    const sessionId = soulLinkState.metadata.sessionId
+    if (!sessionId) return
+
+    const repo = getSupabaseRepository()
+    _unsubscribe = repo.subscribeToSession(sessionId, (session) => {
+      const currentState = getSoulLinkState('Handling realtime update')
+      const merged = mergeRemoteState(currentState, session.state)
+      replaceSoulLinkState(merged)
+      setSyncVersion(session.version)
+    })
+  }
+
+  function unsubscribeFromSession() {
+    if (_unsubscribe) {
+      _unsubscribe()
+      _unsubscribe = null
+    }
+  }
+
   return {
     runState,
     sessionMetadata,
@@ -990,5 +1015,7 @@ export function useSoulLinkStore() {
     pullState,
     syncSession,
     deleteRemoteSession,
+    subscribeToSessionUpdates,
+    unsubscribeFromSession,
   }
 }

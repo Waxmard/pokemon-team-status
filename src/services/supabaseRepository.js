@@ -105,5 +105,24 @@ export function createSupabaseRepository() {
         throw new Error(`Failed to delete session: ${error.message}`)
       }
     },
+
+    subscribeToSession(sessionId, onUpdate) {
+      const client = assertClient()
+      const channel = client
+        .channel(`session-${sessionId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'sessions',
+            filter: `id=eq.${sessionId}`,
+          },
+          (payload) => onUpdate(mapRow(payload.new)),
+        )
+        .subscribe()
+
+      return () => client.removeChannel(channel)
+    },
   }
 }
