@@ -1,6 +1,6 @@
-import { describe, it, expect, afterAll } from 'vitest'
-import { createSupabaseRepository } from '../supabaseRepository.js'
+import { afterAll, describe, expect, it } from 'vitest'
 import { supabase } from '../supabaseClient.js'
+import { createSupabaseRepository } from '../supabaseRepository.js'
 
 const isConfigured = !!supabase
 const describeIf = isConfigured ? describe : describe.skip
@@ -76,11 +76,7 @@ describeIf('supabaseRepository (integration)', () => {
       state: { v: 1 },
     })
 
-    const result = await repo.pushSessionState(
-      sessionId,
-      { v: 2 },
-      1,
-    )
+    const result = await repo.pushSessionState(sessionId, { v: 2 }, 1)
     expect(result).toEqual({ success: true, version: 2 })
 
     const fetched = await repo.fetchSessionById(sessionId)
@@ -102,11 +98,7 @@ describeIf('supabaseRepository (integration)', () => {
     await repo.pushSessionState(sessionId, { v: 2 }, 1)
 
     // Try pushing with stale version 1
-    const result = await repo.pushSessionState(
-      sessionId,
-      { v: 'conflict' },
-      1,
-    )
+    const result = await repo.pushSessionState(sessionId, { v: 'conflict' }, 1)
     expect(result).toEqual({ success: false, version: null })
   })
 

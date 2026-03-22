@@ -68,6 +68,18 @@
             <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
               View {{ otherSoulLinkPlayerName }}
             </button>
+            <template v-if="hasRemoteSession && isSupabaseAvailable">
+              <button class="reset-option" @click="handleSyncNow" :disabled="isSyncing">
+                {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
+              </button>
+              <div class="session-code-display" @click="copyInviteCode">
+                {{ soulLinkSessionMetadata.inviteCode }}
+                <span class="session-code-hint">{{ copyLabel }}</span>
+              </div>
+              <button class="reset-option reset-option-danger" @click="handleLeaveSession">
+                Leave Session
+              </button>
+            </template>
           </div>
           <div class="reset-option-group">
             <button class="reset-option" @click="resetPokemon">
@@ -84,6 +96,27 @@
             <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
               New Soul Link Run
             </button>
+            <template v-if="isSupabaseAvailable">
+              <template v-if="showJoinInput">
+                <div class="session-input-row">
+                  <input
+                    ref="joinCodeInput"
+                    v-model="joinCodeValue"
+                    class="session-code-input"
+                    type="text"
+                    maxlength="6"
+                    placeholder="Invite code"
+                    @keydown.enter="handleJoinSession"
+                  />
+                  <button class="reset-option session-confirm-btn" @click="handleJoinSession" :disabled="sessionActionPending">
+                    Join
+                  </button>
+                </div>
+              </template>
+              <button v-else class="reset-option" @click="showJoinInput = true">
+                Join Soul Link Run
+              </button>
+            </template>
           </div>
         </div>
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
@@ -124,6 +157,7 @@ import { useRunStore } from './composables/useRunStore.js'
 import { useSoulLinkStore } from './composables/useSoulLinkStore.js'
 import { getPokemonDataForRules } from './data/pokemon.js'
 import { GENERATION_RULESETS, getAllTypesForRules } from './data/types.js'
+import { supabase } from './services/supabaseClient.js'
 import { themeOverrides } from './theme/colors.js'
 import {
   sanitizeDraftActionForRules,
@@ -166,6 +200,8 @@ const {
   gymProgress: soulLinkGymProgress,
   generationRules: soulLinkGenerationRules,
   localPreferences: soulLinkLocalPreferences,
+  sessionMetadata: soulLinkSessionMetadata,
+  activity: soulLinkActivity,
   loadSoulLinkData,
   loadError: soulLinkLoadError,
   setGenerationRules: setSoulLinkGenerationRules,
@@ -181,6 +217,11 @@ const {
   updatePlayerGymProgress,
   resetPlayerRoster,
   resetPlayerGymProgress,
+  createSession: createSoulLinkSession,
+  joinSession: joinSoulLinkSession,
+  pushState: pushSoulLinkState,
+  syncSession: syncSoulLinkSession,
+  deleteRemoteSession: deleteSoulLinkRemoteSession,
 } = useSoulLinkStore()
 
 const {
@@ -198,7 +239,19 @@ const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
 const showResetDialog = ref(false)
 const linkedDeleteTarget = ref(null)
 const playerNameInput = ref(null)
+const joinCodeInput = ref(null)
+const joinCodeValue = ref('')
+const showJoinInput = ref(false)
+const sessionActionPending = ref(false)
+const copyLabel = ref('tap to copy')
 const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
+const isSupabaseAvailable = !!supabase
+const hasRemoteSession = computed(
+  () => !isSoloMode.value && !!soulLinkSessionMetadata.value?.sessionId,
+)
+const isSyncing = computed(
+  () => soulLinkActivity.value?.syncState === 'syncing',
+)
 const appTitle = computed(() =>
   isSoloMode.value ? 'Weakness Calculator' : viewedSoulLinkPlayerName.value,
 )
@@ -336,6 +389,7 @@ function handleRenameViewedSoulLinkPlayer(nextName) {
   if (!player || !trimmedName || trimmedName === player.name) return
 
   updateSoulLinkPlayer(player.id, { name: trimmedName })
+  scheduleSyncPush()
 }
 
 function handleRenameViewedSoulLinkPlayerInput(event) {
@@ -344,6 +398,59 @@ function handleRenameViewedSoulLinkPlayerInput(event) {
 
 function selectPlayerNameInput() {
   playerNameInput.value?.select()
+}
+
+// --- Session management ---
+
+let syncPushTimer = null
+function scheduleSyncPush() {
+  if (!hasRemoteSession.value) return
+  clearTimeout(syncPushTimer)
+  syncPushTimer = setTimeout(() => {
+    pushSoulLinkState().catch((err) => console.error('Auto-push failed:', err))
+  }, 5000)
+}
+
+async function handleJoinSession() {
+  const code = joinCodeValue.value.trim()
+  if (!code) return
+  sessionActionPending.value = true
+  try {
+    await joinSoulLinkSession(code)
+    showJoinInput.value = false
+    joinCodeValue.value = ''
+  } catch (error) {
+    console.error('Failed to join session:', error)
+  } finally {
+    sessionActionPending.value = false
+  }
+}
+
+async function handleSyncNow() {
+  clearTimeout(syncPushTimer)
+  await syncSoulLinkSession()
+}
+
+async function handleLeaveSession() {
+  try {
+    await deleteSoulLinkRemoteSession()
+  } catch (error) {
+    console.error('Failed to leave session:', error)
+  }
+}
+
+async function copyInviteCode() {
+  const code = soulLinkSessionMetadata.value?.inviteCode
+  if (!code) return
+  try {
+    await navigator.clipboard.writeText(code)
+    copyLabel.value = 'copied!'
+    setTimeout(() => {
+      copyLabel.value = 'tap to copy'
+    }, 2000)
+  } catch {
+    copyLabel.value = 'copy failed'
+  }
 }
 
 function getRulesetPokemonData(name) {
@@ -431,6 +538,13 @@ async function startNewRun(mode) {
   } else {
     startNewLocalSoulLinkRun()
     setCurrentRunMode(RUN_MODES.SOUL_LINK)
+    if (isSupabaseAvailable) {
+      try {
+        await createSoulLinkSession()
+      } catch (err) {
+        console.error('Failed to create session for new Soul Link run:', err)
+      }
+    }
   }
 
   showResetDialog.value = false
@@ -830,6 +944,7 @@ function handleSoulLinkDefeatGym(type) {
   updatePlayerGymProgress(pid, {
     defeatedGyms: [...progress.defeatedGyms, type],
   })
+  scheduleSyncPush()
 }
 
 function handleSoulLinkUndefeatGym(type) {
@@ -838,10 +953,12 @@ function handleSoulLinkUndefeatGym(type) {
   updatePlayerGymProgress(pid, {
     defeatedGyms: progress.defeatedGyms.filter((g) => g !== type),
   })
+  scheduleSyncPush()
 }
 
 function handleSoulLinkPersistPinnedGym(type) {
   updatePlayerGymProgress(viewedSoulLinkPlayerId.value, { pinnedGym: type })
+  scheduleSyncPush()
 }
 
 // --- Soul Link delete handlers ---
@@ -889,6 +1006,7 @@ function confirmLinkedDelete() {
 
   linkedDeleteTarget.value = null
   cancel()
+  scheduleSyncPush()
 }
 
 function handleSoulLinkDeleteTeamPokemon(id) {
@@ -902,6 +1020,7 @@ function handleSoulLinkDeleteTeamPokemon(id) {
     return
   }
   removeSoulLinkRosterMember(viewedSoulLinkPlayerId.value, 'team', id)
+  scheduleSyncPush()
 }
 
 function handleSoulLinkDeleteBoxPokemon(id) {
@@ -911,6 +1030,7 @@ function handleSoulLinkDeleteBoxPokemon(id) {
     return
   }
   removeSoulLinkRosterMember(viewedSoulLinkPlayerId.value, 'box', id)
+  scheduleSyncPush()
 }
 
 function handleSoulLinkDeleteFromDraft() {
@@ -1261,6 +1381,7 @@ function handleSoulLinkConfirmDraft() {
   }
 
   cancel()
+  scheduleSyncPush()
 }
 
 // --- Soul Link swap handlers ---
@@ -1511,7 +1632,7 @@ function handleSoulLinkSwapSuggestion({
   enterSwapMode()
 }
 
-onMounted(() => {
+onMounted(async () => {
   const initialRunMode = loadCurrentRunMode()
 
   if (initialRunMode === RUN_MODES.SOLO) {
@@ -1519,7 +1640,13 @@ onMounted(() => {
     return
   }
 
-  loadSoulLinkData()
+  await loadSoulLinkData()
+
+  if (soulLinkSessionMetadata.value?.sessionId) {
+    syncSoulLinkSession().catch((err) =>
+      console.error('Auto-sync on mount failed:', err),
+    )
+  }
 })
 </script>
 
@@ -1755,5 +1882,64 @@ onMounted(() => {
   font-size: 0.9rem;
   color: var(--color-text-muted);
   margin-bottom: var(--space-4);
+}
+
+.session-input-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.session-code-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-light);
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  font-family: monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  text-align: center;
+}
+
+.session-code-input::placeholder {
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--color-text-muted);
+}
+
+.session-confirm-btn {
+  flex-shrink: 0;
+}
+
+.session-code-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-family: monospace;
+  font-size: 1.2rem;
+  letter-spacing: 0.2em;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background var(--transition-base);
+}
+
+.session-code-hint {
+  font-family: inherit;
+  font-size: 0.7rem;
+  letter-spacing: normal;
+  color: var(--color-text-muted);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .session-code-display:hover {
+    background: var(--color-surface-light);
+  }
 }
 </style>

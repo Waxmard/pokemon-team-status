@@ -1,6 +1,7 @@
 import { computed, ref, toRaw } from 'vue'
 import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
 import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
+import { createSupabaseRepository } from '../services/supabaseRepository.js'
 import {
   sanitizeDefeatedGymsForRules,
   sanitizePinnedGymForRules,
@@ -12,17 +13,36 @@ import {
   normalizeGenerationRules,
 } from '../utils/runSnapshot.js'
 import {
+  buildRemoteState,
   createDefaultSoulLinkActivityEntry,
   createDefaultSoulLinkChangeSet,
   createDefaultSoulLinkLocalPreferences,
   createDefaultSoulLinkPlayerProgress,
   createDefaultSoulLinkPlayerRoster,
   createDefaultSoulLinkState,
+  generateInviteCode,
+  mergeRemoteState,
+  SOUL_LINK_PLAYER_IDS,
+  SOUL_LINK_SYNC_STATES,
 } from '../utils/soulLinkModel.js'
 
 const repository = createLocalSoloRunRepository()
 const internalRunState = ref(createDefaultSoulLinkRunState())
 const loadError = ref(false)
+
+function generateUUID() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+let _supabaseRepo = null
+function getSupabaseRepository() {
+  if (!_supabaseRepo) _supabaseRepo = createSupabaseRepository()
+  return _supabaseRepo
+}
 
 function cloneValue(value) {
   return deepFreeze(JSON.parse(JSON.stringify(toRaw(value))))
@@ -309,6 +329,8 @@ function buildPersistableSnapshot() {
     players: sl.players,
     rosters: sl.rosters,
     progress: sl.progress,
+    sync: sl.sync,
+    activity: sl.activity,
     local: sl.local,
   }
 }
@@ -743,12 +765,186 @@ export function useSoulLinkStore() {
         rosters: snapshot.rosters,
         progress: snapshot.progress,
         local: snapshot.local,
+        sync: snapshot.sync,
+        activity: snapshot.activity,
       })
       loadError.value = false
     } catch (error) {
       console.error('Failed to load Soul Link data:', error)
       loadError.value = true
     }
+  }
+
+  function setSyncState(nextSyncState) {
+    updateSoulLinkState((soulLinkState) => ({
+      ...soulLinkState,
+      activity: {
+        ...soulLinkState.activity,
+        syncState: nextSyncState,
+      },
+    }))
+  }
+
+  function setSyncVersion(nextVersion) {
+    updateSoulLinkState((soulLinkState) => ({
+      ...soulLinkState,
+      sync: {
+        ...soulLinkState.sync,
+        version: nextVersion,
+      },
+    }))
+  }
+
+  async function createSession() {
+    const repo = getSupabaseRepository()
+    const sessionId = generateUUID()
+    const soulLinkState = getSoulLinkState('Creating a session')
+    const remoteState = buildRemoteState(soulLinkState)
+
+    let lastError = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const inviteCode = generateInviteCode()
+      try {
+        const session = await repo.createSession({
+          sessionId,
+          inviteCode,
+          state: remoteState,
+        })
+
+        updateSessionMetadata({
+          sessionId: session.id,
+          inviteCode: session.inviteCode,
+          createdAt: new Date().toISOString(),
+        })
+        setSyncVersion(session.version)
+        setSyncState(SOUL_LINK_SYNC_STATES.READY)
+
+        return { sessionId: session.id, inviteCode: session.inviteCode }
+      } catch (error) {
+        lastError = error
+        if (!error.message?.includes('invite_code')) throw error
+      }
+    }
+
+    throw lastError
+  }
+
+  async function joinSession(inviteCode) {
+    const repo = getSupabaseRepository()
+    const normalizedCode = inviteCode.toUpperCase().trim()
+    const session = await repo.fetchSessionByInviteCode(normalizedCode)
+
+    if (!session) {
+      throw new Error('No session found with that invite code.')
+    }
+
+    const remoteState = session.state
+    const remotePlayers = (remoteState.players ?? []).map((player) => ({
+      ...player,
+      isLocal: player.id === SOUL_LINK_PLAYER_IDS.PARTNER,
+    }))
+
+    createLocalRun({
+      metadata: {
+        sessionId: session.id,
+        inviteCode: session.inviteCode,
+        name: remoteState.metadata?.name ?? null,
+        createdAt: remoteState.metadata?.createdAt ?? null,
+      },
+      players: remotePlayers,
+      rosters: remoteState.rosters,
+      progress: remoteState.progress,
+      local: {
+        devicePlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
+        preferredPlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
+        cachedPlayerSlot: SOUL_LINK_PLAYER_IDS.PARTNER,
+      },
+      sync: { version: session.version },
+      activity: { syncState: SOUL_LINK_SYNC_STATES.READY },
+    })
+
+    return { sessionId: session.id, inviteCode: session.inviteCode }
+  }
+
+  async function pullState() {
+    const soulLinkState = getSoulLinkState('Pulling state')
+    const sessionId = soulLinkState.metadata.sessionId
+    if (!sessionId) return
+
+    const repo = getSupabaseRepository()
+    const session = await repo.fetchSessionById(sessionId)
+
+    if (!session) {
+      setSyncState(SOUL_LINK_SYNC_STATES.LOCAL_ONLY)
+      return
+    }
+
+    const merged = mergeRemoteState(soulLinkState, session.state)
+    replaceSoulLinkState(merged)
+    setSyncVersion(session.version)
+  }
+
+  async function pushState() {
+    const soulLinkState = getSoulLinkState('Pushing state')
+    const sessionId = soulLinkState.metadata.sessionId
+    if (!sessionId) return
+
+    const repo = getSupabaseRepository()
+    const remoteState = buildRemoteState(soulLinkState)
+    const expectedVersion = soulLinkState.sync.version
+
+    const result = await repo.pushSessionState(
+      sessionId,
+      remoteState,
+      expectedVersion,
+    )
+
+    if (result.success) {
+      setSyncVersion(result.version)
+      return
+    }
+
+    // Version conflict — pull and retry once
+    await pullState()
+    const refreshedState = getSoulLinkState('Retrying push after conflict')
+    const refreshedRemote = buildRemoteState(refreshedState)
+    const retryResult = await repo.pushSessionState(
+      sessionId,
+      refreshedRemote,
+      refreshedState.sync.version,
+    )
+
+    if (retryResult.success) {
+      setSyncVersion(retryResult.version)
+    }
+  }
+
+  async function syncSession() {
+    const soulLinkState = getSoulLinkState('Syncing session')
+    if (!soulLinkState.metadata.sessionId) return
+
+    setSyncState(SOUL_LINK_SYNC_STATES.SYNCING)
+    try {
+      await pullState()
+      await pushState()
+      setSyncState(SOUL_LINK_SYNC_STATES.READY)
+    } catch (error) {
+      console.error('Sync failed:', error)
+      setSyncState(SOUL_LINK_SYNC_STATES.READY)
+    }
+  }
+
+  async function deleteRemoteSession() {
+    const soulLinkState = getSoulLinkState('Deleting remote session')
+    const sessionId = soulLinkState.metadata.sessionId
+    if (!sessionId) return
+
+    const repo = getSupabaseRepository()
+    await repo.deleteSession(sessionId)
+
+    updateSessionMetadata({ sessionId: null, inviteCode: null })
+    setSyncVersion(1)
+    setSyncState(SOUL_LINK_SYNC_STATES.LOCAL_ONLY)
   }
 
   return {
@@ -788,5 +984,11 @@ export function useSoulLinkStore() {
     setPlayerRoster,
     resetPlayerRoster,
     resetPlayerGymProgress,
+    createSession,
+    joinSession,
+    pushState,
+    pullState,
+    syncSession,
+    deleteRemoteSession,
   }
 }

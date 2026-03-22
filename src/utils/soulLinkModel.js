@@ -159,3 +159,58 @@ export function createDefaultSoulLinkState() {
     local: createDefaultSoulLinkLocalPreferences(),
   }
 }
+
+const INVITE_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+
+export function generateInviteCode(length = 6) {
+  return Array.from(
+    { length },
+    () =>
+      INVITE_CODE_CHARS[Math.floor(Math.random() * INVITE_CODE_CHARS.length)],
+  ).join('')
+}
+
+export function buildRemoteState(soulLinkState) {
+  return {
+    metadata: soulLinkState.metadata,
+    players: soulLinkState.players.map(({ id, name }) => ({ id, name })),
+    rosters: soulLinkState.rosters,
+    progress: soulLinkState.progress,
+  }
+}
+
+export function mergeRemoteState(localSoulLinkState, remoteState) {
+  const localPlayer = localSoulLinkState.players.find((p) => p.isLocal)
+  const remotePlayerId = localSoulLinkState.players.find((p) => !p.isLocal)?.id
+
+  if (!localPlayer || !remotePlayerId) {
+    return localSoulLinkState
+  }
+
+  const mergedPlayers = localSoulLinkState.players.map((player) => {
+    if (player.isLocal) return player
+    const remoteVersion = remoteState.players.find((p) => p.id === player.id)
+    return remoteVersion ? { ...player, name: remoteVersion.name } : player
+  })
+
+  const mergedRosters = {
+    ...localSoulLinkState.rosters,
+    [remotePlayerId]:
+      remoteState.rosters?.[remotePlayerId] ??
+      localSoulLinkState.rosters[remotePlayerId],
+  }
+
+  const mergedProgress = {
+    ...localSoulLinkState.progress,
+    [remotePlayerId]:
+      remoteState.progress?.[remotePlayerId] ??
+      localSoulLinkState.progress[remotePlayerId],
+  }
+
+  return {
+    ...localSoulLinkState,
+    players: mergedPlayers,
+    rosters: mergedRosters,
+    progress: mergedProgress,
+  }
+}

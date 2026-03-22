@@ -81,19 +81,24 @@ reuses the existing app shell instead of introducing a separate app surface.
 
 Key files: `src/services/supabaseClient.js`, `src/services/supabaseRepository.js`
 
-## Remaining Phases
-
 ### Phase 5: Sync
 
-- Manual Sync action + background polling on app open and after key changes
-- Change-set based sync — each change set is the unit of save, sync, fetch,
-  and reconciliation (not single-field writes)
-- Local player edits apply immediately; cross-player edits require
-  owner-based confirmation before applying
-- Deaths take precedence, notify partner, undo death is an explicit action
-- Web app only for v1 — no native conversion
+- Snapshot-based sync via Supabase: full shared state push/pull with
+  optimistic concurrency (version compare-and-swap)
+- `buildRemoteState` / `mergeRemoteState` pure helpers in `soulLinkModel.js`
+  for extracting shared state and merging remote player data
+- Store methods: `createSession`, `joinSession`, `pushState`, `pullState`,
+  `syncSession`, `deleteRemoteSession` in `useSoulLinkStore.js`
+- Session management UI in options dialog: create/join/sync/leave/copy code
+- Auto-sync on mount when session exists, 5-second debounced auto-push after
+  mutations
+- `isLocal` flag flips for joining player (device-only, never stored remotely)
+- Conflict resolution: pull then retry push on version mismatch
 
-Key files: `useSoulLinkStore.js`, Supabase service layer
+Key files: `src/utils/soulLinkModel.js`, `src/composables/useSoulLinkStore.js`,
+`src/App.vue`
+
+## Remaining Phases
 
 ### Phase 6: Activity Feed
 
