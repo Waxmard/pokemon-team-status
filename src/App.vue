@@ -309,6 +309,7 @@ function toggleGenerationRules() {
   }
 
   setSoulLinkGenerationRules(nextRuleset)
+  triggerSync()
 }
 
 const generationRulesLabel = computed(() => {

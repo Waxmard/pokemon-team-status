@@ -802,7 +802,11 @@ export function useSoulLinkStore() {
     const repo = getSupabaseRepository()
     const sessionId = generateUUID()
     const soulLinkState = getSoulLinkState('Creating a session')
-    const remoteState = buildRemoteState(soulLinkState)
+    const runState = getSoulLinkRunState('Creating a session')
+    const remoteState = buildRemoteState(
+      soulLinkState,
+      runState.rules.generation,
+    )
 
     let lastError = null
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -848,6 +852,7 @@ export function useSoulLinkStore() {
     }))
 
     createLocalRun({
+      generationRules: remoteState.generationRules,
       metadata: {
         sessionId: session.id,
         inviteCode: session.inviteCode,
@@ -856,7 +861,6 @@ export function useSoulLinkStore() {
       },
       players: remotePlayers,
       rosters: remoteState.rosters,
-      progress: remoteState.progress,
       local: {
         devicePlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
         preferredPlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
@@ -893,7 +897,11 @@ export function useSoulLinkStore() {
     if (!sessionId) return
 
     const repo = getSupabaseRepository()
-    const remoteState = buildRemoteState(soulLinkState)
+    const runState = getSoulLinkRunState('Pushing state')
+    const remoteState = buildRemoteState(
+      soulLinkState,
+      runState.rules.generation,
+    )
     const expectedVersion = soulLinkState.sync.version
 
     const result = await repo.pushSessionState(
@@ -911,7 +919,13 @@ export function useSoulLinkStore() {
     // Version conflict — pull and retry once
     await pullState()
     const refreshedState = getSoulLinkState('Retrying push after conflict')
-    const refreshedRemote = buildRemoteState(refreshedState)
+    const refreshedRunState = getSoulLinkRunState(
+      'Retrying push after conflict',
+    )
+    const refreshedRemote = buildRemoteState(
+      refreshedState,
+      refreshedRunState.rules.generation,
+    )
     const retryResult = await repo.pushSessionState(
       sessionId,
       refreshedRemote,
@@ -966,6 +980,9 @@ export function useSoulLinkStore() {
       const merged = mergeRemoteState(currentState, session.state)
       replaceSoulLinkState(merged)
       setSyncVersion(session.version)
+      if (session.state.generationRules) {
+        setGenerationRules(session.state.generationRules)
+      }
     })
   }
 
