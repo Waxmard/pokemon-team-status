@@ -14,12 +14,6 @@ export const SOUL_LINK_SYNC_STATES = {
   SYNCING: 'syncing',
 }
 
-export const SOUL_LINK_NOTIFICATION_TYPES = {
-  PARTNER_UPDATE: 'partner-update',
-  GYM_PROGRESS: 'gym-progress',
-  MEMBER_UPDATE: 'member-update',
-}
-
 export function createDefaultSoulLinkSessionMetadata() {
   return {
     sessionId: null,
@@ -88,17 +82,6 @@ export function createDefaultSoulLinkProgress() {
   }
 }
 
-export function createDefaultSoulLinkChangeSet() {
-  return {
-    id: null,
-    sessionId: null,
-    actorPlayerId: SOUL_LINK_PLAYER_IDS.LOCAL,
-    createdAt: null,
-    baseVersion: null,
-    operations: [],
-  }
-}
-
 export function createDefaultSoulLinkNotificationSettings() {
   return {
     enabled: true,
@@ -115,20 +98,6 @@ export function createDefaultSoulLinkLocalPreferences() {
     cachedPlayerSlot: SOUL_LINK_PLAYER_IDS.LOCAL,
     sessionPreference: 'soul-link',
     notifications: createDefaultSoulLinkNotificationSettings(),
-  }
-}
-
-export function createDefaultSoulLinkActivityEntry(overrides = {}) {
-  return {
-    id: null,
-    type: SOUL_LINK_NOTIFICATION_TYPES.PARTNER_UPDATE,
-    actorPlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
-    createdAt: null,
-    message: null,
-    readAt: null,
-    entityType: null,
-    entityId: null,
-    ...overrides,
   }
 }
 

@@ -33,7 +33,6 @@ describe('useSoulLinkStore', () => {
     })
     expect(firstStore.players.value).toHaveLength(2)
     expect(firstStore.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([])
-    expect(firstStore.pendingChangeSets.value).toEqual([])
   })
 
   it('returns defensive read views instead of mutable live state', () => {
@@ -233,7 +232,7 @@ describe('useSoulLinkStore', () => {
     })
   })
 
-  it('tracks local preferences, pending sync changes, and activity entries', () => {
+  it('tracks local preferences', () => {
     const store = useSoulLinkStore()
 
     store.setCachedPlayerSlot(SOUL_LINK_PLAYER_IDS.PARTNER)
@@ -242,31 +241,11 @@ describe('useSoulLinkStore', () => {
         gymProgress: false,
       },
     })
-    store.enqueuePendingChangeSet({
-      id: 'change-1',
-      operations: [{ op: 'replace', path: '/metadata/name', value: 'Run' }],
-    })
-    store.appendActivityEntry({
-      id: 'activity-1',
-      actorPlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
-      createdAt: '2026-03-18T10:00:00.000Z',
-      message: 'Partner updated their team',
-    })
-    store.markActivityEntryRead('activity-1', '2026-03-18T11:00:00.000Z')
-    store.removePendingChangeSet('change-1')
 
     expect(store.localPreferences.value.cachedPlayerSlot).toBe(
       SOUL_LINK_PLAYER_IDS.PARTNER,
     )
     expect(store.localPreferences.value.notifications.gymProgress).toBe(false)
-    expect(store.pendingChangeSets.value).toEqual([])
-    expect(store.activityFeed.value).toEqual([
-      expect.objectContaining({
-        id: 'activity-1',
-        readAt: '2026-03-18T11:00:00.000Z',
-      }),
-    ])
-    expect(store.activity.value.lastUpdatedAt).toBe('2026-03-18T10:00:00.000Z')
   })
 
   it('validates player references when creating runs and updating preferences', () => {

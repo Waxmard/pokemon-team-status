@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  createDefaultSoulLinkActivityEntry,
-  createDefaultSoulLinkChangeSet,
   createDefaultSoulLinkLocalPreferences,
   createDefaultSoulLinkMember,
   createDefaultSoulLinkState,
-  SOUL_LINK_NOTIFICATION_TYPES,
   SOUL_LINK_PLAYER_IDS,
   SOUL_LINK_SYNC_STATES,
 } from '../soulLinkModel.js'
@@ -82,33 +79,6 @@ describe('soulLinkModel helpers', () => {
       catchLocation: null,
       ownerPlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
       pairId: null,
-    })
-  })
-
-  it('creates sync and activity records with stable defaults', () => {
-    expect(createDefaultSoulLinkChangeSet()).toEqual({
-      id: null,
-      sessionId: null,
-      actorPlayerId: SOUL_LINK_PLAYER_IDS.LOCAL,
-      createdAt: null,
-      baseVersion: null,
-      operations: [],
-    })
-
-    expect(
-      createDefaultSoulLinkActivityEntry({
-        id: 'activity-1',
-        type: SOUL_LINK_NOTIFICATION_TYPES.GYM_PROGRESS,
-      }),
-    ).toEqual({
-      id: 'activity-1',
-      type: SOUL_LINK_NOTIFICATION_TYPES.GYM_PROGRESS,
-      actorPlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
-      createdAt: null,
-      message: null,
-      readAt: null,
-      entityType: null,
-      entityId: null,
     })
   })
 

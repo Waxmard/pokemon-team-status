@@ -14,8 +14,6 @@ import {
 } from '../utils/runSnapshot.js'
 import {
   buildRemoteState,
-  createDefaultSoulLinkActivityEntry,
-  createDefaultSoulLinkChangeSet,
   createDefaultSoulLinkLocalPreferences,
   createDefaultSoulLinkPlayerProgress,
   createDefaultSoulLinkPlayerRoster,
@@ -392,18 +390,8 @@ const localPreferences = computed(() =>
 const activity = computed(() =>
   cloneValue(getSoulLinkState('Accessing Soul Link activity').activity),
 )
-const activityFeed = computed(() =>
-  cloneValue(
-    getSoulLinkState('Accessing Soul Link activity').activity.recentEntries,
-  ),
-)
 const sync = computed(() =>
   cloneValue(getSoulLinkState('Accessing Soul Link sync state').sync),
-)
-const pendingChangeSets = computed(() =>
-  cloneValue(
-    getSoulLinkState('Accessing Soul Link sync state').sync.pendingChangeSets,
-  ),
 )
 
 export function useSoulLinkStore() {
@@ -631,69 +619,6 @@ export function useSoulLinkStore() {
       ...playerProgress,
       ...cloneValue(updates),
     })
-  }
-
-  function enqueuePendingChangeSet(changeSet) {
-    updateSoulLinkState((soulLinkState) => ({
-      ...soulLinkState,
-      sync: {
-        ...soulLinkState.sync,
-        pendingChangeSets: [
-          ...soulLinkState.sync.pendingChangeSets,
-          {
-            ...createDefaultSoulLinkChangeSet(),
-            ...cloneValue(changeSet),
-          },
-        ],
-      },
-    }))
-  }
-
-  function removePendingChangeSet(changeSetId) {
-    updateSoulLinkState((soulLinkState) => ({
-      ...soulLinkState,
-      sync: {
-        ...soulLinkState.sync,
-        pendingChangeSets: soulLinkState.sync.pendingChangeSets.filter(
-          (changeSet) => changeSet.id !== changeSetId,
-        ),
-      },
-    }))
-  }
-
-  function appendActivityEntry(entry) {
-    const nextEntry = {
-      ...createDefaultSoulLinkActivityEntry(),
-      ...cloneValue(entry),
-    }
-
-    updateSoulLinkState((soulLinkState) => ({
-      ...soulLinkState,
-      activity: {
-        ...soulLinkState.activity,
-        lastUpdatedAt: nextEntry.createdAt,
-        recentEntries: [nextEntry, ...soulLinkState.activity.recentEntries],
-      },
-    }))
-  }
-
-  function markActivityEntryRead(entryId, readAt) {
-    const timestamp = readAt ?? new Date().toISOString()
-
-    updateSoulLinkState((soulLinkState) => ({
-      ...soulLinkState,
-      activity: {
-        ...soulLinkState.activity,
-        recentEntries: soulLinkState.activity.recentEntries.map((entry) =>
-          entry.id === entryId
-            ? {
-                ...entry,
-                readAt: timestamp,
-              }
-            : entry,
-        ),
-      },
-    }))
   }
 
   function setPlayerRoster(playerId, roster) {
@@ -1002,9 +927,7 @@ export function useSoulLinkStore() {
     generationRules,
     localPreferences,
     activity,
-    activityFeed,
     sync,
-    pendingChangeSets,
     loadSoulLinkData,
     loadError,
     createLocalRun,
@@ -1019,10 +942,6 @@ export function useSoulLinkStore() {
     updateRosterMember,
     removeRosterMember,
     updatePlayerGymProgress,
-    enqueuePendingChangeSet,
-    removePendingChangeSet,
-    appendActivityEntry,
-    markActivityEntryRead,
     getPlayerRoster,
     getPlayerTeam,
     getPlayerBox,

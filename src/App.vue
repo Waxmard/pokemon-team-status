@@ -172,6 +172,12 @@ import {
 import { buildPokemonMember, generatePokemonId } from './utils/pokemon.js'
 import { RUN_MODES } from './utils/runSnapshot.js'
 import {
+  findLinkedDeleteTarget as findLinkedDeleteTargetUtil,
+  preserveSoulLinkPairingFields,
+  reconcileSoulLinkPairing as reconcileSoulLinkPairingUtil,
+  updateReciprocalSoulLinkPairId as updateReciprocalSoulLinkPairIdUtil,
+} from './utils/soulLinkPairing.js'
+import {
   adaptSoulLinkMemberToUiMember,
   adaptUiMemberToSoulLinkMember,
   buildSoulLinkMemberFromDraft,
@@ -207,7 +213,6 @@ const {
   generationRules: soulLinkGenerationRules,
   localPreferences: soulLinkLocalPreferences,
   sessionMetadata: soulLinkSessionMetadata,
-  activity: soulLinkActivity,
   loadSoulLinkData,
   loadError: soulLinkLoadError,
   setGenerationRules: setSoulLinkGenerationRules,
@@ -984,32 +989,12 @@ function handleSoulLinkPersistPinnedGym(type) {
 // --- Soul Link delete handlers ---
 
 function findLinkedDeleteTarget(playerId, memberId, rosterKey) {
-  const roster = getPlayerRoster(playerId)
-  const member = roster[rosterKey].find((m) => m.id === memberId)
-  if (!member?.pairId) return null
-
-  const partnerId = findPartnerPlayerId()
-  if (!partnerId) return null
-
-  const partnerRoster = getPlayerRoster(partnerId)
-  const partnerMember = [...partnerRoster.team, ...partnerRoster.box].find(
-    (m) => m.id === member.pairId,
-  )
-  if (!partnerMember) return null
-
-  const partnerRosterKey = partnerRoster.team.some(
-    (m) => m.id === partnerMember.id,
-  )
-    ? 'team'
-    : 'box'
-
-  return {
+  return findLinkedDeleteTargetUtil(
+    playerId,
     memberId,
     rosterKey,
-    partnerPlayerId: partnerId,
-    partnerMemberId: partnerMember.id,
-    partnerRosterKey,
-  }
+    getPairingContext(),
+  )
 }
 
 function confirmLinkedDelete() {
@@ -1087,147 +1072,35 @@ function findPartnerPlayerId() {
   )?.id
 }
 
-function reconcileSoulLinkPairing(playerId, memberId, rosterKey) {
-  const roster = getPlayerRoster(playerId)
-  const member = roster[rosterKey].find((m) => m.id === memberId)
-  if (!member) return
-
-  const partnerId = findPartnerPlayerId()
-  if (!partnerId) return
-
-  const partnerRoster = getPlayerRoster(partnerId)
-  const allPartnerMembers = [...partnerRoster.team, ...partnerRoster.box]
-
-  const normalizedCatchLocation = member.catchLocation?.toLowerCase() ?? null
-  const existingPartner = member.pairId
-    ? allPartnerMembers.find((m) => m.id === member.pairId)
-    : null
-
-  // If catchLocation is empty, clear pairing
-  if (!normalizedCatchLocation) {
-    if (existingPartner) {
-      const existingPartnerKey = partnerRoster.team.includes(existingPartner)
-        ? 'team'
-        : 'box'
-      updateRosterMember(partnerId, existingPartnerKey, existingPartner.id, {
-        pairId: null,
-      })
-    }
-    updateRosterMember(playerId, rosterKey, memberId, { pairId: null })
-    return
-  }
-
-  if (
-    existingPartner?.catchLocation?.toLowerCase() === normalizedCatchLocation
-  ) {
-    if (existingPartner.pairId !== memberId) {
-      const existingPartnerKey = partnerRoster.team.includes(existingPartner)
-        ? 'team'
-        : 'box'
-      updateRosterMember(partnerId, existingPartnerKey, existingPartner.id, {
-        pairId: memberId,
-      })
-    }
-    return
-  }
-
-  // Clear old pair if member previously had a different pairId
-  if (existingPartner) {
-    const oldPartnerKey = partnerRoster.team.includes(existingPartner)
-      ? 'team'
-      : 'box'
-    updateRosterMember(partnerId, oldPartnerKey, existingPartner.id, {
-      pairId: null,
-    })
-  }
-
-  // Find partner member with same catchLocation (case-insensitive) that is unlinked
-  const matchingPartner = allPartnerMembers.find(
-    (m) =>
-      m.catchLocation &&
-      m.catchLocation.toLowerCase() === normalizedCatchLocation &&
-      m.id !== member.pairId,
-  )
-
-  if (matchingPartner) {
-    // Clear matching partner's old pair if it had one
-    if (matchingPartner.pairId && matchingPartner.pairId !== memberId) {
-      // Find and clear the old partner's partner
-      const myRoster = getPlayerRoster(playerId)
-      const allMyMembers = [...myRoster.team, ...myRoster.box]
-      const oldPairOfPartner = allMyMembers.find(
-        (m) => m.id === matchingPartner.pairId,
-      )
-      if (oldPairOfPartner) {
-        const oldPairKey = myRoster.team.includes(oldPairOfPartner)
-          ? 'team'
-          : 'box'
-        updateRosterMember(playerId, oldPairKey, oldPairOfPartner.id, {
-          pairId: null,
-        })
-      }
-    }
-
-    const partnerKey = partnerRoster.team.includes(matchingPartner)
-      ? 'team'
-      : 'box'
-    updateRosterMember(playerId, rosterKey, memberId, {
-      pairId: matchingPartner.id,
-    })
-    updateRosterMember(partnerId, partnerKey, matchingPartner.id, {
-      pairId: memberId,
-    })
-  } else {
-    // No matching partner — clear own pairId
-    updateRosterMember(playerId, rosterKey, memberId, { pairId: null })
+function getPairingContext() {
+  return {
+    getPlayerRoster,
+    updateRosterMember,
+    partnerId: findPartnerPlayerId(),
   }
 }
 
-function preserveSoulLinkPairingFields(member, sourceMember) {
-  if (!member) return member
+function reconcileSoulLinkPairing(playerId, memberId, rosterKey) {
+  reconcileSoulLinkPairingUtil(
+    playerId,
+    memberId,
+    rosterKey,
+    getPairingContext(),
+  )
+}
 
-  const hasMemberCatchLocation = Object.hasOwn(member, 'catchLocation')
-  const hasMemberPairId = Object.hasOwn(member, 'pairId')
-
-  return {
-    ...member,
-    catchLocation: hasMemberCatchLocation
-      ? member.catchLocation
-      : (sourceMember?.catchLocation ?? null),
-    pairId: hasMemberPairId ? member.pairId : (sourceMember?.pairId ?? null),
-  }
+function updateReciprocalSoulLinkPairId(previousMemberId, nextMemberId) {
+  updateReciprocalSoulLinkPairIdUtil(
+    previousMemberId,
+    nextMemberId,
+    getPairingContext(),
+  )
 }
 
 function refreshSoulLinkDraftMetadata(member) {
   if (!draftAction.value) return
-
   draftAction.value.catchLocation = member?.catchLocation ?? null
   draftAction.value.pairId = member?.pairId ?? null
-}
-
-function updateReciprocalSoulLinkPairId(previousMemberId, nextMemberId) {
-  if (!previousMemberId || !nextMemberId || previousMemberId === nextMemberId) {
-    return
-  }
-
-  const partnerId = findPartnerPlayerId()
-  if (!partnerId) return
-
-  const partnerRoster = getPlayerRoster(partnerId)
-  const partnerMember = [...partnerRoster.team, ...partnerRoster.box].find(
-    (member) => member.pairId === previousMemberId,
-  )
-  if (!partnerMember) return
-
-  const partnerKey = partnerRoster.team.some(
-    (member) => member.id === partnerMember.id,
-  )
-    ? 'team'
-    : 'box'
-
-  updateRosterMember(partnerId, partnerKey, partnerMember.id, {
-    pairId: nextMemberId,
-  })
 }
 
 // --- Soul Link confirm draft handler ---
@@ -1909,29 +1782,6 @@ onMounted(async () => {
   font-size: 0.9rem;
   color: var(--color-text-muted);
   margin-bottom: var(--space-4);
-}
-
-.sync-now-link {
-  background: transparent;
-  border: none;
-  -webkit-appearance: none;
-  appearance: none;
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-  padding: var(--space-1) 0;
-  transition: color var(--transition-base);
-}
-
-.sync-now-link:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .sync-now-link:hover:not(:disabled) {
-    color: var(--color-text-primary);
-  }
 }
 
 .session-input-row {
