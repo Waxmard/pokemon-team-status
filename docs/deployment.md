@@ -39,6 +39,7 @@ All user data is stored in IndexedDB (`pokemon-team-calculator` database):
 - Box (reserve Pokemon)
 - Defeated gyms
 - Pinned gym
+- Soul Link snapshot (full state for Soul Link runs)
 
 This data persists across sessions and survives browser restarts.
 
@@ -107,6 +108,42 @@ from Safari, allowing the service worker to persist even when the app is
 closed.
 
 **Recommendation**: Always install to Home Screen for reliable offline access.
+
+## Supabase Setup (Soul Link)
+
+Soul Link mode requires a Supabase project for online sync.
+
+### Environment Variables
+
+Copy `.env.example` to `.env.local` (local dev) or set in your hosting
+provider:
+
+```text
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+Without these, the app runs in local-only mode with no sync features.
+
+### Database Setup
+
+Run this SQL in the Supabase Dashboard SQL Editor:
+
+```sql
+create table if not exists public.sessions (
+  id uuid primary key,
+  invite_code text not null unique,
+  state jsonb not null default '{}'::jsonb,
+  version integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+### Enable Realtime
+
+In the Supabase Dashboard, go to Database > Replication and enable the
+`sessions` table for the `supabase_realtime` publication. This enables
+instant partner updates via WebSocket.
 
 ## Build Output
 

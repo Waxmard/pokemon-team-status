@@ -62,9 +62,10 @@ To verify the service worker registered:
 ```text
 src/
 ├── components/     # Vue components
-├── composables/    # Shared state (useStorage, useDraftAction)
+├── composables/    # Shared state (useRunStore, useSoulLinkStore, etc.)
 ├── data/           # Pokemon, types, abilities data
-├── utils/          # Scoring algorithm (typeCalc.js)
+├── services/       # Supabase client, repositories
+├── utils/          # Scoring, Soul Link model/pairing
 ├── theme/          # Naive UI theming
 └── styles/         # Global CSS
 
@@ -92,16 +93,28 @@ docs/               # Documentation
 The app uses Vue composables with module-level refs (singleton pattern). State
 is shared across all components that import the composable.
 
-#### useStorage.js
+#### useRunStore.js (Solo Mode)
 
-Handles persistent data via IndexedDB (`pokemon-team-calculator` database):
+Handles solo run state and IndexedDB persistence:
 
 - `team` - Active Pokemon team (up to 6)
-- `box` - Reserve Pokemon storage (up to 3)
+- `box` - Reserve Pokemon storage
 - `defeatedGyms` - List of defeated gym types
 - `pinnedGym` - Currently pinned gym type
 
-Data persists across sessions and works offline.
+#### useSoulLinkStore.js (Soul Link Mode)
+
+Full state management for two-player Soul Link runs:
+
+- Player rosters (team + box per player), gym progress, player names
+- Supabase sync: `createSession`, `joinSession`, `pushState`, `pullState`
+- Realtime subscription for instant partner updates
+- Local persistence via IndexedDB snapshots
+
+#### useRunModeStore.js
+
+Persists the selected run mode (`solo` or `soul-link`) across sessions via
+localStorage.
 
 #### useDraftAction.js
 
@@ -110,6 +123,26 @@ Manages the draft/editing state for adding or modifying Pokemon:
 - Tracks current edit operation (add to team, add to box, edit, swap)
 - Holds temporary Pokemon configuration (pokemon, ability, berry, moves,
   specialMove)
+
+### Services
+
+#### supabaseClient.js
+
+Shared Supabase client. Exports `null` when env vars are missing (graceful
+degradation for local-only mode).
+
+#### supabaseRepository.js
+
+Data access layer for the `sessions` table:
+
+- `createSession` / `fetchSessionById` / `fetchSessionByInviteCode`
+- `pushSessionState` (optimistic concurrency via version column)
+- `deleteSession`
+- `subscribeToSession` (Supabase Realtime)
+
+#### localRunRepository.js
+
+IndexedDB persistence for both solo and Soul Link data.
 
 ### Core Type Calculation
 
@@ -140,13 +173,15 @@ See [How It Works](how-it-works.md) for algorithm details.
 
 ```text
 App.vue
-├── TeamSection.vue          # Team and box display with DraftPanel
-│   ├── TeamSlot.vue         # Individual Pokemon slot
-│   └── DraftPanel.vue       # Multi-step wizard for adding/editing
-├── GymColumns.vue           # Gym type weakness columns
-│   └── GymColumn.vue        # Individual gym type with score
-│       └── GymRow.vue       # Single gym entry
-└── SwapPreview.vue          # Preview when swapping box/team Pokemon
+├── TeamSection.vue              # Team and box display with DraftPanel
+│   ├── TeamSlot.vue             # Individual Pokemon slot
+│   └── DraftPanel.vue           # Multi-step wizard for adding/editing
+├── GymColumns.vue               # Gym type weakness columns
+│   └── GymColumn.vue            # Individual gym type with score
+│       └── GymRow.vue           # Single gym entry
+├── SwapPreview.vue              # Preview when swapping box/team Pokemon
+└── SoulLinkShell.vue            # Soul Link mode wrapper
+    └── SoulLinkPlayerView.vue   # Player view (TeamSection + GymColumns)
 ```
 
 ## Code Style
