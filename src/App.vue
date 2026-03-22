@@ -4,7 +4,10 @@
       <div v-if="activeLoadError" class="load-error-banner" @click="retryLoad">
         Failed to load saved data. Tap to retry.
       </div>
-      <button class="reset-btn" @click="showResetDialog = true" aria-label="Reset">✦</button>
+      <div class="header-btns">
+        <button class="header-btn" @click="showResetDialog = true" aria-label="Options">✦</button>
+        <button v-if="!isSoloMode" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
+      </div>
       <h1 class="app-title">
         <span v-if="isSoloMode" class="title-accent">{{ appTitle }}</span>
         <span v-else class="title-player-row">
@@ -64,23 +67,6 @@
           <button class="reset-option" @click="toggleGenerationRules">
             {{ generationRulesLabel }}
           </button>
-          <div v-if="!isSoloMode" class="reset-option-group">
-            <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
-              View {{ otherSoulLinkPlayerName }}
-            </button>
-            <template v-if="hasRemoteSession && isSupabaseAvailable">
-              <button class="reset-option" @click="handleSyncNow" :disabled="isSyncing">
-                {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
-              </button>
-              <div class="session-code-display" @click="copyInviteCode">
-                {{ soulLinkSessionMetadata.inviteCode }}
-                <span class="session-code-hint">{{ copyLabel }}</span>
-              </div>
-              <button class="reset-option reset-option-danger" @click="handleLeaveSession">
-                Leave Session
-              </button>
-            </template>
-          </div>
           <div class="reset-option-group">
             <button class="reset-option" @click="resetPokemon">
               Reset Team & Box
@@ -93,6 +79,48 @@
             <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
               New Solo Run
             </button>
+          </div>
+        </div>
+        <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
+      </div>
+    </div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div v-if="linkedDeleteTarget" class="reset-overlay"
+         @click.self="linkedDeleteTarget = null">
+      <div class="reset-dialog">
+        <h3 class="reset-dialog-title">Delete Linked Pair</h3>
+        <p class="linked-delete-text">
+          This linked Pokemon and its partner will both be deleted.
+        </p>
+        <div class="reset-dialog-options">
+          <button class="reset-option reset-option-danger"
+                  @click="confirmLinkedDelete">
+            Delete Both
+          </button>
+        </div>
+        <button class="reset-dialog-cancel"
+                @click="linkedDeleteTarget = null">✕</button>
+      </div>
+    </div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div v-if="showSoulLinkDialog" class="reset-overlay" @click.self="showSoulLinkDialog = false">
+      <div class="reset-dialog">
+        <h3 class="reset-dialog-title">Soul Link</h3>
+        <div class="reset-dialog-options">
+          <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
+            View {{ otherSoulLinkPlayerName }}
+          </button>
+          <div v-if="hasRemoteSession && isSupabaseAvailable" class="reset-option-group">
+            <div class="session-code-display" @click="copyInviteCode">
+              {{ soulLinkSessionMetadata.inviteCode }}
+              <span class="session-code-hint">{{ copyLabel }}</span>
+            </div>
+          </div>
+          <div class="reset-option-group">
             <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
               New Soul Link Run
             </button>
@@ -118,28 +146,11 @@
               </button>
             </template>
           </div>
-        </div>
-        <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
-      </div>
-    </div>
-  </Teleport>
-
-  <Teleport to="body">
-    <div v-if="linkedDeleteTarget" class="reset-overlay"
-         @click.self="linkedDeleteTarget = null">
-      <div class="reset-dialog">
-        <h3 class="reset-dialog-title">Delete Linked Pair</h3>
-        <p class="linked-delete-text">
-          This linked Pokemon and its partner will both be deleted.
-        </p>
-        <div class="reset-dialog-options">
-          <button class="reset-option reset-option-danger"
-                  @click="confirmLinkedDelete">
-            Delete Both
+          <button v-if="hasRemoteSession && isSupabaseAvailable" class="sync-now-link" @click="handleSyncNow" :disabled="isSyncing">
+            {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
           </button>
         </div>
-        <button class="reset-dialog-cancel"
-                @click="linkedDeleteTarget = null">✕</button>
+        <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
       </div>
     </div>
   </Teleport>
@@ -221,7 +232,6 @@ const {
   joinSession: joinSoulLinkSession,
   pushState: pushSoulLinkState,
   syncSession: syncSoulLinkSession,
-  deleteRemoteSession: deleteSoulLinkRemoteSession,
 } = useSoulLinkStore()
 
 const {
@@ -237,6 +247,7 @@ const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
   useRunModeStore()
 
 const showResetDialog = ref(false)
+const showSoulLinkDialog = ref(false)
 const linkedDeleteTarget = ref(null)
 const playerNameInput = ref(null)
 const joinCodeInput = ref(null)
@@ -380,6 +391,7 @@ function handleViewOtherSoulLinkPlayer() {
     setCachedPlayerSlot(other.id)
   }
   showResetDialog.value = false
+  showSoulLinkDialog.value = false
 }
 
 function handleRenameViewedSoulLinkPlayer(nextName) {
@@ -431,25 +443,45 @@ async function handleSyncNow() {
   await syncSoulLinkSession()
 }
 
-async function handleLeaveSession() {
-  try {
-    await deleteSoulLinkRemoteSession()
-  } catch (error) {
-    console.error('Failed to leave session:', error)
-  }
-}
-
-async function copyInviteCode() {
+function copyInviteCode() {
   const code = soulLinkSessionMetadata.value?.inviteCode
   if (!code) return
-  try {
-    await navigator.clipboard.writeText(code)
+
+  function onSuccess() {
     copyLabel.value = 'copied!'
     setTimeout(() => {
       copyLabel.value = 'tap to copy'
     }, 2000)
+  }
+
+  function tryFallback() {
+    if (fallbackCopy(code)) {
+      onSuccess()
+    } else {
+      copyLabel.value = 'copy failed'
+    }
+  }
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(code).then(onSuccess).catch(tryFallback)
+  } else {
+    tryFallback()
+  }
+}
+
+function fallbackCopy(text) {
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  try {
+    return document.execCommand('copy')
   } catch {
-    copyLabel.value = 'copy failed'
+    return false
+  } finally {
+    document.body.removeChild(textarea)
   }
 }
 
@@ -548,6 +580,7 @@ async function startNewRun(mode) {
   }
 
   showResetDialog.value = false
+  showSoulLinkDialog.value = false
 }
 
 // Helper to construct the hypothetical draft team
@@ -1714,11 +1747,16 @@ onMounted(async () => {
   -webkit-text-fill-color: var(--color-text-primary);
 }
 
-.reset-btn {
+.header-btns {
   position: absolute;
   top: 0;
   left: 0;
   z-index: 10;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.header-btn {
   background: transparent;
   border: none;
   color: var(--color-text-muted);
@@ -1728,9 +1766,21 @@ onMounted(async () => {
   transition: color var(--transition-base);
 }
 
-.reset-btn:hover,
-.reset-btn:active {
+.header-btn:hover,
+.header-btn:active {
   color: rgba(139, 92, 246, 1);
+}
+
+.header-btn-link {
+  font-size: 0.6rem;
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.header-btn-link:hover,
+.header-btn-link:active {
+  filter: grayscale(0);
+  opacity: 1;
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
@@ -1770,7 +1820,7 @@ onMounted(async () => {
     min-width: 0;
   }
 
-  .reset-btn {
+  .header-btns {
     top: auto;
     bottom: 0;
   }
@@ -1884,6 +1934,29 @@ onMounted(async () => {
   margin-bottom: var(--space-4);
 }
 
+.sync-now-link {
+  background: transparent;
+  border: none;
+  -webkit-appearance: none;
+  appearance: none;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: var(--space-1) 0;
+  transition: color var(--transition-base);
+}
+
+.sync-now-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sync-now-link:hover:not(:disabled) {
+    color: var(--color-text-primary);
+  }
+}
+
 .session-input-row {
   display: flex;
   gap: var(--space-2);
@@ -1919,12 +1992,12 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   font-family: monospace;
-  font-size: 1.2rem;
-  letter-spacing: 0.2em;
+  font-size: 0.95rem;
+  letter-spacing: 0.15em;
   color: var(--color-text-primary);
   cursor: pointer;
   transition: background var(--transition-base);
