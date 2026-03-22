@@ -469,6 +469,9 @@ function handleDeleteBoxPokemon(id) {
   grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
+  max-height: 715px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Content fade out/in (grid and panel transitions) */

@@ -193,12 +193,7 @@ export function mergeRemoteState(localSoulLinkState, remoteState) {
     return remoteVersion ? { ...player, name: remoteVersion.name } : player
   })
 
-  const mergedRosters = {
-    ...localSoulLinkState.rosters,
-    [remotePlayerId]:
-      remoteState.rosters?.[remotePlayerId] ??
-      localSoulLinkState.rosters[remotePlayerId],
-  }
+  const mergedRosters = remoteState.rosters ?? localSoulLinkState.rosters
 
   return {
     ...localSoulLinkState,
