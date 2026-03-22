@@ -45,6 +45,7 @@ function getSupabaseRepository() {
 }
 
 let _unsubscribe = null
+let _lastPushedVersion = 0
 
 function cloneValue(value) {
   return deepFreeze(JSON.parse(JSON.stringify(toRaw(value))))
@@ -902,6 +903,7 @@ export function useSoulLinkStore() {
     )
 
     if (result.success) {
+      _lastPushedVersion = result.version
       setSyncVersion(result.version)
       return
     }
@@ -917,6 +919,7 @@ export function useSoulLinkStore() {
     )
 
     if (retryResult.success) {
+      _lastPushedVersion = retryResult.version
       setSyncVersion(retryResult.version)
     }
   }
@@ -958,6 +961,7 @@ export function useSoulLinkStore() {
 
     const repo = getSupabaseRepository()
     _unsubscribe = repo.subscribeToSession(sessionId, (session) => {
+      if (session.version <= _lastPushedVersion) return
       const currentState = getSoulLinkState('Handling realtime update')
       const merged = mergeRemoteState(currentState, session.state)
       replaceSoulLinkState(merged)

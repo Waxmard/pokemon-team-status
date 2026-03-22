@@ -6,7 +6,7 @@
       </div>
       <div class="header-btns">
         <button class="header-btn" @click="showResetDialog = true" aria-label="Options">✦</button>
-        <button v-if="!isSoloMode" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
+        <button v-if="!isSoloMode && hasRemoteSession" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
       </div>
       <h1 class="app-title">
         <span v-if="isSoloMode" class="title-accent">{{ appTitle }}</span>
@@ -79,6 +79,30 @@
             <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
               New Solo Run
             </button>
+            <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
+              New Soul Link Run
+            </button>
+            <template v-if="isSupabaseAvailable">
+              <template v-if="showJoinInput">
+                <div class="session-input-row">
+                  <input
+                    ref="joinCodeInput"
+                    v-model="joinCodeValue"
+                    class="session-code-input"
+                    type="text"
+                    maxlength="6"
+                    placeholder="Invite code"
+                    @keydown.enter="handleJoinSession"
+                  />
+                  <button class="reset-option session-confirm-btn" @click="handleJoinSession" :disabled="sessionActionPending">
+                    Join
+                  </button>
+                </div>
+              </template>
+              <button v-else class="reset-option" @click="showJoinInput = true">
+                Join Soul Link Run
+              </button>
+            </template>
           </div>
         </div>
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
@@ -119,32 +143,6 @@
               {{ soulLinkSessionMetadata.inviteCode }}
               <span class="session-code-hint">{{ copyLabel }}</span>
             </div>
-          </div>
-          <div class="reset-option-group">
-            <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
-              New Soul Link Run
-            </button>
-            <template v-if="isSupabaseAvailable">
-              <template v-if="showJoinInput">
-                <div class="session-input-row">
-                  <input
-                    ref="joinCodeInput"
-                    v-model="joinCodeValue"
-                    class="session-code-input"
-                    type="text"
-                    maxlength="6"
-                    placeholder="Invite code"
-                    @keydown.enter="handleJoinSession"
-                  />
-                  <button class="reset-option session-confirm-btn" @click="handleJoinSession" :disabled="sessionActionPending">
-                    Join
-                  </button>
-                </div>
-              </template>
-              <button v-else class="reset-option" @click="showJoinInput = true">
-                Join Soul Link Run
-              </button>
-            </template>
           </div>
         </div>
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
@@ -227,6 +225,7 @@ const {
   resetPlayerGymProgress,
   createSession: createSoulLinkSession,
   joinSession: joinSoulLinkSession,
+  pushState: pushSoulLinkState,
   syncSession: syncSoulLinkSession,
   subscribeToSessionUpdates: subscribeSoulLink,
   unsubscribeFromSession: unsubscribeSoulLink,
@@ -411,7 +410,7 @@ function selectPlayerNameInput() {
 
 function triggerSync() {
   if (!hasRemoteSession.value) return
-  syncSoulLinkSession().catch((err) => console.error('Sync failed:', err))
+  pushSoulLinkState().catch((err) => console.error('Push failed:', err))
 }
 
 async function handleJoinSession() {
