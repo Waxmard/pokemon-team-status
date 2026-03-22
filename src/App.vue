@@ -1810,16 +1810,6 @@ onMounted(async () => {
     margin-bottom: var(--space-2);
   }
 
-  .app-container> :nth-child(3) {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .app-container> :nth-child(4) {
-    flex: 1;
-    min-width: 0;
-  }
-
   .header-btns {
     top: auto;
     bottom: 0;
@@ -2013,6 +2003,18 @@ onMounted(async () => {
 @media (hover: hover) and (pointer: fine) {
   .session-code-display:hover {
     background: var(--color-surface-light);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .app-container .team-section-wrapper {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .app-container .gym-section-wrapper {
+    flex: 1;
+    min-width: 0;
   }
 }
 </style>

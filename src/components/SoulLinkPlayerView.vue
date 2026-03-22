@@ -79,4 +79,10 @@ defineEmits([
   display: grid;
   gap: var(--space-2);
 }
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .soul-link-player-view {
+    display: contents;
+  }
+}
 </style>
