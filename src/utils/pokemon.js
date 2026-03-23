@@ -70,12 +70,13 @@ export function buildPokemonMember(source, options = {}) {
       types: source.pokemon.types,
       ability: source.ability ?? null,
       berry: source.berry ?? null,
-      moves: (source.moves ?? []).filter((m) => m),
+      moves: (source.moves ?? []).filter(Boolean),
       specialMove: source.specialMove ?? null,
       megaForm: source.megaForm ?? null,
       megaTypes: source.megaTypes ?? null,
       megaSpriteId: source.megaSpriteId ?? null,
       spriteVariant: source.spriteVariant ?? 'default',
+      pairId: source.pairId ?? null,
     }
   }
 
@@ -92,5 +93,6 @@ export function buildPokemonMember(source, options = {}) {
     megaTypes: source.megaTypes ?? null,
     megaSpriteId: source.megaSpriteId ?? null,
     spriteVariant: source.spriteVariant ?? 'default',
+    pairId: source.pairId ?? null,
   }
 }

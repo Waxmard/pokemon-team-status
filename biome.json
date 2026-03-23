@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["src/**/*.js", "src/**/*.vue", "*.js"]
+    "includes": ["src/**/*.js", "src/**/*.vue", "*.js", "scripts/**/*.js"]
   },
   "formatter": {
     "enabled": true,
@@ -21,6 +21,14 @@
       "correctness": {
         "noUnusedVariables": "off",
         "noUnusedImports": "off"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "warn"
+      },
+      "style": {
+        "useNumberNamespace": "warn",
+        "useNodejsImportProtocol": "warn",
+        "noNegationElse": "warn"
       }
     }
   },

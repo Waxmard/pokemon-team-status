@@ -12,7 +12,7 @@
 
     <!-- Pin slot as absolute overlay, not in grid flow -->
     <div
-      v-if="isDragging"
+      v-if="!readOnly && isDragging"
       class="pin-slot-overlay"
       :class="{ 'pin-slot-hover': isPinSlotHover }"
       @dragenter.prevent="onPinSlotEnter"
@@ -35,6 +35,7 @@
         :pinned="element.type === pinnedType"
         :improvementScore="element.improvementScore"
         :suggestionMode="suggestionMode"
+        :readOnly="readOnly"
         :style="{ animationDelay: `${index * 30}ms` }"
         @click="$emit('gymClick', element.type)"
         @dragstart="onRowDragStart(element.type, $event)"
@@ -81,6 +82,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  readOnly: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['gymClick', 'pin'])
@@ -92,6 +97,7 @@ const isPinSlotHover = ref(false)
 const touchDragType = ref(null)
 
 function onRowDragStart(type, event) {
+  if (props.readOnly) return
   isDragging.value = true
   draggedType.value = type
   // Set drag data for the drag operation
@@ -109,11 +115,13 @@ function onDragEnd() {
 
 // Touch drag handlers for mobile
 function onTouchDragStart(type) {
+  if (props.readOnly) return
   isDragging.value = true
   touchDragType.value = type
 }
 
 function onTouchMove(event) {
+  if (props.readOnly) return
   if (!touchDragType.value) return
 
   const touch = event.touches[0]
@@ -124,8 +132,11 @@ function onTouchMove(event) {
   isPinSlotHover.value = !!pinSlot
 }
 
-function onTouchEnd() {
+function onTouchEnd(event) {
+  if (props.readOnly) return
   if (touchDragType.value && isPinSlotHover.value) {
+    // Prevent synthetic click from firing on whatever is under the finger
+    event.preventDefault()
     emit('pin', touchDragType.value)
   }
   // Reset all state
@@ -144,6 +155,7 @@ function onPinSlotLeave() {
 }
 
 function onDropPin() {
+  if (props.readOnly) return
   if (draggedType.value) {
     emit('pin', draggedType.value)
   }

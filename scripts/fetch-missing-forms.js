@@ -173,85 +173,82 @@ async function fetchPokemonForm(apiName) {
   }
 }
 
-async function main() {
-  console.log(`Fetching ${MISSING_FORMS.length} Pokemon forms from PokeAPI...\n`)
-
-  const results = []
-
-  for (const apiName of MISSING_FORMS) {
-    try {
-      await delay(100) // Rate limiting
-      const pokemon = await fetchPokemonForm(apiName)
-      results.push(pokemon)
-      console.log(`  ${pokemon.displayName}: ${pokemon.types.join('/')}`)
-    } catch (error) {
-      console.error(`  Failed to fetch ${apiName}: ${error.message}`)
-    }
-  }
-
-  console.log('\n// ============================================')
-  console.log('// Add these entries to the end of POKEMON_DATA')
-  console.log('// ============================================\n')
-
-  // Group by category
-  const categories = {
-    rotom: results.filter((r) => r.apiName.startsWith('rotom-')),
-    alolan: results.filter((r) => r.apiName.endsWith('-alola')),
-    galarian: results.filter(
-      (r) => r.apiName.endsWith('-galar') || r.apiName.includes('-galar')
-    ),
-    paldean: results.filter((r) => r.apiName.endsWith('-paldea')),
-    oricorio: results.filter((r) => r.apiName.startsWith('oricorio-')),
-    wormadam: results.filter((r) => r.apiName.startsWith('wormadam-')),
-    shaymin: results.filter((r) => r.apiName.startsWith('shaymin-')),
-    castform: results.filter((r) => r.apiName.startsWith('castform-')),
-  }
-
-  function formatEntry(p) {
-    return `  { name: '${p.displayName}', types: [${p.types.map((t) => `'${t}'`).join(', ')}], spriteId: ${p.spriteId} },`
-  }
-
-  console.log('  // Rotom Forms')
-  for (const p of categories.rotom) {
-    console.log(formatEntry(p))
-  }
-
-  console.log('  // Alolan Forms')
-  for (const p of categories.alolan) {
-    console.log(formatEntry(p))
-  }
-
-  console.log('  // Galarian Forms')
-  for (const p of categories.galarian) {
-    console.log(formatEntry(p))
-  }
-
-  console.log('  // Paldean Forms')
-  for (const p of categories.paldean) {
-    console.log(formatEntry(p))
-  }
-
-  console.log('  // Oricorio Styles')
-  for (const p of categories.oricorio) {
-    console.log(formatEntry(p))
-  }
-
-  console.log('  // Wormadam Forms')
-  for (const p of categories.wormadam) {
-    console.log(formatEntry(p))
-  }
-
-  console.log('  // Shaymin Forms')
-  for (const p of categories.shaymin) {
-    console.log(formatEntry(p))
-  }
-
-  console.log('  // Castform Forms')
-  for (const p of categories.castform) {
-    console.log(formatEntry(p))
-  }
-
-  console.log(`\n// Total: ${results.length} forms added`)
+function formatEntry(p) {
+  const typesStr = p.types.map((t) => `'${t}'`).join(', ')
+  return `  { name: '${p.displayName}', types: [${typesStr}], spriteId: ${p.spriteId} },`
 }
 
-main()
+console.log(`Fetching ${MISSING_FORMS.length} Pokemon forms from PokeAPI...\n`)
+
+const results = []
+
+for (const apiName of MISSING_FORMS) {
+  try {
+    await delay(100) // Rate limiting
+    const pokemon = await fetchPokemonForm(apiName)
+    results.push(pokemon)
+    console.log(`  ${pokemon.displayName}: ${pokemon.types.join('/')}`)
+  } catch (error) {
+    console.error(`  Failed to fetch ${apiName}: ${error.message}`)
+  }
+}
+
+console.log('\n// ============================================')
+console.log('// Add these entries to the end of POKEMON_DATA')
+console.log('// ============================================\n')
+
+// Group by category
+const categories = {
+  rotom: results.filter((r) => r.apiName.startsWith('rotom-')),
+  alolan: results.filter((r) => r.apiName.endsWith('-alola')),
+  galarian: results.filter(
+    (r) => r.apiName.endsWith('-galar') || r.apiName.includes('-galar'),
+  ),
+  paldean: results.filter((r) => r.apiName.endsWith('-paldea')),
+  oricorio: results.filter((r) => r.apiName.startsWith('oricorio-')),
+  wormadam: results.filter((r) => r.apiName.startsWith('wormadam-')),
+  shaymin: results.filter((r) => r.apiName.startsWith('shaymin-')),
+  castform: results.filter((r) => r.apiName.startsWith('castform-')),
+}
+
+console.log('  // Rotom Forms')
+for (const p of categories.rotom) {
+  console.log(formatEntry(p))
+}
+
+console.log('  // Alolan Forms')
+for (const p of categories.alolan) {
+  console.log(formatEntry(p))
+}
+
+console.log('  // Galarian Forms')
+for (const p of categories.galarian) {
+  console.log(formatEntry(p))
+}
+
+console.log('  // Paldean Forms')
+for (const p of categories.paldean) {
+  console.log(formatEntry(p))
+}
+
+console.log('  // Oricorio Styles')
+for (const p of categories.oricorio) {
+  console.log(formatEntry(p))
+}
+
+console.log('  // Wormadam Forms')
+for (const p of categories.wormadam) {
+  console.log(formatEntry(p))
+}
+
+console.log('  // Shaymin Forms')
+for (const p of categories.shaymin) {
+  console.log(formatEntry(p))
+}
+
+console.log('  // Castform Forms')
+for (const p of categories.castform) {
+  console.log(formatEntry(p))
+}
+
+console.log(`\n// Total: ${results.length} forms added`)

@@ -14,9 +14,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint:duplication": "jscpd src/"
+    "lint:duplication": "jscpd src/",
+    "lint:sonar": "eslint --config eslint.config.sonar.mjs src/ scripts/",
+    "prepare": "husky"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.3",
     "naive-ui": "^2.38.0",
     "vue": "^3.4.0",
     "vuedraggable": "^4.1.0"
@@ -25,9 +28,21 @@
     "@biomejs/biome": "2.3.13",
     "@vitejs/plugin-vue": "^5.0.0",
     "@vitest/coverage-v8": "^4.0.18",
+    "eslint": "^10.1.0",
+    "eslint-plugin-sonarjs": "^4.0.2",
+    "husky": "^9.1.7",
     "jscpd": "^4.0.8",
+    "lint-staged": "^16.4.0",
     "vite": "^5.0.0",
     "vite-plugin-pwa": "^0.17.0",
     "vitest": "^4.0.18"
+  },
+  "lint-staged": {
+    "src/**/*.{js,vue}": [
+      "biome check --write --no-errors-on-unmatched"
+    ],
+    "scripts/**/*.js": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   }
 }

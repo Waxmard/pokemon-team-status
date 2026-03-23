@@ -1,7 +1,7 @@
 <template>
   <div class="team-section-wrapper">
     <!-- Swap Action Buttons (cancel/confirm) - shown only in swap mode -->
-    <div v-if="swapMode" class="swap-action-buttons">
+    <div v-if="!readOnly && swapMode" class="swap-action-buttons">
       <button class="swap-action-btn cancel" @click="handleCancelSwap">
         <span class="action-icon">✕</span>
       </button>
@@ -11,12 +11,16 @@
     </div>
 
     <!-- Add Button (when not editing) -->
-    <button v-if="!swapMode && !showDraftPanel" class="add-button" @click="handleAddClick">
+    <button v-if="!readOnly && !swapMode && !showDraftPanel" class="add-button" @click="handleAddClick">
       <span class="add-icon">+</span>
     </button>
 
     <!-- Delete Button (when editing a Pokemon) -->
-    <button v-if="isEditing && showDraftPanel" class="add-button delete-mode" @click="handleDeleteClick">
+    <button
+      v-if="!readOnly && isEditing && showDraftPanel"
+      class="add-button delete-mode"
+      @click="handleDeleteClick"
+    >
       <span class="add-icon">🗑</span>
     </button>
 
@@ -50,6 +54,8 @@
             v-for="pokemon in team"
             :key="pokemon.id"
             :pokemon="pokemon"
+            :generation-rules="generationRules"
+            :interactive="!readOnly"
             @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
             @delete="handleDeleteTeamPokemon"
           />
@@ -58,6 +64,7 @@
             v-for="i in emptyTeamSlotCount"
             :key="'team-empty-' + i"
             :pokemon="null"
+            :interactive="!readOnly"
             @add="swapMode ? handleSwapSelect(null) : startAdd()"
           />
         </div>
@@ -68,6 +75,8 @@
             v-for="pokemon in box"
             :key="pokemon.id"
             :pokemon="pokemon"
+            :generation-rules="generationRules"
+            :interactive="!readOnly"
             @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditBoxPokemon(pokemon.id)"
             @delete="handleDeleteBoxPokemon"
           />
@@ -75,6 +84,7 @@
             v-for="i in emptyBoxSlotCount"
             :key="'box-empty-' + i"
             :pokemon="null"
+            :interactive="!readOnly"
             @add="swapMode ? handleSwapSelect(null) : startAddToBox()"
           />
         </div>
@@ -85,6 +95,11 @@
         v-else
         key="panel"
         :team="team"
+        :box="box"
+        :defeated-gyms="defeatedGyms"
+        :pinned-gym="pinnedGym"
+        :partner-roster="partnerRoster"
+        :is-soul-link-mode="isSoulLinkMode"
         @confirm="$emit('confirmDraft')"
         @cancel="cancel"
         @swapSuggestion="handleSwapSuggestion"
@@ -99,7 +114,6 @@
 import { computed, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { useLongPress } from '../composables/useLongPress.js'
-import { useStorage } from '../composables/useStorage.js'
 import { getPokemonDataForRules } from '../data/pokemon.js'
 import { getMegaSpriteUrl, getSpriteUrl } from '../utils/pokemon.js'
 import DraftPanel from './DraftPanel.vue'
@@ -114,6 +128,30 @@ const props = defineProps({
   box: {
     type: Array,
     default: () => [],
+  },
+  generationRules: {
+    type: String,
+    required: true,
+  },
+  readOnly: {
+    type: Boolean,
+    default: false,
+  },
+  defeatedGyms: {
+    type: Array,
+    default: null,
+  },
+  pinnedGym: {
+    type: String,
+    default: undefined,
+  },
+  partnerRoster: {
+    type: Array,
+    default: null,
+  },
+  isSoulLinkMode: {
+    type: Boolean,
+    default: false,
   },
 })
 
@@ -139,10 +177,8 @@ const {
   cancel,
 } = useDraftAction()
 
-const { generationRules } = useStorage()
-
 function getRulesetPokemonData(name) {
-  return getPokemonDataForRules(name, generationRules.value)
+  return getPokemonDataForRules(name, props.generationRules)
 }
 
 // Sprite URL for the pokemon "in hand" during swap mode
@@ -181,11 +217,13 @@ function handleModeClick() {
   }
   // If in swap mode, clicking toggle cancels swap
   if (swapMode.value) {
+    if (props.readOnly) return
     emit('cancelSwap')
     return
   }
   // If editing a team or box Pokemon, start swap mode
   if (isEditingForSwap.value) {
+    if (props.readOnly) return
     enterSwapMode()
     return
   }
@@ -194,10 +232,12 @@ function handleModeClick() {
 }
 
 function handleCancelSwap() {
+  if (props.readOnly) return
   emit('cancelSwap')
 }
 
 function handleConfirmSwap() {
+  if (props.readOnly) return
   exitSwapMode()
 }
 
@@ -240,14 +280,14 @@ const emptyTeamSlotCount = computed(() => {
 
 // Handle clicking a team slot in swap mode - perform immediate swap
 function handleSwapSelect(targetId) {
-  if (swapMode.value) {
+  if (!props.readOnly && swapMode.value) {
     emit('immediateSwap', targetId)
   }
 }
 
 // Show draft panel for add/edit modes (but not in swap mode)
 const showDraftPanel = computed(() => {
-  return !!draftAction.value && !swapMode.value
+  return !!draftAction.value && !swapMode.value && !props.readOnly
 })
 
 // Detect when editing a team or box Pokemon (for showing swap icon in mode toggle)
@@ -264,6 +304,7 @@ const isEditing = computed(() => {
 })
 
 function handleEditPokemon(id) {
+  if (props.readOnly) return
   const pokemon = props.team.find((p) => p.id === id)
   if (!pokemon) return
   const pokemonData = getRulesetPokemonData(pokemon.name)
@@ -273,14 +314,17 @@ function handleEditPokemon(id) {
     berry: pokemon.berry || null,
     moves: pokemon.moves,
     specialMove: pokemon.specialMove,
+    pairId: pokemon.pairId || null,
     megaForm: pokemon.megaForm || null,
     megaTypes: pokemon.megaTypes || null,
     megaSpriteId: pokemon.megaSpriteId || null,
     spriteVariant: pokemon.spriteVariant || 'default',
+    catchLocation: pokemon.catchLocation || null,
   })
 }
 
 function handleEditBoxPokemon(boxPokemonId) {
+  if (props.readOnly) return
   const pokemon = props.box.find((p) => p.id === boxPokemonId)
   if (!pokemon) return
   const pokemonData = getRulesetPokemonData(pokemon.name)
@@ -291,10 +335,12 @@ function handleEditBoxPokemon(boxPokemonId) {
     berry: pokemon.berry || null,
     moves: pokemon.moves,
     specialMove: pokemon.specialMove,
+    pairId: pokemon.pairId || null,
     megaForm: pokemon.megaForm || null,
     megaTypes: pokemon.megaTypes || null,
     megaSpriteId: pokemon.megaSpriteId || null,
     spriteVariant: pokemon.spriteVariant || 'default',
+    catchLocation: pokemon.catchLocation || null,
   })
 }
 
@@ -306,6 +352,7 @@ function toggleViewMode() {
 }
 
 function handleAddClick() {
+  if (props.readOnly) return
   if (viewMode.value === 'box') {
     startAddToBox()
   } else {
@@ -314,18 +361,22 @@ function handleAddClick() {
 }
 
 function handleSwapSuggestion(event) {
+  if (props.readOnly) return
   emit('swapSuggestion', event)
 }
 
 function handleDeleteClick() {
+  if (props.readOnly) return
   emit('deletePokemon')
 }
 
 function handleDeleteTeamPokemon(id) {
+  if (props.readOnly) return
   emit('deleteTeamPokemon', id)
 }
 
 function handleDeleteBoxPokemon(id) {
+  if (props.readOnly) return
   emit('deleteBoxPokemon', id)
 }
 </script>
@@ -418,6 +469,9 @@ function handleDeleteBoxPokemon(id) {
   grid-template-columns: 1fr;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
+  max-height: 715px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Content fade out/in (grid and panel transitions) */

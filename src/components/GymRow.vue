@@ -1,12 +1,13 @@
 <template>
   <div
     class="gym-card touchable"
-    :class="{ defeated: defeated && !suggestionMode, pinned: pinned }"
-    @click="!suggestionMode && $emit('click', type)"
+    :class="{ defeated: defeated && !suggestionMode, pinned: pinned, 'read-only': readOnly }"
+    @click="!suggestionMode && !readOnly && $emit('click', type)"
   >
     <div class="gym-card-inner" :style="rowBackgroundStyle">
       <!-- Drag handle for pin -->
       <span
+        v-if="!readOnly && !suggestionMode"
         class="drag-handle"
         draggable="true"
         @dragstart.stop="onHandleDragStart"
@@ -88,6 +89,10 @@ const props = defineProps({
     type: Number,
     default: undefined,
   },
+  readOnly: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['click', 'dragstart', 'touchdragstart'])
@@ -138,6 +143,10 @@ const rowBackgroundStyle = computed(() => {
   -webkit-touch-callout: none;
   -webkit-user-drag: element;
   user-select: none;
+}
+
+.gym-card.read-only {
+  cursor: default;
 }
 
 .gym-card-inner {
