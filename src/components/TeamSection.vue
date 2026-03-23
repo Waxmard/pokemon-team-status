@@ -20,6 +20,7 @@
       v-if="!readOnly && isEditing && showDraftPanel"
       class="add-button delete-mode"
       @click="handleDeleteClick"
+      aria-label="Delete"
     >
       <span class="add-icon">🗑</span>
     </button>

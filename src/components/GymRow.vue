@@ -2,6 +2,7 @@
   <div
     class="gym-card touchable"
     :class="{ defeated: defeated && !suggestionMode, pinned: pinned, 'read-only': readOnly }"
+    :aria-label="`${type} gym`"
     @click="!suggestionMode && !readOnly && $emit('click', type)"
   >
     <div class="gym-card-inner" :style="rowBackgroundStyle">

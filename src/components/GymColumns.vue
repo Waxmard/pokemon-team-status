@@ -1,5 +1,5 @@
 <template>
-  <div class="gym-section-wrapper">
+  <div class="gym-section-wrapper" aria-label="Gym types">
     <div class="gyms-header">
       <span
         v-if="showSwapPreview"
