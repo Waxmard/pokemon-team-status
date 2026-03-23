@@ -46,7 +46,8 @@ let _unsubscribe = null
 let _lastPushedVersion = 0
 
 function cloneValue(value) {
-  return deepFreeze(structuredClone(toRaw(value)))
+  // JSON round-trip required here — structuredClone fails on Vue reactive internals
+  return deepFreeze(JSON.parse(JSON.stringify(toRaw(value))))
 }
 
 function deepFreeze(value) {
