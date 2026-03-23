@@ -14,12 +14,12 @@ afterAll(async () => {
   }
 })
 
+function randomInviteCode() {
+  return `test-${crypto.randomUUID().slice(0, 6)}`
+}
+
 describeIf('supabaseRepository (integration)', () => {
   const repo = createSupabaseRepository()
-
-  function randomInviteCode() {
-    return 'test-' + Math.random().toString(36).slice(2, 8)
-  }
 
   it('creates and fetches a session by id', async () => {
     const sessionId = crypto.randomUUID()

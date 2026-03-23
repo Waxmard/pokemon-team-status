@@ -45,6 +45,25 @@ const generationRules = computed(
   () => getSoloRunState('Accessing generation rules').rules.generation,
 )
 
+async function persistGenerationRules(newRules) {
+  const soloRunState = getSoloRunState('Persisting generation rules')
+  const nextRules = normalizeGenerationRules(newRules)
+  const sanitizedSnapshot = sanitizePersistedSoloRunSnapshot({
+    ...mapSoloRunStateToPersistedSnapshot(soloRunState),
+    generationRules: nextRules,
+  })
+
+  setRunState(sanitizedSnapshot)
+
+  await Promise.all([
+    repository.persistSoloGenerationRules(nextRules),
+    repository.persistSoloTeam(sanitizedSnapshot.team),
+    repository.persistSoloBox(sanitizedSnapshot.box),
+    repository.persistSoloDefeatedGyms(sanitizedSnapshot.defeatedGyms),
+    repository.persistSoloPinnedGym(sanitizedSnapshot.pinnedGym),
+  ])
+}
+
 export function useRunStore() {
   async function loadData() {
     try {
@@ -145,25 +164,6 @@ export function useRunStore() {
       },
     }
     await repository.persistSoloPinnedGym(gymType)
-  }
-
-  async function persistGenerationRules(newRules) {
-    const soloRunState = getSoloRunState('Persisting generation rules')
-    const nextRules = normalizeGenerationRules(newRules)
-    const sanitizedSnapshot = sanitizePersistedSoloRunSnapshot({
-      ...mapSoloRunStateToPersistedSnapshot(soloRunState),
-      generationRules: nextRules,
-    })
-
-    setRunState(sanitizedSnapshot)
-
-    await Promise.all([
-      repository.persistSoloGenerationRules(nextRules),
-      repository.persistSoloTeam(sanitizedSnapshot.team),
-      repository.persistSoloBox(sanitizedSnapshot.box),
-      repository.persistSoloDefeatedGyms(sanitizedSnapshot.defeatedGyms),
-      repository.persistSoloPinnedGym(sanitizedSnapshot.pinnedGym),
-    ])
   }
 
   async function resetTeamAndBox() {

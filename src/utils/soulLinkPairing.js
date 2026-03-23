@@ -43,6 +43,37 @@ export function findLinkedDeleteTarget(
   }
 }
 
+function clearPartnerPairing(
+  partnerId,
+  partnerRoster,
+  existingPartner,
+  updateRosterMember,
+) {
+  updateRosterMember(
+    partnerId,
+    findRosterKey(partnerRoster, existingPartner.id),
+    existingPartner.id,
+    { pairId: null },
+  )
+}
+
+function displaceOldPairOfPartner(playerId, memberId, matchingPartner, ctx) {
+  if (!matchingPartner.pairId || matchingPartner.pairId === memberId) return
+
+  const myRoster = ctx.getPlayerRoster(playerId)
+  const oldPairOfPartner = [...myRoster.team, ...myRoster.box].find(
+    (m) => m.id === matchingPartner.pairId,
+  )
+  if (oldPairOfPartner) {
+    ctx.updateRosterMember(
+      playerId,
+      findRosterKey(myRoster, oldPairOfPartner.id),
+      oldPairOfPartner.id,
+      { pairId: null },
+    )
+  }
+}
+
 export function reconcileSoulLinkPairing(
   playerId,
   memberId,
@@ -51,8 +82,7 @@ export function reconcileSoulLinkPairing(
 ) {
   const roster = getPlayerRoster(playerId)
   const member = roster[rosterKey].find((m) => m.id === memberId)
-  if (!member) return
-  if (!partnerId) return
+  if (!member || !partnerId) return
 
   const partnerRoster = getPlayerRoster(partnerId)
   const allPartnerMembers = [...partnerRoster.team, ...partnerRoster.box]
@@ -64,11 +94,11 @@ export function reconcileSoulLinkPairing(
 
   if (!normalizedCatchLocation) {
     if (existingPartner) {
-      updateRosterMember(
+      clearPartnerPairing(
         partnerId,
-        findRosterKey(partnerRoster, existingPartner.id),
-        existingPartner.id,
-        { pairId: null },
+        partnerRoster,
+        existingPartner,
+        updateRosterMember,
       )
     }
     updateRosterMember(playerId, rosterKey, memberId, { pairId: null })
@@ -90,11 +120,11 @@ export function reconcileSoulLinkPairing(
   }
 
   if (existingPartner) {
-    updateRosterMember(
+    clearPartnerPairing(
       partnerId,
-      findRosterKey(partnerRoster, existingPartner.id),
-      existingPartner.id,
-      { pairId: null },
+      partnerRoster,
+      existingPartner,
+      updateRosterMember,
     )
   }
 
@@ -106,22 +136,10 @@ export function reconcileSoulLinkPairing(
   )
 
   if (matchingPartner) {
-    if (matchingPartner.pairId && matchingPartner.pairId !== memberId) {
-      const myRoster = getPlayerRoster(playerId)
-      const allMyMembers = [...myRoster.team, ...myRoster.box]
-      const oldPairOfPartner = allMyMembers.find(
-        (m) => m.id === matchingPartner.pairId,
-      )
-      if (oldPairOfPartner) {
-        updateRosterMember(
-          playerId,
-          findRosterKey(myRoster, oldPairOfPartner.id),
-          oldPairOfPartner.id,
-          { pairId: null },
-        )
-      }
-    }
-
+    displaceOldPairOfPartner(playerId, memberId, matchingPartner, {
+      getPlayerRoster,
+      updateRosterMember,
+    })
     updateRosterMember(playerId, rosterKey, memberId, {
       pairId: matchingPartner.id,
     })

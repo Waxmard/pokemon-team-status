@@ -46,7 +46,7 @@ let _unsubscribe = null
 let _lastPushedVersion = 0
 
 function cloneValue(value) {
-  return deepFreeze(JSON.parse(JSON.stringify(toRaw(value))))
+  return deepFreeze(structuredClone(toRaw(value)))
 }
 
 function deepFreeze(value) {
@@ -154,12 +154,13 @@ function normalizePlayerScopedRecords(records, playerIds, factory, context) {
 }
 
 function normalizeLocalPreferences(local, playerIdSet, localPlayerId, context) {
+  const defaults = createDefaultSoulLinkLocalPreferences()
   const nextLocal = {
-    ...createDefaultSoulLinkLocalPreferences(),
-    ...(local ?? {}),
+    ...defaults,
+    ...local,
     notifications: {
-      ...createDefaultSoulLinkLocalPreferences().notifications,
-      ...(local?.notifications ?? {}),
+      ...defaults.notifications,
+      ...local?.notifications,
     },
   }
 
@@ -290,7 +291,7 @@ function normalizeCreateLocalRunOptions(options = {}) {
     ),
     metadata: {
       ...baseSoulLinkState.metadata,
-      ...(options.metadata ?? {}),
+      ...options.metadata,
     },
     players,
     rosters: normalizeRosters(
@@ -306,11 +307,11 @@ function normalizeCreateLocalRunOptions(options = {}) {
     ),
     sync: {
       ...baseSoulLinkState.sync,
-      ...(options.sync ?? {}),
+      ...options.sync,
     },
     activity: {
       ...baseSoulLinkState.activity,
-      ...(options.activity ?? {}),
+      ...options.activity,
     },
     local: normalizeLocalPreferences(
       options.local,
@@ -394,6 +395,281 @@ const sync = computed(() =>
   cloneValue(getSoulLinkState('Accessing Soul Link sync state').sync),
 )
 
+function updateSessionMetadata(updates) {
+  updateSoulLinkState((soulLinkState) => ({
+    ...soulLinkState,
+    metadata: {
+      ...soulLinkState.metadata,
+      ...updates,
+    },
+  }))
+}
+
+function setGenerationRules(nextGenerationRules) {
+  const soulLinkRunState = getSoulLinkRunState(
+    'Setting Soul Link generation rules',
+  )
+  const nextRules = normalizeGenerationRules(nextGenerationRules)
+
+  internalRunState.value = {
+    ...soulLinkRunState,
+    rules: {
+      ...soulLinkRunState.rules,
+      generation: nextRules,
+    },
+    soulLink: {
+      ...soulLinkRunState.soulLink,
+      rosters: sanitizeSoulLinkRostersForRules(
+        soulLinkRunState.soulLink.rosters,
+        nextRules,
+      ),
+      progress: sanitizeSoulLinkProgressForRules(
+        soulLinkRunState.soulLink.progress,
+        nextRules,
+      ),
+    },
+  }
+
+  repository.persistSoulLinkSnapshot(buildPersistableSnapshot())
+}
+
+function updatePlayer(playerId, updates) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Updating a Soul Link player',
+  )
+
+  updateSoulLinkState((soulLinkState) => ({
+    ...soulLinkState,
+    players: soulLinkState.players.map((player) =>
+      player.id === nextPlayerId
+        ? {
+            ...player,
+            ...cloneValue(updates),
+            id: nextPlayerId,
+            isLocal: player.isLocal,
+          }
+        : player,
+    ),
+  }))
+}
+
+function setCachedPlayerSlot(playerId) {
+  assertKnownPlayerId(playerId, 'Setting the cached Soul Link player slot')
+
+  updateSoulLinkState((soulLinkState) => ({
+    ...soulLinkState,
+    local: {
+      ...soulLinkState.local,
+      cachedPlayerSlot: playerId,
+      preferredPlayerId: playerId,
+    },
+  }))
+}
+
+function setLocalPreferences(updates) {
+  const soulLinkState = getSoulLinkState('Setting Soul Link local preferences')
+  const { playerIdSet, localPlayerId } = normalizePlayers(
+    soulLinkState.players,
+    'Setting Soul Link local preferences',
+  )
+
+  updateSoulLinkState((currentSoulLinkState) => ({
+    ...currentSoulLinkState,
+    local: normalizeLocalPreferences(
+      {
+        ...currentSoulLinkState.local,
+        ...updates,
+        notifications: updates.notifications
+          ? {
+              ...currentSoulLinkState.local.notifications,
+              ...updates.notifications,
+            }
+          : currentSoulLinkState.local.notifications,
+      },
+      playerIdSet,
+      localPlayerId,
+      'Setting Soul Link local preferences',
+    ),
+  }))
+}
+
+function addRosterMember(playerId, rosterKey, member) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Adding a Soul Link roster member',
+  )
+  const nextRosterKey = assertRosterKey(
+    rosterKey,
+    'Adding a Soul Link roster member',
+  )
+  const playerRoster =
+    getSoulLinkState('Adding a Soul Link roster member').rosters[
+      nextPlayerId
+    ] ?? createDefaultSoulLinkPlayerRoster()
+
+  updatePlayerRecord('rosters', nextPlayerId, {
+    ...playerRoster,
+    [nextRosterKey]: [
+      ...playerRoster[nextRosterKey],
+      {
+        ...cloneValue(member),
+        ownerPlayerId: nextPlayerId,
+      },
+    ],
+  })
+}
+
+function updateRosterMember(playerId, rosterKey, memberId, updates) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Updating a Soul Link roster member',
+  )
+  const nextRosterKey = assertRosterKey(
+    rosterKey,
+    'Updating a Soul Link roster member',
+  )
+  const playerRoster =
+    getSoulLinkState('Updating a Soul Link roster member').rosters[
+      nextPlayerId
+    ] ?? createDefaultSoulLinkPlayerRoster()
+
+  updatePlayerRecord('rosters', nextPlayerId, {
+    ...playerRoster,
+    [nextRosterKey]: playerRoster[nextRosterKey].map((member) =>
+      member.id === memberId
+        ? {
+            ...member,
+            ...cloneValue(updates),
+            ownerPlayerId: nextPlayerId,
+          }
+        : member,
+    ),
+  })
+}
+
+function removeRosterMember(playerId, rosterKey, memberId) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Removing a Soul Link roster member',
+  )
+  const nextRosterKey = assertRosterKey(
+    rosterKey,
+    'Removing a Soul Link roster member',
+  )
+  const playerRoster =
+    getSoulLinkState('Removing a Soul Link roster member').rosters[
+      nextPlayerId
+    ] ?? createDefaultSoulLinkPlayerRoster()
+
+  updatePlayerRecord('rosters', nextPlayerId, {
+    ...playerRoster,
+    [nextRosterKey]: playerRoster[nextRosterKey].filter(
+      (member) => member.id !== memberId,
+    ),
+  })
+}
+
+function updatePlayerGymProgress(playerId, updates) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Updating Soul Link gym progress',
+  )
+  const playerProgress =
+    getSoulLinkState('Updating Soul Link gym progress').progress[
+      nextPlayerId
+    ] ?? createDefaultSoulLinkPlayerProgress()
+
+  updatePlayerRecord('progress', nextPlayerId, {
+    ...playerProgress,
+    ...cloneValue(updates),
+  })
+}
+
+function setPlayerRoster(playerId, roster) {
+  const pid = assertKnownPlayerId(playerId, 'Setting a Soul Link roster')
+  updatePlayerRecord('rosters', pid, {
+    team: normalizeRosterMembers(roster.team, pid),
+    box: normalizeRosterMembers(roster.box, pid),
+  })
+}
+
+function resetPlayerRoster(playerId) {
+  updatePlayerRecord(
+    'rosters',
+    assertKnownPlayerId(playerId, 'Resetting a Soul Link roster'),
+    createDefaultSoulLinkPlayerRoster(),
+  )
+}
+
+function resetPlayerGymProgress(playerId) {
+  updatePlayerRecord(
+    'progress',
+    assertKnownPlayerId(playerId, 'Resetting Soul Link gym progress'),
+    createDefaultSoulLinkPlayerProgress(),
+  )
+}
+
+function getPlayerRoster(playerId) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Accessing a Soul Link roster',
+  )
+
+  return cloneValue(
+    getSoulLinkState('Accessing a Soul Link roster').rosters[nextPlayerId] ??
+      createDefaultSoulLinkPlayerRoster(),
+  )
+}
+
+function getPlayerTeam(playerId) {
+  return getPlayerRoster(playerId).team
+}
+
+function getPlayerBox(playerId) {
+  return getPlayerRoster(playerId).box
+}
+
+function getPlayerGymProgress(playerId) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Accessing Soul Link gym progress',
+  )
+
+  return cloneValue(
+    getSoulLinkState('Accessing Soul Link gym progress').progress[
+      nextPlayerId
+    ] ?? createDefaultSoulLinkPlayerProgress(),
+  )
+}
+
+function setSyncState(nextSyncState) {
+  updateSoulLinkState((soulLinkState) => ({
+    ...soulLinkState,
+    activity: {
+      ...soulLinkState.activity,
+      syncState: nextSyncState,
+    },
+  }))
+}
+
+function setSyncVersion(nextVersion) {
+  updateSoulLinkState((soulLinkState) => ({
+    ...soulLinkState,
+    sync: {
+      ...soulLinkState.sync,
+      version: nextVersion,
+    },
+  }))
+}
+
+function unsubscribeFromSession() {
+  if (_unsubscribe) {
+    _unsubscribe()
+    _unsubscribe = null
+  }
+}
+
 export function useSoulLinkStore() {
   function createLocalRun(options = {}) {
     const normalizedOptions = normalizeCreateLocalRunOptions(options)
@@ -428,256 +704,6 @@ export function useSoulLinkStore() {
     return createLocalRun({ generationRules: generation })
   }
 
-  function updateSessionMetadata(updates) {
-    updateSoulLinkState((soulLinkState) => ({
-      ...soulLinkState,
-      metadata: {
-        ...soulLinkState.metadata,
-        ...updates,
-      },
-    }))
-  }
-
-  function setGenerationRules(nextGenerationRules) {
-    const soulLinkRunState = getSoulLinkRunState(
-      'Setting Soul Link generation rules',
-    )
-    const nextRules = normalizeGenerationRules(nextGenerationRules)
-
-    internalRunState.value = {
-      ...soulLinkRunState,
-      rules: {
-        ...soulLinkRunState.rules,
-        generation: nextRules,
-      },
-      soulLink: {
-        ...soulLinkRunState.soulLink,
-        rosters: sanitizeSoulLinkRostersForRules(
-          soulLinkRunState.soulLink.rosters,
-          nextRules,
-        ),
-        progress: sanitizeSoulLinkProgressForRules(
-          soulLinkRunState.soulLink.progress,
-          nextRules,
-        ),
-      },
-    }
-
-    repository.persistSoulLinkSnapshot(buildPersistableSnapshot())
-  }
-
-  function updatePlayer(playerId, updates) {
-    const nextPlayerId = assertKnownPlayerId(
-      playerId,
-      'Updating a Soul Link player',
-    )
-
-    updateSoulLinkState((soulLinkState) => ({
-      ...soulLinkState,
-      players: soulLinkState.players.map((player) =>
-        player.id === nextPlayerId
-          ? {
-              ...player,
-              ...cloneValue(updates),
-              id: nextPlayerId,
-              isLocal: player.isLocal,
-            }
-          : player,
-      ),
-    }))
-  }
-
-  function setCachedPlayerSlot(playerId) {
-    assertKnownPlayerId(playerId, 'Setting the cached Soul Link player slot')
-
-    updateSoulLinkState((soulLinkState) => ({
-      ...soulLinkState,
-      local: {
-        ...soulLinkState.local,
-        cachedPlayerSlot: playerId,
-        preferredPlayerId: playerId,
-      },
-    }))
-  }
-
-  function setLocalPreferences(updates) {
-    const soulLinkState = getSoulLinkState(
-      'Setting Soul Link local preferences',
-    )
-    const { playerIdSet, localPlayerId } = normalizePlayers(
-      soulLinkState.players,
-      'Setting Soul Link local preferences',
-    )
-
-    updateSoulLinkState((currentSoulLinkState) => ({
-      ...currentSoulLinkState,
-      local: normalizeLocalPreferences(
-        {
-          ...currentSoulLinkState.local,
-          ...updates,
-          notifications: updates.notifications
-            ? {
-                ...currentSoulLinkState.local.notifications,
-                ...updates.notifications,
-              }
-            : currentSoulLinkState.local.notifications,
-        },
-        playerIdSet,
-        localPlayerId,
-        'Setting Soul Link local preferences',
-      ),
-    }))
-  }
-
-  function addRosterMember(playerId, rosterKey, member) {
-    const nextPlayerId = assertKnownPlayerId(
-      playerId,
-      'Adding a Soul Link roster member',
-    )
-    const nextRosterKey = assertRosterKey(
-      rosterKey,
-      'Adding a Soul Link roster member',
-    )
-    const playerRoster =
-      getSoulLinkState('Adding a Soul Link roster member').rosters[
-        nextPlayerId
-      ] ?? createDefaultSoulLinkPlayerRoster()
-
-    updatePlayerRecord('rosters', nextPlayerId, {
-      ...playerRoster,
-      [nextRosterKey]: [
-        ...playerRoster[nextRosterKey],
-        {
-          ...cloneValue(member),
-          ownerPlayerId: nextPlayerId,
-        },
-      ],
-    })
-  }
-
-  function updateRosterMember(playerId, rosterKey, memberId, updates) {
-    const nextPlayerId = assertKnownPlayerId(
-      playerId,
-      'Updating a Soul Link roster member',
-    )
-    const nextRosterKey = assertRosterKey(
-      rosterKey,
-      'Updating a Soul Link roster member',
-    )
-    const playerRoster =
-      getSoulLinkState('Updating a Soul Link roster member').rosters[
-        nextPlayerId
-      ] ?? createDefaultSoulLinkPlayerRoster()
-
-    updatePlayerRecord('rosters', nextPlayerId, {
-      ...playerRoster,
-      [nextRosterKey]: playerRoster[nextRosterKey].map((member) =>
-        member.id === memberId
-          ? {
-              ...member,
-              ...cloneValue(updates),
-              ownerPlayerId: nextPlayerId,
-            }
-          : member,
-      ),
-    })
-  }
-
-  function removeRosterMember(playerId, rosterKey, memberId) {
-    const nextPlayerId = assertKnownPlayerId(
-      playerId,
-      'Removing a Soul Link roster member',
-    )
-    const nextRosterKey = assertRosterKey(
-      rosterKey,
-      'Removing a Soul Link roster member',
-    )
-    const playerRoster =
-      getSoulLinkState('Removing a Soul Link roster member').rosters[
-        nextPlayerId
-      ] ?? createDefaultSoulLinkPlayerRoster()
-
-    updatePlayerRecord('rosters', nextPlayerId, {
-      ...playerRoster,
-      [nextRosterKey]: playerRoster[nextRosterKey].filter(
-        (member) => member.id !== memberId,
-      ),
-    })
-  }
-
-  function updatePlayerGymProgress(playerId, updates) {
-    const nextPlayerId = assertKnownPlayerId(
-      playerId,
-      'Updating Soul Link gym progress',
-    )
-    const playerProgress =
-      getSoulLinkState('Updating Soul Link gym progress').progress[
-        nextPlayerId
-      ] ?? createDefaultSoulLinkPlayerProgress()
-
-    updatePlayerRecord('progress', nextPlayerId, {
-      ...playerProgress,
-      ...cloneValue(updates),
-    })
-  }
-
-  function setPlayerRoster(playerId, roster) {
-    const pid = assertKnownPlayerId(playerId, 'Setting a Soul Link roster')
-    updatePlayerRecord('rosters', pid, {
-      team: normalizeRosterMembers(roster.team, pid),
-      box: normalizeRosterMembers(roster.box, pid),
-    })
-  }
-
-  function resetPlayerRoster(playerId) {
-    updatePlayerRecord(
-      'rosters',
-      assertKnownPlayerId(playerId, 'Resetting a Soul Link roster'),
-      createDefaultSoulLinkPlayerRoster(),
-    )
-  }
-
-  function resetPlayerGymProgress(playerId) {
-    updatePlayerRecord(
-      'progress',
-      assertKnownPlayerId(playerId, 'Resetting Soul Link gym progress'),
-      createDefaultSoulLinkPlayerProgress(),
-    )
-  }
-
-  function getPlayerRoster(playerId) {
-    const nextPlayerId = assertKnownPlayerId(
-      playerId,
-      'Accessing a Soul Link roster',
-    )
-
-    return cloneValue(
-      getSoulLinkState('Accessing a Soul Link roster').rosters[nextPlayerId] ??
-        createDefaultSoulLinkPlayerRoster(),
-    )
-  }
-
-  function getPlayerTeam(playerId) {
-    return getPlayerRoster(playerId).team
-  }
-
-  function getPlayerBox(playerId) {
-    return getPlayerRoster(playerId).box
-  }
-
-  function getPlayerGymProgress(playerId) {
-    const nextPlayerId = assertKnownPlayerId(
-      playerId,
-      'Accessing Soul Link gym progress',
-    )
-
-    return cloneValue(
-      getSoulLinkState('Accessing Soul Link gym progress').progress[
-        nextPlayerId
-      ] ?? createDefaultSoulLinkPlayerProgress(),
-    )
-  }
-
   async function loadSoulLinkData() {
     try {
       const snapshot = await repository.loadSoulLinkSnapshot()
@@ -703,34 +729,14 @@ export function useSoulLinkStore() {
     }
   }
 
-  function setSyncState(nextSyncState) {
-    updateSoulLinkState((soulLinkState) => ({
-      ...soulLinkState,
-      activity: {
-        ...soulLinkState.activity,
-        syncState: nextSyncState,
-      },
-    }))
-  }
-
-  function setSyncVersion(nextVersion) {
-    updateSoulLinkState((soulLinkState) => ({
-      ...soulLinkState,
-      sync: {
-        ...soulLinkState.sync,
-        version: nextVersion,
-      },
-    }))
-  }
-
   async function createSession() {
     const repo = getSupabaseRepository()
     const sessionId = generateUUID()
     const soulLinkState = getSoulLinkState('Creating a session')
-    const runState = getSoulLinkRunState('Creating a session')
+    const currentRunState = getSoulLinkRunState('Creating a session')
     const remoteState = buildRemoteState(
       soulLinkState,
-      runState.rules.generation,
+      currentRunState.rules.generation,
     )
 
     let lastError = null
@@ -822,10 +828,10 @@ export function useSoulLinkStore() {
     if (!sessionId) return
 
     const repo = getSupabaseRepository()
-    const runState = getSoulLinkRunState('Pushing state')
+    const currentRunState = getSoulLinkRunState('Pushing state')
     const remoteState = buildRemoteState(
       soulLinkState,
-      runState.rules.generation,
+      currentRunState.rules.generation,
     )
     const expectedVersion = soulLinkState.sync.version
 
@@ -909,13 +915,6 @@ export function useSoulLinkStore() {
         setGenerationRules(session.state.generationRules)
       }
     })
-  }
-
-  function unsubscribeFromSession() {
-    if (_unsubscribe) {
-      _unsubscribe()
-      _unsubscribe = null
-    }
   }
 
   return {

@@ -16,29 +16,29 @@ function getLocalStorage() {
   }
 }
 
+function loadCurrentRunMode() {
+  const storedMode = getLocalStorage()?.getItem(RUN_MODE_STORAGE_KEY)
+  const nextMode = normalizeRunMode(storedMode)
+
+  currentRunMode.value = nextMode
+
+  return nextMode
+}
+
+function persistCurrentRunMode(mode) {
+  const nextMode = normalizeRunMode(mode)
+
+  currentRunMode.value = nextMode
+  getLocalStorage()?.setItem(RUN_MODE_STORAGE_KEY, nextMode)
+
+  return nextMode
+}
+
+function setCurrentRunMode(mode) {
+  return persistCurrentRunMode(mode)
+}
+
 export function useRunModeStore() {
-  function loadCurrentRunMode() {
-    const storedMode = getLocalStorage()?.getItem(RUN_MODE_STORAGE_KEY)
-    const nextMode = normalizeRunMode(storedMode)
-
-    currentRunMode.value = nextMode
-
-    return nextMode
-  }
-
-  function persistCurrentRunMode(mode) {
-    const nextMode = normalizeRunMode(mode)
-
-    currentRunMode.value = nextMode
-    getLocalStorage()?.setItem(RUN_MODE_STORAGE_KEY, nextMode)
-
-    return nextMode
-  }
-
-  function setCurrentRunMode(mode) {
-    return persistCurrentRunMode(mode)
-  }
-
   return {
     currentRunMode: computed(() => currentRunMode.value),
     loadCurrentRunMode,

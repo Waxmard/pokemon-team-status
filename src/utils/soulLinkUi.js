@@ -38,7 +38,7 @@ export function buildSoulLinkMemberFromDraft(
     types: draftAction.pokemon.types ?? [],
     ability: draftAction.ability ?? null,
     berry: draftAction.berry ?? null,
-    moves: (draftAction.moves ?? []).filter((m) => m),
+    moves: (draftAction.moves ?? []).filter(Boolean),
     specialMove: draftAction.specialMove ?? null,
     megaForm: draftAction.megaForm ?? null,
     megaTypes: draftAction.megaTypes ?? null,

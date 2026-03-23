@@ -364,8 +364,8 @@ const effectiveBox = computed(() => props.box ?? storageBox.value)
 const effectiveDefeatedGyms = computed(
   () => props.defeatedGyms ?? storageDefeatedGyms.value,
 )
-const effectivePinnedGym = computed(() =>
-  props.pinnedGym !== undefined ? props.pinnedGym : storagePinnedGym.value,
+const effectivePinnedGym = computed(
+  () => props.pinnedGym ?? storagePinnedGym.value,
 )
 
 // Suggestion state
@@ -623,7 +623,7 @@ const canEvolve = computed(() => {
 
 const evolutionOptions = computed(() => {
   const evo = effectiveDraftPokemon.value?.evolvesTo
-  const evoList = evo ? [].concat(evo) : []
+  const evoList = evo ? [evo].flat() : []
   // Add mega options as special entries
   const megas = megaOptions.value.map((mega) => ({
     isMega: true,

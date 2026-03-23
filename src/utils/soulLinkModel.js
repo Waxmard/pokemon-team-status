@@ -132,10 +132,10 @@ export function createDefaultSoulLinkState() {
 const INVITE_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 
 export function generateInviteCode(length = 6) {
+  const bytes = crypto.getRandomValues(new Uint8Array(length))
   return Array.from(
-    { length },
-    () =>
-      INVITE_CODE_CHARS[Math.floor(Math.random() * INVITE_CODE_CHARS.length)],
+    bytes,
+    (b) => INVITE_CODE_CHARS[b % INVITE_CODE_CHARS.length],
   ).join('')
 }
 

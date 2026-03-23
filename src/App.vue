@@ -438,27 +438,27 @@ async function handleJoinSession() {
   }
 }
 
+function onCopySuccess() {
+  copyLabel.value = 'copied!'
+  setTimeout(() => {
+    copyLabel.value = 'tap to copy'
+  }, 2000)
+}
+
 function copyInviteCode() {
   const code = soulLinkSessionMetadata.value?.inviteCode
   if (!code) return
 
-  function onSuccess() {
-    copyLabel.value = 'copied!'
-    setTimeout(() => {
-      copyLabel.value = 'tap to copy'
-    }, 2000)
-  }
-
   function tryFallback() {
     if (fallbackCopy(code)) {
-      onSuccess()
+      onCopySuccess()
     } else {
       copyLabel.value = 'copy failed'
     }
   }
 
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(code).then(onSuccess).catch(tryFallback)
+    navigator.clipboard.writeText(code).then(onCopySuccess).catch(tryFallback)
   } else {
     tryFallback()
   }
@@ -476,7 +476,7 @@ function fallbackCopy(text) {
   } catch {
     return false
   } finally {
-    document.body.removeChild(textarea)
+    textarea.remove()
   }
 }
 
@@ -1149,7 +1149,7 @@ function confirmSoulLinkMemberUpdate(pid, rosterKey, memberId) {
     { ...uiMember, catchLocation: draftAction.value.catchLocation ?? null },
     pid,
   )
-  const { id: _id, ownerPlayerId: _ownerId, ...updates } = slMember
+  const { id, ownerPlayerId, ...updates } = slMember
   updateRosterMember(pid, rosterKey, memberId, updates)
   reconcileSoulLinkPairing(pid, memberId, rosterKey)
 }
