@@ -26,8 +26,8 @@
             </div>
           </div>
         </div>
-        <SpriteImg v-if="pokemon.pairedPartner" :src="partnerSpriteUrl" :alt="pokemon.pairedPartner.name" :width="24"
-          :height="24" class="partner-sprite" />
+        <SpriteImg v-if="pokemon.pairedPartner" :src="partnerSpriteUrl" :alt="pokemon.pairedPartner.name" :width="32"
+          :height="32" class="partner-sprite" />
       </div>
       <div v-else key="empty" class="empty-content">
         <svg class="empty-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
