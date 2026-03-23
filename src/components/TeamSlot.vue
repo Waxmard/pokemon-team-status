@@ -1,71 +1,50 @@
 <template>
-  <div
-    class="team-slot"
-    :class="{
-      empty: !pokemon,
-      clickable: true,
-    }"
-    :style="cardBackgroundStyle"
-    @click="pokemon ? $emit('edit', pokemon.id) : $emit('add')"
-  >
-        <Transition name="slot-content" mode="out-in">
-          <div v-if="pokemon" key="filled" class="slot-inner">
-            <div class="slot-content">
-              <div class="sprite-container">
-                <SpriteImg
-                  v-if="spriteUrl"
-                  :src="spriteUrl"
-                  :alt="pokemon.name"
-                  :width="80"
-                  :height="80"
-                />
-              </div>
-              <div class="pokemon-info">
-                <div v-if="pokemon.moves.length" class="pokemon-moves">
-                  <img
-                    v-for="move in pokemon.moves"
-                    :key="move"
-                    :src="getTypeIcon(move)"
-                    :alt="move"
-                    :title="move"
-                    class="move-type-icon"
-                  />
-                </div>
-                <div class="pokemon-badges">
-                  <SpriteImg
-                    v-if="pokemon.berry"
-                    class="berry-icon"
-                    :src="getBerrySprite(pokemon.berry)"
-                    :alt="pokemon.berry"
-                    :title="pokemon.berry"
-                    :width="24"
-                    :height="24"
-                  />
-                  <span v-if="pokemon.specialMove" class="special-move-badge">
-                    {{ pokemon.specialMove }}
-                  </span>
-                  <span v-if="pokemon.ability" class="ability-badge">
-                    {{ pokemon.ability }}
-                  </span>
-                </div>
-              </div>
+  <div class="team-slot" :class="{
+    empty: !pokemon,
+    clickable: interactive,
+  }" :style="cardBackgroundStyle" @click="handleClick">
+    <Transition name="slot-content" mode="out-in">
+      <div v-if="pokemon" key="filled" class="slot-inner">
+        <div class="slot-content">
+          <div class="sprite-container">
+            <SpriteImg v-if="spriteUrl" :src="spriteUrl" :alt="pokemon.name" :width="80" :height="80" />
+          </div>
+          <div class="pokemon-info">
+            <div v-if="pokemon.moves.length" class="pokemon-moves">
+              <img v-for="move in pokemon.moves" :key="move" :src="getTypeIcon(move)" :alt="move" :title="move"
+                class="move-type-icon" />
+            </div>
+            <div class="pokemon-badges">
+              <SpriteImg v-if="pokemon.berry" class="berry-icon" :src="getBerrySprite(pokemon.berry)"
+                :alt="pokemon.berry" :title="pokemon.berry" :width="24" :height="24" />
+              <span v-if="pokemon.specialMove" class="special-move-badge">
+                {{ pokemon.specialMove }}
+              </span>
+              <span v-if="pokemon.ability" class="ability-badge">
+                {{ pokemon.ability }}
+              </span>
             </div>
           </div>
-          <div v-else key="empty" class="empty-content">
-            <svg class="empty-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="16"/>
-              <line x1="8" y1="12" x2="16" y2="12"/>
-            </svg>
-            <span class="empty-text">Empty Slot</span>
-          </div>
-        </Transition>
+        </div>
+        <SpriteImg v-if="pokemon.pairedPartner" :src="partnerSpriteUrl" :alt="pokemon.pairedPartner.name" :width="24"
+          :height="24" class="partner-sprite" />
+      </div>
+      <div v-else key="empty" class="empty-content">
+        <svg class="empty-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="16" />
+          <line x1="8" y1="12" x2="16" y2="12" />
+        </svg>
+        <span class="empty-text">Empty Slot</span>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { useStorage } from '../composables/useStorage.js'
+import { useRunStore } from '../composables/useRunStore.js'
 import { ABILITIES } from '../data/abilities.js'
 import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { hexToRgba } from '../utils/colors.js'
@@ -73,6 +52,7 @@ import { getMemberTypesForRules } from '../utils/generationRules.js'
 import {
   getBerrySprite,
   getMegaSpriteUrl,
+  getSmallSpriteUrl,
   getSpriteUrl,
 } from '../utils/pokemon.js'
 import SpriteImg from './SpriteImg.vue'
@@ -82,11 +62,34 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  generationRules: {
+    type: String,
+    default: null,
+  },
+  interactive: {
+    type: Boolean,
+    default: true,
+  },
 })
 
-defineEmits(['edit', 'add'])
+const emit = defineEmits(['edit', 'add'])
 
-const { generationRules } = useStorage()
+const { generationRules } = useRunStore()
+
+const effectiveGenerationRules = computed(
+  () => props.generationRules ?? generationRules.value,
+)
+
+function handleClick() {
+  if (!props.interactive) return
+
+  if (props.pokemon) {
+    emit('edit', props.pokemon.id)
+    return
+  }
+
+  emit('add')
+}
 
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null
@@ -98,50 +101,65 @@ const spriteUrl = computed(() => {
   return getSpriteUrl(props.pokemon.name, variant)
 })
 
-const cardBackgroundStyle = computed(() => {
-  if (!props.pokemon) return {}
+const partnerSpriteUrl = computed(() => {
+  if (!props.pokemon?.pairedPartner) return null
+  const partner = props.pokemon.pairedPartner
+  const variant = partner.spriteVariant || 'default'
+  if (partner.megaSpriteId) {
+    return getMegaSpriteUrl(partner.megaSpriteId, variant)
+  }
+  return getSmallSpriteUrl(partner.name, variant)
+})
 
-  const opacity = 0.15
-  const types = [
-    ...getMemberTypesForRules(props.pokemon, generationRules.value),
-  ]
+function getExtendedTypes(pokemon, baseTypes) {
+  const types = [...baseTypes]
 
-  if (!types.length) return {}
-
-  // For Protean, include move types in the gradient
-  const abilityData = ABILITIES[props.pokemon.ability]
-  if (abilityData?.protean && props.pokemon.moves?.length) {
-    for (const moveType of props.pokemon.moves) {
+  const abilityData = ABILITIES[pokemon.ability]
+  if (abilityData?.protean && pokemon.moves?.length) {
+    for (const moveType of pokemon.moves) {
       if (moveType && !types.includes(moveType)) {
         types.push(moveType)
       }
     }
   }
 
-  // Include mega types in the gradient
-  if (props.pokemon.megaTypes?.length) {
-    for (const megaType of props.pokemon.megaTypes) {
+  if (pokemon.megaTypes?.length) {
+    for (const megaType of pokemon.megaTypes) {
       if (!types.includes(megaType)) {
         types.push(megaType)
       }
     }
   }
 
+  return types
+}
+
+const cardBackgroundStyle = computed(() => {
+  if (!props.pokemon) return {}
+
+  const opacity = 0.15
+  const baseTypes = getMemberTypesForRules(
+    props.pokemon,
+    effectiveGenerationRules.value,
+  )
+  if (!baseTypes.length) return {}
+
+  const types = getExtendedTypes(props.pokemon, baseTypes)
+
   if (types.length === 1) {
     const color = TYPE_COLORS[types[0]].bg
     return {
       background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`,
     }
-  } else {
-    // Create gradient stops for all types
-    const stops = types.map((type, i) => {
-      const color = TYPE_COLORS[type].bg
-      const percent = (i / (types.length - 1)) * 100
-      return `${hexToRgba(color, opacity)} ${percent}%`
-    })
-    return {
-      background: `linear-gradient(135deg, ${stops.join(', ')})`,
-    }
+  }
+
+  const stops = types.map((type, i) => {
+    const color = TYPE_COLORS[type].bg
+    const percent = (i / (types.length - 1)) * 100
+    return `${hexToRgba(color, opacity)} ${percent}%`
+  })
+  return {
+    background: `linear-gradient(135deg, ${stops.join(', ')})`,
   }
 })
 </script>
@@ -255,6 +273,13 @@ const cardBackgroundStyle = computed(() => {
   margin-right: var(--space-1);
 }
 
+.partner-sprite {
+  position: absolute;
+  bottom: var(--space-1);
+  right: var(--space-1);
+  opacity: 0.85;
+}
+
 .special-move-badge,
 .ability-badge {
   font-size: 0.7rem;
@@ -263,6 +288,4 @@ const cardBackgroundStyle = computed(() => {
   background: rgba(255, 255, 255, 0.1);
   white-space: nowrap;
 }
-
-
 </style>

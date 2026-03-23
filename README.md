@@ -28,6 +28,11 @@ To run locally on your phone:
 npx vite --host
 ```
 
+### Supabase (Soul Link sync)
+
+Copy `.env.example` to `.env.local` and fill in your Supabase project URL and
+anon key. Without these, the app runs in local-only mode (no online sync).
+
 ## Documentation
 
 - [How It Works](docs/how-it-works.md) - Scoring algorithm and Pokemon basics
@@ -41,6 +46,8 @@ npx vite --host
 - Track defeated gyms
 - Swap suggestions to optimize team coverage
 - Mega evolution support
+- **Soul Link mode**: Shared two-player runs with paired catches, real-time
+  sync via Supabase, and invite code sharing
 - Works fully offline (PWA)
   - **iOS**: Must be added to Home Screen for offline support
 
@@ -53,4 +60,5 @@ More screenshots available in the [`screenshots/`](screenshots/) directory.
 - Vue 3 + Vite
 - Naive UI
 - IndexedDB (offline storage)
+- Supabase (Soul Link sync + Realtime)
 - PWA with Workbox
