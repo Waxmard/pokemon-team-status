@@ -1719,7 +1719,7 @@ onMounted(async () => {
   border-radius: var(--radius-lg);
   background: var(--color-surface-light);
   color: var(--color-text-primary);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-family: monospace;
   text-transform: uppercase;
   letter-spacing: 0.15em;

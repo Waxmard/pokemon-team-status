@@ -67,6 +67,7 @@ export const themeOverrides = {
     borderColor: colors.border,
     borderColorFocus: colors.primary,
     borderRadius: '10px',
+    fontSizeMedium: '16px',
   },
   Select: {
     peers: {
@@ -89,6 +90,7 @@ export const themeOverrides = {
         borderColor: colors.border,
         borderColorFocus: colors.primary,
         borderRadius: '10px',
+        fontSizeMedium: '16px',
       },
     },
   },
