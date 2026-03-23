@@ -532,12 +532,14 @@ const canConfirm = computed(() => {
 })
 
 const wizardStepTitle = computed(() => {
+  const name = draftAction.value?.pokemon?.name
+  if (!name) return 'Choose Pokemon'
   const titles = {
-    pokemon: 'Choose Pokemon',
+    pokemon: name,
     catchLocation: 'Catch Location',
-    ability: 'Choose Ability',
-    berry: 'Choose Item',
-    moves: 'Move Types',
+    ability: `${name}'s Ability`,
+    berry: `${name}'s Item`,
+    moves: `${name}'s Move Types`,
   }
   return titles[wizardStep.value]
 })
