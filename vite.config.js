@@ -27,7 +27,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['types/*.svg', 'icons/*.png'],
       devOptions: {
-        enabled: true,
+        enabled: false,
       },
       manifest: {
         name: 'Pokemon Team Weakness Calculator',
