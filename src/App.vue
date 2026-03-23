@@ -76,8 +76,8 @@
             </button>
           </div>
           <div class="reset-option-group">
-            <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
-              New Solo Run
+            <button class="reset-option" @click="switchToSoloMode">
+              Solo Mode
             </button>
             <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
               New Soul Link Run
@@ -554,6 +554,14 @@ async function clearTransientUiState() {
   cancel()
   swapOriginalState.value = null
   soulLinkSwapOriginalRoster.value = null
+}
+
+async function switchToSoloMode() {
+  await clearTransientUiState()
+  unsubscribeSoulLink()
+  setCurrentRunMode(RUN_MODES.SOLO)
+  showResetDialog.value = false
+  showSoulLinkDialog.value = false
 }
 
 async function startNewRun(mode) {
