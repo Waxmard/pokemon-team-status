@@ -139,24 +139,14 @@
 
         <!-- Step: Catch Location -->
         <div v-if="wizardStep === 'catchLocation'" class="wizard-step catch-location-step">
-          <div class="catch-location-input-row">
-            <n-auto-complete
-              v-model:value="catchLocationQuery"
-              :options="catchLocationOptions"
-              placeholder="Enter location..."
-              @select="onSelectCatchLocation"
-              @update:value="onCatchLocationInput"
-              clearable
-            />
-            <button
-              v-if="!matchedPartnerForLocation && catchLocationQuery.trim() && catchLocationQuery.trim() !== draftAction.catchLocation"
-              class="save-location-btn"
-              @click="saveCatchLocation"
-              aria-label="Save location"
-            >
-              ✓
-            </button>
-          </div>
+          <n-auto-complete
+            v-model:value="catchLocationQuery"
+            :options="catchLocationOptions"
+            placeholder="Enter location..."
+            @select="onSelectCatchLocation"
+            @update:value="onCatchLocationInput"
+            clearable
+          />
           <div class="pokemon-preview">
             <SpriteImg
               v-if="matchedPartnerForLocation"
@@ -906,19 +896,8 @@ function onSelectCatchLocation(value) {
 
 function onCatchLocationInput(value) {
   catchLocationQuery.value = value
-  // Only auto-set if it matches a partner location
-  const match = partnerUnlinkedLocations.value.find(
-    (loc) => loc.toLowerCase() === value.toLowerCase(),
-  )
-  if (match) {
-    updateCatchLocation(match)
-  }
-}
-
-function saveCatchLocation() {
-  if (catchLocationQuery.value.trim()) {
-    updateCatchLocation(catchLocationQuery.value.trim())
-  }
+  const trimmed = value.trim()
+  updateCatchLocation(trimmed || null)
 }
 
 function unlinkCatchLocation() {
@@ -1423,17 +1402,6 @@ function onSearchInput(value) {
   overflow: visible;
 }
 
-.catch-location-input-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.catch-location-input-row .n-auto-complete {
-  flex: 1;
-}
-
-.save-location-btn,
 .unlink-location-btn {
   background: transparent;
   border: none;
@@ -1442,13 +1410,6 @@ function onSearchInput(value) {
   cursor: pointer;
   padding: var(--space-1);
   transition: color var(--transition-base);
-}
-
-.save-location-btn {
-  color: var(--color-success);
-}
-
-.unlink-location-btn {
   color: var(--color-danger);
 }
 
