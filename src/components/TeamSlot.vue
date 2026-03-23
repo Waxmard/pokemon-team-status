@@ -111,50 +111,55 @@ const partnerSpriteUrl = computed(() => {
   return getSmallSpriteUrl(partner.name, variant)
 })
 
-const cardBackgroundStyle = computed(() => {
-  if (!props.pokemon) return {}
+function getExtendedTypes(pokemon, baseTypes) {
+  const types = [...baseTypes]
 
-  const opacity = 0.15
-  const types = [
-    ...getMemberTypesForRules(props.pokemon, effectiveGenerationRules.value),
-  ]
-
-  if (!types.length) return {}
-
-  // For Protean, include move types in the gradient
-  const abilityData = ABILITIES[props.pokemon.ability]
-  if (abilityData?.protean && props.pokemon.moves?.length) {
-    for (const moveType of props.pokemon.moves) {
+  const abilityData = ABILITIES[pokemon.ability]
+  if (abilityData?.protean && pokemon.moves?.length) {
+    for (const moveType of pokemon.moves) {
       if (moveType && !types.includes(moveType)) {
         types.push(moveType)
       }
     }
   }
 
-  // Include mega types in the gradient
-  if (props.pokemon.megaTypes?.length) {
-    for (const megaType of props.pokemon.megaTypes) {
+  if (pokemon.megaTypes?.length) {
+    for (const megaType of pokemon.megaTypes) {
       if (!types.includes(megaType)) {
         types.push(megaType)
       }
     }
   }
 
+  return types
+}
+
+const cardBackgroundStyle = computed(() => {
+  if (!props.pokemon) return {}
+
+  const opacity = 0.15
+  const baseTypes = getMemberTypesForRules(
+    props.pokemon,
+    effectiveGenerationRules.value,
+  )
+  if (!baseTypes.length) return {}
+
+  const types = getExtendedTypes(props.pokemon, baseTypes)
+
   if (types.length === 1) {
     const color = TYPE_COLORS[types[0]].bg
     return {
       background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`,
     }
-  } else {
-    // Create gradient stops for all types
-    const stops = types.map((type, i) => {
-      const color = TYPE_COLORS[type].bg
-      const percent = (i / (types.length - 1)) * 100
-      return `${hexToRgba(color, opacity)} ${percent}%`
-    })
-    return {
-      background: `linear-gradient(135deg, ${stops.join(', ')})`,
-    }
+  }
+
+  const stops = types.map((type, i) => {
+    const color = TYPE_COLORS[type].bg
+    const percent = (i / (types.length - 1)) * 100
+    return `${hexToRgba(color, opacity)} ${percent}%`
+  })
+  return {
+    background: `linear-gradient(135deg, ${stops.join(', ')})`,
   }
 })
 </script>

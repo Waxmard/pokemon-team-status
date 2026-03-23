@@ -493,8 +493,8 @@ watch(swapMode, (isSwapMode) => {
     // Only capture if not already captured (e.g., by confirmDraft for add-replace)
     if (!swapOriginalState.value) {
       swapOriginalState.value = {
-        team: JSON.parse(JSON.stringify(team.value)),
-        box: JSON.parse(JSON.stringify(box.value)),
+        team: structuredClone(team.value),
+        box: structuredClone(box.value),
       }
     }
   } else {
@@ -657,6 +657,82 @@ const defeatedGymsList = computed(() => {
     })
 })
 
+function swapInHandToTarget(targetPokemon) {
+  const replacedPokemonData = getRulesetPokemonData(targetPokemon.name)
+  updateInHandPokemon({
+    pokemonData: replacedPokemonData,
+    ability: targetPokemon.ability,
+    berry: targetPokemon.berry,
+    moves: targetPokemon.moves,
+    specialMove: targetPokemon.specialMove,
+    megaForm: targetPokemon.megaForm,
+    megaTypes: targetPokemon.megaTypes,
+    megaSpriteId: targetPokemon.megaSpriteId,
+    spriteVariant: targetPokemon.spriteVariant,
+  })
+}
+
+function handleBoxToTeamSwap(targetId, inHandPokemon) {
+  const boxPokemonId = draftAction.value.boxPokemonId
+
+  if (targetId === null) {
+    if (team.value.length >= 6) return
+    const newTeamMember = buildPokemonMember(draftAction.value, {
+      source: 'team',
+    })
+    persistTeam([...team.value, newTeamMember])
+    persistBox(box.value.filter((p) => p.id !== boxPokemonId))
+    exitSwapMode()
+    return
+  }
+
+  const targetPokemon = team.value.find((p) => p.id === targetId)
+  if (!targetPokemon) return
+
+  const newTeam = team.value.map((p) =>
+    p.id === targetId ? { ...inHandPokemon, id: generatePokemonId('team') } : p,
+  )
+  persistTeam(newTeam)
+
+  const newBoxMember = buildPokemonMember(targetPokemon, { source: 'box' })
+  persistBox([...box.value.filter((p) => p.id !== boxPokemonId), newBoxMember])
+
+  swapInHandToTarget(targetPokemon)
+  draftAction.value.boxPokemonId = newBoxMember.id
+}
+
+function handleTeamToBoxSwap(targetId, inHandPokemon) {
+  const teamPokemonId = draftAction.value.editId
+
+  if (targetId === null) {
+    const newBoxMember = buildPokemonMember(draftAction.value, {
+      source: 'box',
+    })
+    persistBox([...box.value, newBoxMember])
+    persistTeam(team.value.filter((p) => p.id !== teamPokemonId))
+    exitSwapMode()
+    return
+  }
+
+  const targetPokemon = box.value.find((p) => p.id === targetId)
+  if (!targetPokemon) return
+
+  const newBox = box.value.map((p) =>
+    p.id === targetId ? { ...inHandPokemon, id: generatePokemonId('box') } : p,
+  )
+  persistBox(newBox)
+
+  const newTeamMember = buildPokemonMember(targetPokemon, {
+    source: 'team',
+  })
+  persistTeam(
+    team.value.map((p) => (p.id === teamPokemonId ? newTeamMember : p)),
+  )
+
+  swapInHandToTarget(targetPokemon)
+  draftAction.value.editId = newTeamMember.id
+}
+
 // Handle immediate swap when clicking a slot in swap mode
 function handleImmediateSwap(targetId) {
   if (!draftAction.value?.pokemon) return
@@ -664,115 +740,16 @@ function handleImmediateSwap(targetId) {
   const inHandPokemon = buildPokemonMember(draftAction.value)
 
   if (draftAction.value.isBoxPokemon) {
-    // Box → Team swap
-    const boxPokemonId = draftAction.value.boxPokemonId
-
-    if (targetId === null) {
-      // Moving to empty team slot - remove from box, add to team
-      if (team.value.length >= 6) return // Team full
-
-      const newTeamMember = buildPokemonMember(draftAction.value, {
-        source: 'team',
-      })
-      persistTeam([...team.value, newTeamMember])
-      persistBox(box.value.filter((p) => p.id !== boxPokemonId))
-
-      // Exit swap mode - no chain swap when moving to empty slot
-      exitSwapMode()
-      return
-    }
-
-    const targetPokemon = team.value.find((p) => p.id === targetId)
-    if (!targetPokemon) return
-
-    const replacedPokemonData = getRulesetPokemonData(targetPokemon.name)
-
-    // Place in-hand pokemon in team slot
-    const newTeam = team.value.map((p) =>
-      p.id === targetId
-        ? { ...inHandPokemon, id: generatePokemonId('team') }
-        : p,
-    )
-    persistTeam(newTeam)
-
-    // Remove old box pokemon, add replaced team pokemon to box
-    const newBoxMember = buildPokemonMember(targetPokemon, { source: 'box' })
-    persistBox([
-      ...box.value.filter((p) => p.id !== boxPokemonId),
-      newBoxMember,
-    ])
-
-    // Update "in hand" to be the replaced pokemon for chain swapping
-    updateInHandPokemon(
-      replacedPokemonData,
-      targetPokemon.ability,
-      targetPokemon.berry,
-      targetPokemon.moves,
-      targetPokemon.specialMove,
-      targetPokemon.megaForm,
-      targetPokemon.megaTypes,
-      targetPokemon.megaSpriteId,
-      targetPokemon.spriteVariant,
-    )
-    draftAction.value.boxPokemonId = newBoxMember.id
+    handleBoxToTeamSwap(targetId, inHandPokemon)
   } else if (draftAction.value.isTeamPokemon) {
-    // Team → Box swap (new logic)
-    const teamPokemonId = draftAction.value.editId
-
-    if (targetId === null) {
-      // Moving to empty box slot - remove from team, add to box
-      const newBoxMember = buildPokemonMember(draftAction.value, {
-        source: 'box',
-      })
-      persistBox([...box.value, newBoxMember])
-      persistTeam(team.value.filter((p) => p.id !== teamPokemonId))
-
-      // Exit swap mode - no chain swap possible when moving to empty slot
-      exitSwapMode()
-    } else {
-      // Swap with existing box Pokemon
-      const targetPokemon = box.value.find((p) => p.id === targetId)
-      if (!targetPokemon) return
-
-      const replacedPokemonData = getRulesetPokemonData(targetPokemon.name)
-
-      // Place in-hand pokemon in box slot
-      const newBox = box.value.map((p) =>
-        p.id === targetId
-          ? { ...inHandPokemon, id: generatePokemonId('box') }
-          : p,
-      )
-      persistBox(newBox)
-
-      // Replace team pokemon with box pokemon
-      const newTeamMember = buildPokemonMember(targetPokemon, {
-        source: 'team',
-      })
-      persistTeam(
-        team.value.map((p) => (p.id === teamPokemonId ? newTeamMember : p)),
-      )
-
-      // Update "in hand" to be the replaced box pokemon for chain swapping
-      updateInHandPokemon(
-        replacedPokemonData,
-        targetPokemon.ability,
-        targetPokemon.berry,
-        targetPokemon.moves,
-        targetPokemon.specialMove,
-        targetPokemon.megaForm,
-        targetPokemon.megaTypes,
-        targetPokemon.megaSpriteId,
-        targetPokemon.spriteVariant,
-      )
-      draftAction.value.editId = newTeamMember.id
-    }
+    handleTeamToBoxSwap(targetId, inHandPokemon)
   }
 }
 
 function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
   swapOriginalState.value = {
-    team: JSON.parse(JSON.stringify(team.value)),
-    box: JSON.parse(JSON.stringify(box.value)),
+    team: structuredClone(team.value),
+    box: structuredClone(box.value),
   }
 
   if (isTeamMember) {
@@ -815,23 +792,93 @@ function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
   enterSwapMode()
 }
 
+function confirmBoxPokemonEdit() {
+  const boxIndex = box.value.findIndex(
+    (p) => p.id === draftAction.value.boxPokemonId,
+  )
+  const updatedPokemon = buildPokemonMember(draftAction.value, {
+    id: draftAction.value.boxPokemonId,
+  })
+
+  if (!draftAction.value.replaceTarget) {
+    const newBox = [...box.value]
+    newBox[boxIndex] = updatedPokemon
+    persistBox(newBox)
+    return
+  }
+
+  if (draftAction.value.replaceTarget.startsWith('empty-')) {
+    if (team.value.length < 6) {
+      persistTeam([
+        ...team.value,
+        buildPokemonMember(draftAction.value, { source: 'team' }),
+      ])
+      persistBox(
+        box.value.filter((p) => p.id !== draftAction.value.boxPokemonId),
+      )
+    }
+    return
+  }
+
+  const targetIndex = team.value.findIndex(
+    (p) => p.id === draftAction.value.replaceTarget,
+  )
+  if (targetIndex !== -1) {
+    const replacedPokemon = team.value[targetIndex]
+    const boxMember = buildPokemonMember(replacedPokemon, { source: 'box' })
+    persistTeam(
+      team.value.map((p) =>
+        p.id === draftAction.value.replaceTarget
+          ? buildPokemonMember(draftAction.value, { source: 'team' })
+          : p,
+      ),
+    )
+    persistBox([
+      ...box.value.filter((p) => p.id !== draftAction.value.boxPokemonId),
+      boxMember,
+    ])
+  }
+}
+
+function handleDraftDeletion() {
+  if (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) {
+    deleteTeamPokemon(draftAction.value.editId)
+  } else if (
+    draftAction.value.type === 'edit' &&
+    draftAction.value.isBoxPokemon
+  ) {
+    deleteBoxPokemon(draftAction.value.boxPokemonId)
+  }
+}
+
+function enterAddReplaceMode() {
+  swapOriginalState.value = {
+    team: structuredClone(team.value),
+    box: structuredClone(box.value),
+  }
+
+  const tempBoxMember = buildPokemonMember(draftAction.value, {
+    source: 'temp',
+  })
+  persistBox([...box.value, tempBoxMember])
+
+  draftAction.value = {
+    ...draftAction.value,
+    type: 'edit',
+    isBoxPokemon: true,
+    isAddReplace: true,
+    boxPokemonId: tempBoxMember.id,
+  }
+
+  enterSwapMode()
+}
+
 // Methods
 function confirmDraft() {
   if (!draftAction.value) return
 
-  // Handle deletion (wizard mode: confirmed with no pokemon)
   if (!draftAction.value.pokemon) {
-    if (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) {
-      // Delete team Pokemon
-      deleteTeamPokemon(draftAction.value.editId)
-    } else if (
-      draftAction.value.type === 'edit' &&
-      draftAction.value.isBoxPokemon
-    ) {
-      // Delete box Pokemon
-      deleteBoxPokemon(draftAction.value.boxPokemonId)
-    }
-    // For 'add' type with no pokemon, just cancel
+    handleDraftDeletion()
     cancel()
     return
   }
@@ -840,94 +887,16 @@ function confirmDraft() {
 
   if (draftAction.value.type === 'add') {
     if (team.value.length < 6) {
-      // Normal add - team has room
       persistTeam([...team.value, newMember])
     } else {
-      // Team is full - enter replace mode
-      // Capture state BEFORE adding temp Pokemon (so cancel discards it)
-      swapOriginalState.value = {
-        team: JSON.parse(JSON.stringify(team.value)),
-        box: JSON.parse(JSON.stringify(box.value)),
-      }
-
-      // 1. Add new Pokemon to box temporarily
-      const tempBoxMember = buildPokemonMember(draftAction.value, {
-        source: 'temp',
-      })
-      persistBox([...box.value, tempBoxMember])
-
-      // 2. Set up draftAction for swap mode with this Pokemon "in hand"
-      draftAction.value = {
-        ...draftAction.value,
-        type: 'edit',
-        isBoxPokemon: true,
-        isAddReplace: true, // Flag for cancel behavior
-        boxPokemonId: tempBoxMember.id,
-      }
-
-      // 3. Enter swap mode
-      enterSwapMode()
-      return // Don't call cancel() - stay in swap mode
+      enterAddReplaceMode()
+      return
     }
   } else if (draftAction.value.type === 'addToBox') {
     persistBox([...box.value, newMember])
   } else if (draftAction.value.type === 'edit') {
     if (draftAction.value.isBoxPokemon) {
-      // Editing a box Pokemon
-      const boxIndex = box.value.findIndex(
-        (p) => p.id === draftAction.value.boxPokemonId,
-      )
-      const updatedPokemon = buildPokemonMember(draftAction.value, {
-        id: draftAction.value.boxPokemonId,
-      })
-
-      if (draftAction.value.replaceTarget) {
-        // Move to team
-        if (draftAction.value.replaceTarget.startsWith('empty-')) {
-          // Add to team
-          if (team.value.length < 6) {
-            persistTeam([
-              ...team.value,
-              buildPokemonMember(draftAction.value, { source: 'team' }),
-            ])
-            persistBox(
-              box.value.filter((p) => p.id !== draftAction.value.boxPokemonId),
-            )
-          }
-        } else {
-          // Replace existing team member
-          const targetIndex = team.value.findIndex(
-            (p) => p.id === draftAction.value.replaceTarget,
-          )
-          if (targetIndex !== -1) {
-            const replacedPokemon = team.value[targetIndex]
-            // Move replaced Pokemon to box
-            const boxMember = buildPokemonMember(replacedPokemon, {
-              source: 'box',
-            })
-            // Replace team Pokemon with box Pokemon
-            persistTeam(
-              team.value.map((p) =>
-                p.id === draftAction.value.replaceTarget
-                  ? buildPokemonMember(draftAction.value, { source: 'team' })
-                  : p,
-              ),
-            )
-            // Update box: remove edited Pokemon, add replaced team Pokemon
-            persistBox([
-              ...box.value.filter(
-                (p) => p.id !== draftAction.value.boxPokemonId,
-              ),
-              boxMember,
-            ])
-          }
-        }
-      } else {
-        // Just update in box (no move to team)
-        const newBox = [...box.value]
-        newBox[boxIndex] = updatedPokemon
-        persistBox(newBox)
-      }
+      confirmBoxPokemonEdit()
     } else {
       // Editing a team Pokemon
       persistTeam(
@@ -1107,20 +1076,134 @@ function refreshSoulLinkDraftMetadata(member) {
 
 // --- Soul Link confirm draft handler ---
 
+function confirmSoulLinkBoxPokemonReplace(pid, newMember) {
+  const roster = getSoulLinkRoster()
+
+  if (draftAction.value.replaceTarget.startsWith('empty-')) {
+    if (roster.team.length >= 6) return
+    const boxedMember = roster.box.find(
+      (m) => m.id === draftAction.value.boxPokemonId,
+    )
+    const movedMember = preserveSoulLinkPairingFields(newMember, boxedMember)
+    addRosterMember(pid, 'team', movedMember)
+    removeSoulLinkRosterMember(pid, 'box', draftAction.value.boxPokemonId)
+    updateReciprocalSoulLinkPairId(
+      draftAction.value.boxPokemonId,
+      movedMember.id,
+    )
+    reconcileSoulLinkPairing(pid, movedMember.id, 'team')
+    return
+  }
+
+  const boxedMember = roster.box.find(
+    (m) => m.id === draftAction.value.boxPokemonId,
+  )
+  const replacedTeamMember = roster.team.find(
+    (m) => m.id === draftAction.value.replaceTarget,
+  )
+  if (!boxedMember || !replacedTeamMember) return
+
+  const nextTeamMember = preserveSoulLinkPairingFields(newMember, boxedMember)
+  const uiReplaced = {
+    id: generatePokemonId('box'),
+    name: replacedTeamMember.speciesName,
+    types: replacedTeamMember.types,
+    ability: replacedTeamMember.ability,
+    berry: replacedTeamMember.berry,
+    moves: replacedTeamMember.moves,
+    specialMove: replacedTeamMember.specialMove,
+    megaForm: replacedTeamMember.megaForm,
+    megaTypes: replacedTeamMember.megaTypes,
+    megaSpriteId: replacedTeamMember.megaSpriteId,
+    spriteVariant: replacedTeamMember.spriteVariant,
+    catchLocation: replacedTeamMember.catchLocation,
+    pairId: replacedTeamMember.pairId,
+  }
+  const boxMember = preserveSoulLinkPairingFields(
+    adaptUiMemberToSoulLinkMember(uiReplaced, pid),
+    replacedTeamMember,
+  )
+
+  setPlayerRoster(pid, {
+    team: roster.team.map((m) =>
+      m.id === draftAction.value.replaceTarget ? nextTeamMember : m,
+    ),
+    box: [
+      ...roster.box.filter((m) => m.id !== draftAction.value.boxPokemonId),
+      boxMember,
+    ],
+  })
+
+  updateReciprocalSoulLinkPairId(
+    draftAction.value.boxPokemonId,
+    nextTeamMember.id,
+  )
+  updateReciprocalSoulLinkPairId(draftAction.value.replaceTarget, boxMember.id)
+  reconcileSoulLinkPairing(pid, nextTeamMember.id, 'team')
+  reconcileSoulLinkPairing(pid, boxMember.id, 'box')
+}
+
+function confirmSoulLinkMemberUpdate(pid, rosterKey, memberId) {
+  const uiMember = buildPokemonMember(draftAction.value, { id: memberId })
+  const slMember = adaptUiMemberToSoulLinkMember(
+    { ...uiMember, catchLocation: draftAction.value.catchLocation ?? null },
+    pid,
+  )
+  const { id: _id, ownerPlayerId: _ownerId, ...updates } = slMember
+  updateRosterMember(pid, rosterKey, memberId, updates)
+  reconcileSoulLinkPairing(pid, memberId, rosterKey)
+}
+
+function handleSoulLinkDraftDeletion(pid) {
+  if (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) {
+    removeSoulLinkRosterMember(pid, 'team', draftAction.value.editId)
+  } else if (
+    draftAction.value.type === 'edit' &&
+    draftAction.value.isBoxPokemon
+  ) {
+    removeSoulLinkRosterMember(pid, 'box', draftAction.value.boxPokemonId)
+  }
+}
+
+function enterSoulLinkAddReplaceMode(pid) {
+  soulLinkSwapOriginalRoster.value = getSoulLinkRoster()
+
+  const tempMember = buildSoulLinkMemberFromDraft(
+    draftAction.value,
+    pid,
+    'temp',
+  )
+  addRosterMember(pid, 'box', tempMember)
+
+  draftAction.value = {
+    ...draftAction.value,
+    type: 'edit',
+    isBoxPokemon: true,
+    isAddReplace: true,
+    boxPokemonId: tempMember.id,
+  }
+
+  enterSwapMode()
+}
+
+function handleSoulLinkConfirmEdit(pid, newMember) {
+  if (draftAction.value.isBoxPokemon) {
+    if (draftAction.value.replaceTarget) {
+      confirmSoulLinkBoxPokemonReplace(pid, newMember)
+    } else {
+      confirmSoulLinkMemberUpdate(pid, 'box', draftAction.value.boxPokemonId)
+    }
+  } else {
+    confirmSoulLinkMemberUpdate(pid, 'team', draftAction.value.editId)
+  }
+}
+
 function handleSoulLinkConfirmDraft() {
   if (!draftAction.value) return
   const pid = viewedSoulLinkPlayerId.value
 
-  // Handle deletion (wizard mode: confirmed with no pokemon)
   if (!draftAction.value.pokemon) {
-    if (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) {
-      removeSoulLinkRosterMember(pid, 'team', draftAction.value.editId)
-    } else if (
-      draftAction.value.type === 'edit' &&
-      draftAction.value.isBoxPokemon
-    ) {
-      removeSoulLinkRosterMember(pid, 'box', draftAction.value.boxPokemonId)
-    }
+    handleSoulLinkDraftDeletion(pid)
     cancel()
     return
   }
@@ -1133,25 +1216,7 @@ function handleSoulLinkConfirmDraft() {
       addRosterMember(pid, 'team', newMember)
       reconcileSoulLinkPairing(pid, newMember.id, 'team')
     } else {
-      // Team full — enter replace mode
-      soulLinkSwapOriginalRoster.value = getSoulLinkRoster()
-
-      const tempMember = buildSoulLinkMemberFromDraft(
-        draftAction.value,
-        pid,
-        'temp',
-      )
-      addRosterMember(pid, 'box', tempMember)
-
-      draftAction.value = {
-        ...draftAction.value,
-        type: 'edit',
-        isBoxPokemon: true,
-        isAddReplace: true,
-        boxPokemonId: tempMember.id,
-      }
-
-      enterSwapMode()
+      enterSoulLinkAddReplaceMode(pid)
       return
     }
   } else if (draftAction.value.type === 'addToBox') {
@@ -1163,116 +1228,7 @@ function handleSoulLinkConfirmDraft() {
     addRosterMember(pid, 'box', boxMember)
     reconcileSoulLinkPairing(pid, boxMember.id, 'box')
   } else if (draftAction.value.type === 'edit') {
-    if (draftAction.value.isBoxPokemon) {
-      if (draftAction.value.replaceTarget) {
-        const roster = getSoulLinkRoster()
-        if (draftAction.value.replaceTarget.startsWith('empty-')) {
-          if (roster.team.length < 6) {
-            const boxedMember = roster.box.find(
-              (m) => m.id === draftAction.value.boxPokemonId,
-            )
-            const movedMember = preserveSoulLinkPairingFields(
-              newMember,
-              boxedMember,
-            )
-            addRosterMember(pid, 'team', movedMember)
-            removeSoulLinkRosterMember(
-              pid,
-              'box',
-              draftAction.value.boxPokemonId,
-            )
-            updateReciprocalSoulLinkPairId(
-              draftAction.value.boxPokemonId,
-              movedMember.id,
-            )
-            reconcileSoulLinkPairing(pid, movedMember.id, 'team')
-          }
-        } else {
-          // Replace existing team member — atomic via setPlayerRoster
-          const boxedMember = roster.box.find(
-            (m) => m.id === draftAction.value.boxPokemonId,
-          )
-          const replacedTeamMember = roster.team.find(
-            (m) => m.id === draftAction.value.replaceTarget,
-          )
-          if (boxedMember && replacedTeamMember) {
-            const nextTeamMember = preserveSoulLinkPairingFields(
-              newMember,
-              boxedMember,
-            )
-            const uiReplaced = {
-              id: generatePokemonId('box'),
-              name: replacedTeamMember.speciesName,
-              types: replacedTeamMember.types,
-              ability: replacedTeamMember.ability,
-              berry: replacedTeamMember.berry,
-              moves: replacedTeamMember.moves,
-              specialMove: replacedTeamMember.specialMove,
-              megaForm: replacedTeamMember.megaForm,
-              megaTypes: replacedTeamMember.megaTypes,
-              megaSpriteId: replacedTeamMember.megaSpriteId,
-              spriteVariant: replacedTeamMember.spriteVariant,
-              catchLocation: replacedTeamMember.catchLocation,
-              pairId: replacedTeamMember.pairId,
-            }
-            const boxMember = preserveSoulLinkPairingFields(
-              adaptUiMemberToSoulLinkMember(uiReplaced, pid),
-              replacedTeamMember,
-            )
-
-            setPlayerRoster(pid, {
-              team: roster.team.map((m) =>
-                m.id === draftAction.value.replaceTarget ? nextTeamMember : m,
-              ),
-              box: [
-                ...roster.box.filter(
-                  (m) => m.id !== draftAction.value.boxPokemonId,
-                ),
-                boxMember,
-              ],
-            })
-
-            updateReciprocalSoulLinkPairId(
-              draftAction.value.boxPokemonId,
-              nextTeamMember.id,
-            )
-            updateReciprocalSoulLinkPairId(
-              draftAction.value.replaceTarget,
-              boxMember.id,
-            )
-            reconcileSoulLinkPairing(pid, nextTeamMember.id, 'team')
-            reconcileSoulLinkPairing(pid, boxMember.id, 'box')
-          }
-        }
-      } else {
-        // Just update in box
-        const uiMember = buildPokemonMember(draftAction.value, {
-          id: draftAction.value.boxPokemonId,
-        })
-        const slMember = adaptUiMemberToSoulLinkMember(
-          {
-            ...uiMember,
-            catchLocation: draftAction.value.catchLocation ?? null,
-          },
-          pid,
-        )
-        const { id: _id, ownerPlayerId: _ownerId, ...updates } = slMember
-        updateRosterMember(pid, 'box', draftAction.value.boxPokemonId, updates)
-        reconcileSoulLinkPairing(pid, draftAction.value.boxPokemonId, 'box')
-      }
-    } else {
-      // Editing a team Pokemon
-      const uiMember = buildPokemonMember(draftAction.value, {
-        id: draftAction.value.editId,
-      })
-      const slMember = adaptUiMemberToSoulLinkMember(
-        { ...uiMember, catchLocation: draftAction.value.catchLocation ?? null },
-        pid,
-      )
-      const { id: _id, ownerPlayerId: _ownerId, ...updates } = slMember
-      updateRosterMember(pid, 'team', draftAction.value.editId, updates)
-      reconcileSoulLinkPairing(pid, draftAction.value.editId, 'team')
-    }
+    handleSoulLinkConfirmEdit(pid, newMember)
   }
 
   cancel()
@@ -1292,6 +1248,122 @@ function handleSoulLinkCancelSwap() {
   soulLinkSwapOriginalRoster.value = null
 }
 
+function soulLinkMemberToUiFields(member) {
+  return {
+    name: member.speciesName,
+    types: member.types,
+    ability: member.ability,
+    berry: member.berry,
+    moves: member.moves,
+    specialMove: member.specialMove,
+    megaForm: member.megaForm,
+    megaTypes: member.megaTypes,
+    megaSpriteId: member.megaSpriteId,
+    spriteVariant: member.spriteVariant,
+  }
+}
+
+function handleSoulLinkBoxToTeamSwap(targetId, pid, roster) {
+  const boxPokemonId = draftAction.value.boxPokemonId
+  const boxedMember = roster.box.find((member) => member.id === boxPokemonId)
+  const inHandMember = preserveSoulLinkPairingFields(
+    buildSoulLinkMemberFromDraft(draftAction.value, pid, 'team'),
+    boxedMember,
+  )
+
+  if (targetId === null) {
+    if (roster.team.length >= 6) return
+    addRosterMember(pid, 'team', inHandMember)
+    removeSoulLinkRosterMember(pid, 'box', boxPokemonId)
+    updateReciprocalSoulLinkPairId(boxPokemonId, inHandMember.id)
+    reconcileSoulLinkPairing(pid, inHandMember.id, 'team')
+    exitSwapMode()
+    return
+  }
+
+  const targetMember = roster.team.find((m) => m.id === targetId)
+  if (!targetMember) return
+
+  const nextTeamMember = { ...inHandMember, id: generatePokemonId('team') }
+  const newBoxMember = preserveSoulLinkPairingFields(
+    adaptUiMemberToSoulLinkMember(
+      {
+        id: generatePokemonId('box'),
+        ...soulLinkMemberToUiFields(targetMember),
+      },
+      pid,
+    ),
+    targetMember,
+  )
+
+  setPlayerRoster(pid, {
+    team: roster.team.map((m) => (m.id === targetId ? nextTeamMember : m)),
+    box: [...roster.box.filter((m) => m.id !== boxPokemonId), newBoxMember],
+  })
+
+  updateReciprocalSoulLinkPairId(boxPokemonId, nextTeamMember.id)
+  updateReciprocalSoulLinkPairId(targetId, newBoxMember.id)
+
+  updateInHandPokemon({
+    pokemonData: getSoulLinkGenRulesPokemonData(targetMember.speciesName),
+    ...soulLinkMemberToUiFields(targetMember),
+  })
+  refreshSoulLinkDraftMetadata(targetMember)
+  draftAction.value.boxPokemonId = newBoxMember.id
+}
+
+function handleSoulLinkTeamToBoxSwap(targetId, pid, roster) {
+  const teamPokemonId = draftAction.value.editId
+  const teamMember = roster.team.find((member) => member.id === teamPokemonId)
+  const inHandMember = preserveSoulLinkPairingFields(
+    buildSoulLinkMemberFromDraft(draftAction.value, pid, 'team'),
+    teamMember,
+  )
+
+  if (targetId === null) {
+    const boxMember = preserveSoulLinkPairingFields(
+      buildSoulLinkMemberFromDraft(draftAction.value, pid, 'box'),
+      teamMember,
+    )
+    addRosterMember(pid, 'box', boxMember)
+    removeSoulLinkRosterMember(pid, 'team', teamPokemonId)
+    updateReciprocalSoulLinkPairId(teamPokemonId, boxMember.id)
+    reconcileSoulLinkPairing(pid, boxMember.id, 'box')
+    exitSwapMode()
+    return
+  }
+
+  const targetMember = roster.box.find((m) => m.id === targetId)
+  if (!targetMember) return
+
+  const newTeamMember = preserveSoulLinkPairingFields(
+    adaptUiMemberToSoulLinkMember(
+      {
+        id: generatePokemonId('team'),
+        ...soulLinkMemberToUiFields(targetMember),
+      },
+      pid,
+    ),
+    targetMember,
+  )
+  const nextBoxMember = { ...inHandMember, id: generatePokemonId('box') }
+
+  setPlayerRoster(pid, {
+    team: roster.team.map((m) => (m.id === teamPokemonId ? newTeamMember : m)),
+    box: roster.box.map((m) => (m.id === targetId ? nextBoxMember : m)),
+  })
+
+  updateReciprocalSoulLinkPairId(targetId, newTeamMember.id)
+  updateReciprocalSoulLinkPairId(teamPokemonId, nextBoxMember.id)
+
+  updateInHandPokemon({
+    pokemonData: getSoulLinkGenRulesPokemonData(targetMember.speciesName),
+    ...soulLinkMemberToUiFields(targetMember),
+  })
+  refreshSoulLinkDraftMetadata(targetMember)
+  draftAction.value.editId = newTeamMember.id
+}
+
 function handleSoulLinkImmediateSwap(targetId) {
   if (!draftAction.value?.pokemon) return
 
@@ -1299,143 +1371,9 @@ function handleSoulLinkImmediateSwap(targetId) {
   const roster = getSoulLinkRoster()
 
   if (draftAction.value.isBoxPokemon) {
-    const boxPokemonId = draftAction.value.boxPokemonId
-    const boxedMember = roster.box.find((member) => member.id === boxPokemonId)
-    const inHandMember = preserveSoulLinkPairingFields(
-      buildSoulLinkMemberFromDraft(draftAction.value, pid, 'team'),
-      boxedMember,
-    )
-
-    if (targetId === null) {
-      if (roster.team.length >= 6) return
-      addRosterMember(pid, 'team', inHandMember)
-      removeSoulLinkRosterMember(pid, 'box', boxPokemonId)
-      updateReciprocalSoulLinkPairId(boxPokemonId, inHandMember.id)
-      reconcileSoulLinkPairing(pid, inHandMember.id, 'team')
-      exitSwapMode()
-      return
-    }
-
-    const targetMember = roster.team.find((m) => m.id === targetId)
-    if (!targetMember) return
-
-    const replacedPokemonData = getSoulLinkGenRulesPokemonData(
-      targetMember.speciesName,
-    )
-
-    const nextTeamMember = { ...inHandMember, id: generatePokemonId('team') }
-    const newBoxMember = preserveSoulLinkPairingFields(
-      adaptUiMemberToSoulLinkMember(
-        {
-          id: generatePokemonId('box'),
-          name: targetMember.speciesName,
-          types: targetMember.types,
-          ability: targetMember.ability,
-          berry: targetMember.berry,
-          moves: targetMember.moves,
-          specialMove: targetMember.specialMove,
-          megaForm: targetMember.megaForm,
-          megaTypes: targetMember.megaTypes,
-          megaSpriteId: targetMember.megaSpriteId,
-          spriteVariant: targetMember.spriteVariant,
-        },
-        pid,
-      ),
-      targetMember,
-    )
-
-    setPlayerRoster(pid, {
-      team: roster.team.map((m) => (m.id === targetId ? nextTeamMember : m)),
-      box: [...roster.box.filter((m) => m.id !== boxPokemonId), newBoxMember],
-    })
-
-    updateReciprocalSoulLinkPairId(boxPokemonId, nextTeamMember.id)
-    updateReciprocalSoulLinkPairId(targetId, newBoxMember.id)
-
-    updateInHandPokemon(
-      replacedPokemonData,
-      targetMember.ability,
-      targetMember.berry,
-      targetMember.moves,
-      targetMember.specialMove,
-      targetMember.megaForm,
-      targetMember.megaTypes,
-      targetMember.megaSpriteId,
-      targetMember.spriteVariant,
-    )
-    refreshSoulLinkDraftMetadata(targetMember)
-    draftAction.value.boxPokemonId = newBoxMember.id
+    handleSoulLinkBoxToTeamSwap(targetId, pid, roster)
   } else if (draftAction.value.isTeamPokemon) {
-    const teamPokemonId = draftAction.value.editId
-    const teamMember = roster.team.find((member) => member.id === teamPokemonId)
-    const inHandMember = preserveSoulLinkPairingFields(
-      buildSoulLinkMemberFromDraft(draftAction.value, pid, 'team'),
-      teamMember,
-    )
-
-    if (targetId === null) {
-      const boxMember = preserveSoulLinkPairingFields(
-        buildSoulLinkMemberFromDraft(draftAction.value, pid, 'box'),
-        teamMember,
-      )
-      addRosterMember(pid, 'box', boxMember)
-      removeSoulLinkRosterMember(pid, 'team', teamPokemonId)
-      updateReciprocalSoulLinkPairId(teamPokemonId, boxMember.id)
-      reconcileSoulLinkPairing(pid, boxMember.id, 'box')
-      exitSwapMode()
-    } else {
-      const targetMember = roster.box.find((m) => m.id === targetId)
-      if (!targetMember) return
-
-      const replacedPokemonData = getSoulLinkGenRulesPokemonData(
-        targetMember.speciesName,
-      )
-
-      const newTeamMember = preserveSoulLinkPairingFields(
-        adaptUiMemberToSoulLinkMember(
-          {
-            id: generatePokemonId('team'),
-            name: targetMember.speciesName,
-            types: targetMember.types,
-            ability: targetMember.ability,
-            berry: targetMember.berry,
-            moves: targetMember.moves,
-            specialMove: targetMember.specialMove,
-            megaForm: targetMember.megaForm,
-            megaTypes: targetMember.megaTypes,
-            megaSpriteId: targetMember.megaSpriteId,
-            spriteVariant: targetMember.spriteVariant,
-          },
-          pid,
-        ),
-        targetMember,
-      )
-      const nextBoxMember = { ...inHandMember, id: generatePokemonId('box') }
-
-      setPlayerRoster(pid, {
-        team: roster.team.map((m) =>
-          m.id === teamPokemonId ? newTeamMember : m,
-        ),
-        box: roster.box.map((m) => (m.id === targetId ? nextBoxMember : m)),
-      })
-
-      updateReciprocalSoulLinkPairId(targetId, newTeamMember.id)
-      updateReciprocalSoulLinkPairId(teamPokemonId, nextBoxMember.id)
-
-      updateInHandPokemon(
-        replacedPokemonData,
-        targetMember.ability,
-        targetMember.berry,
-        targetMember.moves,
-        targetMember.specialMove,
-        targetMember.megaForm,
-        targetMember.megaTypes,
-        targetMember.megaSpriteId,
-        targetMember.spriteVariant,
-      )
-      refreshSoulLinkDraftMetadata(targetMember)
-      draftAction.value.editId = newTeamMember.id
-    }
+    handleSoulLinkTeamToBoxSwap(targetId, pid, roster)
   }
 }
 
@@ -1457,16 +1395,7 @@ function handleSoulLinkSwapSuggestion({
       adaptUiMemberToSoulLinkMember(
         {
           id: generatePokemonId('team'),
-          name: boxMember.speciesName,
-          types: boxMember.types,
-          ability: boxMember.ability,
-          berry: boxMember.berry,
-          moves: boxMember.moves,
-          specialMove: boxMember.specialMove,
-          megaForm: boxMember.megaForm,
-          megaTypes: boxMember.megaTypes,
-          megaSpriteId: boxMember.megaSpriteId,
-          spriteVariant: boxMember.spriteVariant,
+          ...soulLinkMemberToUiFields(boxMember),
         },
         pid,
       ),
@@ -1477,16 +1406,7 @@ function handleSoulLinkSwapSuggestion({
       adaptUiMemberToSoulLinkMember(
         {
           id: generatePokemonId('box'),
-          name: teamMember.speciesName,
-          types: teamMember.types,
-          ability: teamMember.ability,
-          berry: teamMember.berry,
-          moves: teamMember.moves,
-          specialMove: teamMember.specialMove,
-          megaForm: teamMember.megaForm,
-          megaTypes: teamMember.megaTypes,
-          megaSpriteId: teamMember.megaSpriteId,
-          spriteVariant: teamMember.spriteVariant,
+          ...soulLinkMemberToUiFields(teamMember),
         },
         pid,
       ),

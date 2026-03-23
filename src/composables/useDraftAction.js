@@ -163,7 +163,7 @@ export function useDraftAction() {
     }
   }
 
-  function updateInHandPokemon(
+  function updateInHandPokemon({
     pokemonData,
     ability,
     berry,
@@ -173,7 +173,7 @@ export function useDraftAction() {
     megaTypes,
     megaSpriteId,
     spriteVariant,
-  ) {
+  }) {
     if (draftAction.value) {
       draftAction.value = {
         ...draftAction.value,

@@ -123,48 +123,60 @@ export function hasEffectiveMove(
   return false
 }
 
+function bonusTypeResistanceScore(gymType, bonusTypes, baseTypes, ruleset) {
+  let score = 0
+  for (const type of bonusTypes) {
+    if (!type || baseTypes.includes(type)) continue
+    score += resistanceOnlyPoints(getTypeEffectiveness(gymType, type, ruleset))
+  }
+  return score
+}
+
+function scoreMember(gymType, member, ruleset) {
+  const memberTypes = getMemberTypesForRules(member, ruleset)
+
+  let multiplier = getDefensiveMultiplier(gymType, memberTypes, ruleset)
+  multiplier = applyAbilityDefense(multiplier, gymType, member.ability)
+  let score = multiplierToPoints(multiplier)
+
+  // Protean: move types act as additional defensive types (resistances only)
+  const abilityData = ABILITIES[member.ability]
+  if (abilityData?.protean && member.moves?.length) {
+    score += bonusTypeResistanceScore(
+      gymType,
+      member.moves,
+      memberTypes,
+      ruleset,
+    )
+  }
+
+  // Mega evolution: extra types = resistances only (like Protean)
+  if (member.megaTypes?.length) {
+    score += bonusTypeResistanceScore(
+      gymType,
+      member.megaTypes,
+      memberTypes,
+      ruleset,
+    )
+  }
+
+  // Check offensive coverage
+  if (hasEffectiveMove(member.moves, gymType, member.specialMove, ruleset)) {
+    score += 1
+  }
+
+  return score
+}
+
 export function calculateScore(
   gymType,
   team,
   ruleset = DEFAULT_GENERATION_RULESET,
 ) {
   let score = 0
-
   for (const member of team) {
-    const memberTypes = getMemberTypesForRules(member, ruleset)
-
-    // Calculate defensive multiplier
-    let multiplier = getDefensiveMultiplier(gymType, memberTypes, ruleset)
-    multiplier = applyAbilityDefense(multiplier, gymType, member.ability)
-    score += multiplierToPoints(multiplier)
-
-    // Protean: move types act as additional defensive types (resistances only)
-    const abilityData = ABILITIES[member.ability]
-    if (abilityData?.protean && member.moves?.length) {
-      for (const moveType of member.moves) {
-        // Skip empty moves and types already covered by base types
-        if (!moveType || memberTypes.includes(moveType)) continue
-        const moveMultiplier = getTypeEffectiveness(gymType, moveType, ruleset)
-        // Only count resistances, not weaknesses - user can choose not to use that move
-        score += resistanceOnlyPoints(moveMultiplier)
-      }
-    }
-
-    // Mega evolution: extra types = resistances only (like Protean)
-    if (member.megaTypes?.length) {
-      for (const megaType of member.megaTypes) {
-        if (memberTypes.includes(megaType)) continue
-        const megaMultiplier = getTypeEffectiveness(gymType, megaType, ruleset)
-        score += resistanceOnlyPoints(megaMultiplier)
-      }
-    }
-
-    // Check offensive coverage
-    if (hasEffectiveMove(member.moves, gymType, member.specialMove, ruleset)) {
-      score += 1
-    }
+    score += scoreMember(gymType, member, ruleset)
   }
-
   return score
 }
 

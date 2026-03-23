@@ -9,9 +9,9 @@
  * Usage: node scripts/fetch-evolutions.js
  */
 
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -67,10 +67,7 @@ function formatName(name) {
   // Standard capitalization
   return name.split('-').map(word =>
     word.charAt(0).toUpperCase() + word.slice(1)
-  ).join('-').replace(/-/g, match => {
-    // Keep hyphens for compound names that use them
-    return ' '
-  }).trim()
+  ).join(' ').trim()
 }
 
 // Build evolution map from chain data
@@ -134,7 +131,7 @@ function updatePokemonFile(evolutionMap) {
   }
 
   // Extract all Pokemon entries
-  const entriesRegex = /\{\s*name:\s*"([^"]+)",\s*types:\s*\[([^\]]*)\](?:,\s*evolvesTo:\s*(?:"[^"]+"|[\[][^\]]*\]))?\s*\}/g
+  const entriesRegex = /\{ name: "([^"]+)", types: \[([^\]]*)](?:, evolvesTo: (?:"[^"]+"|\[[^\]]*]))? \}/g
 
   let newContent = content
   let match
@@ -166,25 +163,21 @@ function updatePokemonFile(evolutionMap) {
   fs.writeFileSync(POKEMON_FILE, newContent)
 }
 
-async function main() {
-  try {
-    const evolutionMap = await fetchAllEvolutionChains()
+try {
+  const evolutionMap = await fetchAllEvolutionChains()
 
-    console.log(`\nFound evolutions for ${Object.keys(evolutionMap).length} Pokemon`)
+  console.log(`\nFound evolutions for ${Object.keys(evolutionMap).length} Pokemon`)
 
-    // Log some examples
-    console.log('\nExamples:')
-    console.log('  Bulbasaur ->', evolutionMap['Bulbasaur'])
-    console.log('  Eevee ->', evolutionMap['Eevee'])
-    console.log('  Poliwhirl ->', evolutionMap['Poliwhirl'])
+  // Log some examples
+  console.log('\nExamples:')
+  console.log('  Bulbasaur ->', evolutionMap['Bulbasaur'])
+  console.log('  Eevee ->', evolutionMap['Eevee'])
+  console.log('  Poliwhirl ->', evolutionMap['Poliwhirl'])
 
-    updatePokemonFile(evolutionMap)
+  updatePokemonFile(evolutionMap)
 
-    console.log('\nDone! pokemon.js has been updated with evolution data.')
-  } catch (error) {
-    console.error('Error:', error)
-    process.exit(1)
-  }
+  console.log('\nDone! pokemon.js has been updated with evolution data.')
+} catch (error) {
+  console.error('Error:', error)
+  process.exit(1)
 }
-
-main()

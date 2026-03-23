@@ -1,7 +1,7 @@
 import { TYPE_COLORS } from '../data/types.js'
 
 export function hexToRgba(hex, alpha) {
-  const num = parseInt(hex.replace('#', ''), 16)
+  const num = Number.parseInt(hex.replace('#', ''), 16)
   const r = (num >> 16) & 255
   const g = (num >> 8) & 255
   const b = num & 255

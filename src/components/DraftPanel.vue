@@ -454,7 +454,7 @@ function focusPokemonInput() {
   if (props.hideSearch || !pokemonInputRef.value) return
 
   // Skip auto-focus on touch devices (iOS blocks async programmatic focus)
-  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return
+  if ('ontouchstart' in globalThis || navigator.maxTouchPoints > 0) return
 
   const focusInput = () => {
     const inputEl = pokemonInputRef.value?.$el?.querySelector('input')
@@ -623,7 +623,7 @@ const canEvolve = computed(() => {
 
 const evolutionOptions = computed(() => {
   const evo = effectiveDraftPokemon.value?.evolvesTo
-  const evoList = evo ? (Array.isArray(evo) ? evo : [evo]) : []
+  const evoList = evo ? [].concat(evo) : []
   // Add mega options as special entries
   const megas = megaOptions.value.map((mega) => ({
     isMega: true,
