@@ -748,8 +748,8 @@ function handleImmediateSwap(targetId) {
 
 function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
   swapOriginalState.value = {
-    team: structuredClone(team.value),
-    box: structuredClone(box.value),
+    team: JSON.parse(JSON.stringify(team.value)),
+    box: JSON.parse(JSON.stringify(box.value)),
   }
 
   if (isTeamMember) {
@@ -853,8 +853,8 @@ function handleDraftDeletion() {
 
 function enterAddReplaceMode() {
   swapOriginalState.value = {
-    team: structuredClone(team.value),
-    box: structuredClone(box.value),
+    team: JSON.parse(JSON.stringify(team.value)),
+    box: JSON.parse(JSON.stringify(box.value)),
   }
 
   const tempBoxMember = buildPokemonMember(draftAction.value, {
