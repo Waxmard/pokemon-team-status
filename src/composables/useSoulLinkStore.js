@@ -326,16 +326,18 @@ function normalizeCreateLocalRunOptions(options = {}) {
 function buildPersistableSnapshot() {
   const runState = getSoulLinkRunState('Building persistable snapshot')
   const sl = runState.soulLink
-  return {
-    generationRules: runState.rules.generation,
-    metadata: sl.metadata,
-    players: sl.players,
-    rosters: sl.rosters,
-    progress: sl.progress,
-    sync: sl.sync,
-    activity: sl.activity,
-    local: sl.local,
-  }
+  return JSON.parse(
+    JSON.stringify({
+      generationRules: runState.rules.generation,
+      metadata: sl.metadata,
+      players: sl.players,
+      rosters: sl.rosters,
+      progress: sl.progress,
+      sync: sl.sync,
+      activity: sl.activity,
+      local: sl.local,
+    }),
+  )
 }
 
 function replaceSoulLinkState(nextSoulLinkState) {
