@@ -49,7 +49,7 @@
       <!-- Grid view -->
       <div v-if="!showDraftPanel || swapMode" :key="'grid-' + viewMode">
         <!-- Team Grid -->
-        <div v-if="viewMode === 'team'" class="team-grid">
+        <div v-if="viewMode === 'team'" class="slot-grid">
           <TeamSlot
             v-for="pokemon in team"
             :key="pokemon.id"
@@ -70,7 +70,7 @@
         </div>
 
         <!-- Box Grid -->
-        <div v-else class="box-grid">
+        <div v-else class="slot-grid slot-grid-scrollable">
           <TeamSlot
             v-for="pokemon in box"
             :key="pokemon.id"
@@ -456,7 +456,7 @@ function handleDeleteBoxPokemon(id) {
   line-height: 1;
 }
 
-.team-grid {
+.slot-grid {
   position: relative;
   display: grid;
   grid-template-columns: 1fr;
@@ -464,14 +464,12 @@ function handleDeleteBoxPokemon(id) {
   margin-bottom: var(--space-4);
 }
 
-.box-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
+.slot-grid-scrollable {
   max-height: 715px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding: 0 var(--space-3) var(--space-3);
+  margin: 0 calc(-1 * var(--space-3));
 }
 
 /* Content fade out/in (grid and panel transitions) */
