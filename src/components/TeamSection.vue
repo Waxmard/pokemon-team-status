@@ -15,10 +15,10 @@
       <span class="add-icon">+</span>
     </button>
 
-    <!-- Delete Button (when editing a Pokemon) -->
+    <!-- Delete Button - mobile only (when editing a Pokemon) -->
     <button
       v-if="!readOnly && isEditing && showDraftPanel"
-      class="add-button delete-mode"
+      class="add-button delete-mode mobile-only"
       @click="handleDeleteClick"
     >
       <span class="add-icon">🗑</span>
@@ -91,19 +91,29 @@
       </div>
 
       <!-- Draft Panel -->
-      <DraftPanel
-        v-else
-        key="panel"
-        :team="team"
-        :box="box"
-        :defeated-gyms="defeatedGyms"
-        :pinned-gym="pinnedGym"
-        :partner-roster="partnerRoster"
-        :is-soul-link-mode="isSoulLinkMode"
-        @confirm="$emit('confirmDraft')"
-        @cancel="cancel"
-        @swapSuggestion="handleSwapSuggestion"
-      />
+      <div v-else key="panel" class="draft-panel-wrapper" @click.self="cancel">
+        <div class="draft-dialog-container">
+          <DraftPanel
+            :team="team"
+            :box="box"
+            :defeated-gyms="defeatedGyms"
+            :pinned-gym="pinnedGym"
+            :partner-roster="partnerRoster"
+            :is-soul-link-mode="isSoulLinkMode"
+            @confirm="$emit('confirmDraft')"
+            @cancel="cancel"
+            @swapSuggestion="handleSwapSuggestion"
+          />
+          <!-- Delete Button - desktop only -->
+          <button
+            v-if="!readOnly && isEditing"
+            class="add-button delete-mode desktop-only"
+            @click="handleDeleteClick"
+          >
+            <span class="add-icon">🗑</span>
+          </button>
+        </div>
+      </div>
     </Transition>
     </div>
     </Transition>
@@ -477,7 +487,7 @@ function handleDeleteBoxPokemon(id) {
 /* Content fade out/in (grid and panel transitions) */
 .content-fade-enter-active,
 .content-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity var(--transition-base), transform var(--transition-base);
 }
 
 .content-fade-enter-from,
@@ -486,9 +496,10 @@ function handleDeleteBoxPokemon(id) {
   transform: scale(0.98);
 }
 
+
 .section-collapse-enter-active,
 .section-collapse-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity var(--transition-slow), transform var(--transition-slow);
   overflow: hidden;
 }
 
@@ -565,6 +576,91 @@ function handleDeleteBoxPokemon(id) {
 
   .add-button {
     bottom: var(--space-2);
+  }
+}
+
+@media (max-width: 1023px) {
+  .desktop-only {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-only {
+    display: none;
+  }
+
+  .slot-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mode-toggle {
+    width: 56px;
+    height: 56px;
+    left: auto;
+    right: var(--space-4);
+  }
+
+  .mode-toggle :deep(.sprite-wrapper) {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .mode-icon {
+    font-size: 1.75rem;
+  }
+
+  .add-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .add-icon {
+    font-size: 1.4rem;
+  }
+
+  .swap-action-buttons {
+    left: auto;
+    right: calc(var(--space-4) + 56px + var(--space-2));
+  }
+
+  .swap-action-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .action-icon {
+    font-size: 1.1rem;
+  }
+
+  .draft-panel-wrapper {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn var(--transition-base) ease forwards;
+  }
+
+  .draft-dialog-container {
+    position: relative;
+  }
+
+  .draft-dialog-container :deep(.draft-panel) {
+    width: 650px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    animation: scaleIn var(--transition-base) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .draft-dialog-container .delete-mode {
+    position: absolute;
+    bottom: calc(-1 * var(--space-8) - var(--space-4));
+    right: var(--space-4);
   }
 }
 </style>
