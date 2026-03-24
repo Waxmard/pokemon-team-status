@@ -4,6 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   base: '/',
+  build: {
+    chunkSizeWarningLimit: 1000,
+  },
   server: {
     host: true,
     port: 4173,
@@ -27,7 +30,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['types/*.svg', 'icons/*.png'],
       devOptions: {
-        enabled: true,
+        enabled: false,
       },
       manifest: {
         name: 'Pokemon Team Weakness Calculator',

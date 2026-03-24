@@ -18,7 +18,7 @@ export function adaptUiMemberToSoulLinkMember(uiMember, playerId) {
     megaTypes: uiMember.megaTypes ?? null,
     megaSpriteId: uiMember.megaSpriteId ?? null,
     spriteVariant: uiMember.spriteVariant ?? 'default',
-    nickname: null,
+    nickname: uiMember.nickname ?? null,
     catchLocation: uiMember.catchLocation ?? null,
     pairId: uiMember.pairId ?? null,
   }
@@ -44,7 +44,7 @@ export function buildSoulLinkMemberFromDraft(
     megaTypes: draftAction.megaTypes ?? null,
     megaSpriteId: draftAction.megaSpriteId ?? null,
     spriteVariant: draftAction.spriteVariant ?? 'default',
-    nickname: null,
+    nickname: draftAction.nickname ?? null,
     catchLocation: draftAction.catchLocation ?? null,
     pairId: draftAction.pairId ?? null,
   }
@@ -65,6 +65,7 @@ export function adaptSoulLinkMemberToUiMember(member) {
     megaTypes: member.megaTypes ?? null,
     megaSpriteId: member.megaSpriteId ?? null,
     spriteVariant: member.spriteVariant ?? 'default',
+    nickname: member.nickname ?? null,
     catchLocation: member.catchLocation ?? null,
     pairId: member.pairId ?? null,
   }
