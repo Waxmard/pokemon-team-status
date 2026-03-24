@@ -1089,6 +1089,7 @@ function onSelectPokemon(value) {
   font-size: 1.1rem;
   margin-bottom: 0;
   text-align: left;
+  white-space: nowrap;
 }
 
 .wizard-title-input {
@@ -1118,6 +1119,7 @@ function onSelectPokemon(value) {
   pointer-events: none;
   font-size: 1.1rem;
   font-weight: 700;
+  white-space: nowrap;
   background-image: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

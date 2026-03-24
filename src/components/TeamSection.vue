@@ -615,7 +615,7 @@ function handleDeleteBoxPokemon(id) {
   }
 
   .draft-panel-wrapper :deep(.draft-panel) {
-    width: 550px;
+    width: 650px;
     max-height: 80vh;
     overflow-y: auto;
     border-radius: var(--radius-xl);
