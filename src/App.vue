@@ -159,7 +159,7 @@
 
 <script setup>
 import { NConfigProvider } from 'naive-ui'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import GymColumns from './components/GymColumns.vue'
 import SoulLinkShell from './components/SoulLinkShell.vue'
 import TeamSection from './components/TeamSection.vue'
@@ -1468,7 +1468,16 @@ function handleSoulLinkSwapSuggestion({
   enterSwapMode()
 }
 
+function handleVisibilityChange() {
+  if (document.hidden || isSoloMode.value || !hasRemoteSession.value) return
+  syncSoulLinkSession().catch((err) =>
+    console.error('Foreground re-sync failed:', err),
+  )
+}
+
 onMounted(async () => {
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+
   const initialRunMode = loadCurrentRunMode()
 
   if (initialRunMode === RUN_MODES.SOLO) {
@@ -1483,6 +1492,10 @@ onMounted(async () => {
       .then(() => subscribeSoulLink())
       .catch((err) => console.error('Auto-sync on mount failed:', err))
   }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
 
