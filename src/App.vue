@@ -508,6 +508,9 @@ watch(swapMode, (isSwapMode) => {
     }
   } else {
     swapOriginalState.value = null
+    if (!isSoloMode.value) {
+      triggerSync()
+    }
   }
 })
 
