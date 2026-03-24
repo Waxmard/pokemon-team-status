@@ -4,6 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   base: '/',
+  build: {
+    chunkSizeWarningLimit: 1000,
+  },
   server: {
     host: true,
     port: 4173,
