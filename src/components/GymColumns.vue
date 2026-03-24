@@ -327,7 +327,7 @@ function handlePin(type) {
   border-radius: var(--radius-xl);
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
-  animation: fadeSlideIn 0.2s ease;
+  animation: fadeSlideIn var(--transition-base);
   transition: opacity var(--transition-fast);
 }
 
@@ -383,6 +383,41 @@ function handlePin(type) {
 
   .gyms-label {
     display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .gyms-header {
+    top: var(--space-2);
+    right: calc(var(--space-4) + var(--space-4));
+  }
+
+  .suggestion-inline {
+    border: none;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+    position: relative;
+    right: var(--space-3);
+    top: calc(var(--space-1) / 2);
+  }
+
+  .gyms-label {
+    display: none;
+  }
+
+  .suggestion-inline :deep(.sprite-wrapper) {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .suggestion-swap-icon {
+    font-size: 1rem;
+  }
+
+  .suggestion-indicator {
+    font-size: 0.8rem;
   }
 }
 </style>

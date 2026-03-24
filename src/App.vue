@@ -60,6 +60,7 @@
   </n-config-provider>
 
   <Teleport to="body">
+    <Transition name="dialog">
     <div v-if="showResetDialog" class="reset-overlay" @click.self="showResetDialog = false">
       <div class="reset-dialog">
         <h3 class="reset-dialog-title">Options</h3>
@@ -108,9 +109,11 @@
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
       </div>
     </div>
+    </Transition>
   </Teleport>
 
   <Teleport to="body">
+    <Transition name="dialog">
     <div v-if="linkedDeleteTarget" class="reset-overlay"
          @click.self="linkedDeleteTarget = null">
       <div class="reset-dialog">
@@ -128,9 +131,11 @@
                 @click="linkedDeleteTarget = null">✕</button>
       </div>
     </div>
+    </Transition>
   </Teleport>
 
   <Teleport to="body">
+    <Transition name="dialog">
     <div v-if="showSoulLinkDialog" class="reset-overlay" @click.self="showSoulLinkDialog = false">
       <div class="reset-dialog">
         <h3 class="reset-dialog-title">Soul Link</h3>
@@ -148,12 +153,13 @@
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
       </div>
     </div>
+    </Transition>
   </Teleport>
 </template>
 
 <script setup>
 import { NConfigProvider } from 'naive-ui'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import GymColumns from './components/GymColumns.vue'
 import SoulLinkShell from './components/SoulLinkShell.vue'
 import TeamSection from './components/TeamSection.vue'
@@ -502,6 +508,9 @@ watch(swapMode, (isSwapMode) => {
     }
   } else {
     swapOriginalState.value = null
+    if (!isSoloMode.value) {
+      triggerSync()
+    }
   }
 })
 
@@ -1462,7 +1471,16 @@ function handleSoulLinkSwapSuggestion({
   enterSwapMode()
 }
 
+function handleVisibilityChange() {
+  if (document.hidden || isSoloMode.value || !hasRemoteSession.value) return
+  syncSoulLinkSession().catch((err) =>
+    console.error('Foreground re-sync failed:', err),
+  )
+}
+
 onMounted(async () => {
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+
   const initialRunMode = loadCurrentRunMode()
 
   if (initialRunMode === RUN_MODES.SOLO) {
@@ -1477,6 +1495,10 @@ onMounted(async () => {
       .then(() => subscribeSoulLink())
       .catch((err) => console.error('Auto-sync on mount failed:', err))
   }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
 
@@ -1612,9 +1634,36 @@ onMounted(async () => {
     bottom: 0;
   }
 }
+
+@media (min-width: 1024px) {
+  .app-container {
+    max-width: 1200px;
+  }
+}
 </style>
 
 <style>
+.dialog-enter-active,
+.dialog-leave-active {
+  transition: opacity var(--transition-base);
+}
+
+.dialog-enter-from,
+.dialog-leave-to {
+  opacity: 0;
+}
+
+.dialog-enter-active .reset-dialog,
+.dialog-leave-active .reset-dialog {
+  transition: transform var(--transition-base), opacity var(--transition-base);
+}
+
+.dialog-enter-from .reset-dialog,
+.dialog-leave-to .reset-dialog {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
 .reset-overlay {
   position: fixed;
   inset: 0;
@@ -1623,7 +1672,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: fadeIn var(--transition-fast) ease forwards;
 }
 
 .reset-dialog {
@@ -1634,7 +1682,6 @@ onMounted(async () => {
   min-width: 220px;
   text-align: center;
   position: relative;
-  animation: scaleIn var(--transition-base) ease forwards;
 }
 
 .reset-dialog-title {
@@ -1791,4 +1838,5 @@ onMounted(async () => {
     min-width: 0;
   }
 }
+
 </style>

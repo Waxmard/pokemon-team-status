@@ -262,4 +262,26 @@ onUnmounted(() => {
     margin: 0;
   }
 }
+
+@media (min-width: 1024px) {
+  .column-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .column-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+  }
+
+  .gym-list {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-3);
+  }
+}
 </style>
