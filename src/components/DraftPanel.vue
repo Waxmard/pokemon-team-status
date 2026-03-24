@@ -1067,7 +1067,7 @@ function onSelectPokemon(value) {
 }
 
 .wizard-step {
-  animation: fadeSlideIn 0.2s ease;
+  animation: fadeSlideIn var(--transition-base);
   flex: 1;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1155,7 +1155,7 @@ function onSelectPokemon(value) {
   align-items: center;
   gap: var(--space-1);
   cursor: pointer;
-  animation: fadeSlideIn 0.2s ease;
+  animation: fadeSlideIn var(--transition-base);
 }
 
 .suggestion-inline:active {

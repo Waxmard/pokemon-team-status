@@ -327,7 +327,7 @@ function handlePin(type) {
   border-radius: var(--radius-xl);
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
-  animation: fadeSlideIn 0.2s ease;
+  animation: fadeSlideIn var(--transition-base);
   transition: opacity var(--transition-fast);
 }
 

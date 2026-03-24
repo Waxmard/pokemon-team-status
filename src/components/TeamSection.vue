@@ -487,7 +487,7 @@ function handleDeleteBoxPokemon(id) {
 /* Content fade out/in (grid and panel transitions) */
 .content-fade-enter-active,
 .content-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity var(--transition-base), transform var(--transition-base);
 }
 
 .content-fade-enter-from,
@@ -499,7 +499,7 @@ function handleDeleteBoxPokemon(id) {
 
 .section-collapse-enter-active,
 .section-collapse-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity var(--transition-slow), transform var(--transition-slow);
   overflow: hidden;
 }
 

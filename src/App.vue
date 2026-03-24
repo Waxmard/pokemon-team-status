@@ -60,6 +60,7 @@
   </n-config-provider>
 
   <Teleport to="body">
+    <Transition name="dialog">
     <div v-if="showResetDialog" class="reset-overlay" @click.self="showResetDialog = false">
       <div class="reset-dialog">
         <h3 class="reset-dialog-title">Options</h3>
@@ -108,9 +109,11 @@
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
       </div>
     </div>
+    </Transition>
   </Teleport>
 
   <Teleport to="body">
+    <Transition name="dialog">
     <div v-if="linkedDeleteTarget" class="reset-overlay"
          @click.self="linkedDeleteTarget = null">
       <div class="reset-dialog">
@@ -128,9 +131,11 @@
                 @click="linkedDeleteTarget = null">✕</button>
       </div>
     </div>
+    </Transition>
   </Teleport>
 
   <Teleport to="body">
+    <Transition name="dialog">
     <div v-if="showSoulLinkDialog" class="reset-overlay" @click.self="showSoulLinkDialog = false">
       <div class="reset-dialog">
         <h3 class="reset-dialog-title">Soul Link</h3>
@@ -148,6 +153,7 @@
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
       </div>
     </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -1621,6 +1627,27 @@ onMounted(async () => {
 </style>
 
 <style>
+.dialog-enter-active,
+.dialog-leave-active {
+  transition: opacity var(--transition-base);
+}
+
+.dialog-enter-from,
+.dialog-leave-to {
+  opacity: 0;
+}
+
+.dialog-enter-active .reset-dialog,
+.dialog-leave-active .reset-dialog {
+  transition: transform var(--transition-base), opacity var(--transition-base);
+}
+
+.dialog-enter-from .reset-dialog,
+.dialog-leave-to .reset-dialog {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
 .reset-overlay {
   position: fixed;
   inset: 0;
@@ -1629,7 +1656,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: fadeIn var(--transition-fast) ease forwards;
 }
 
 .reset-dialog {
@@ -1640,7 +1666,6 @@ onMounted(async () => {
   min-width: 220px;
   text-align: center;
   position: relative;
-  animation: scaleIn var(--transition-base) ease forwards;
 }
 
 .reset-dialog-title {

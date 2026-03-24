@@ -42,8 +42,8 @@
   --shadow-glow-danger: 0 0 12px rgba(239, 68, 68, 0.3);
 
   /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 200ms ease;
+  --transition-fast: 200ms ease;
+  --transition-base: 250ms ease;
   --transition-slow: 300ms ease;
 }
 
