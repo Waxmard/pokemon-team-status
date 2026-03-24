@@ -262,8 +262,8 @@ const rowBackgroundStyle = computed(() => {
 
 @media (min-width: 1024px) {
   .type-icon {
-    width: 64px;
-    height: 64px;
+    width: 72px;
+    height: 72px;
   }
 
   .berry-corner :deep(.sprite-wrapper) {
@@ -272,7 +272,7 @@ const rowBackgroundStyle = computed(() => {
   }
 
   .score-corner {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
   }
 
   .drag-handle {

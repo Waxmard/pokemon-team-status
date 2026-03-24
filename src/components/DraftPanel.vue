@@ -1499,17 +1499,7 @@ function onSelectPokemon(value) {
 
   .moves-type-grid,
   .berry-type-grid {
-    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-  }
-
-  .move-type-option .type-icon {
-    width: 56px;
-    height: 56px;
-  }
-
-  .berry-type-option :deep(.sprite-wrapper) {
-    width: 44px !important;
-    height: 44px !important;
+    grid-template-columns: repeat(6, 1fr);
   }
 
   .suggestion-inline :deep(.sprite-wrapper) {
