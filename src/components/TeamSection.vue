@@ -27,6 +27,7 @@
     <!-- Mode Toggle Button (long-press to collapse) -->
     <button
       class="mode-toggle"
+      :class="{ 'draft-open': showDraftPanel }"
       @click="handleModeClick"
       @mousedown="startLongPress"
       @mouseup="cancelLongPress"
@@ -111,6 +112,14 @@
             @click="handleDeleteClick"
           >
             <span class="add-icon">🗑</span>
+          </button>
+          <!-- Swap Button - desktop only -->
+          <button
+            v-if="isEditingForSwap"
+            class="add-button swap-mode-btn desktop-only"
+            @click="enterSwapMode()"
+          >
+            <span class="add-icon">⇄</span>
           </button>
         </div>
       </div>
@@ -439,6 +448,10 @@ function handleDeleteBoxPokemon(id) {
   font-size: 1rem;
 }
 
+.swap-mode-btn .add-icon {
+  color: var(--color-primary);
+}
+
 .mode-toggle {
   position: absolute;
   top: calc(-1 * var(--space-8) - var(--space-2));
@@ -601,6 +614,10 @@ function handleDeleteBoxPokemon(id) {
     right: var(--space-4);
   }
 
+  .mode-toggle.draft-open {
+    display: none;
+  }
+
   .mode-toggle :deep(.sprite-wrapper) {
     width: 40px !important;
     height: 40px !important;
@@ -660,6 +677,12 @@ function handleDeleteBoxPokemon(id) {
   .draft-dialog-container .delete-mode {
     position: absolute;
     bottom: calc(-1 * var(--space-8) - var(--space-4));
+    right: var(--space-4);
+  }
+
+  .draft-dialog-container .swap-mode-btn {
+    position: absolute;
+    top: calc(-1 * var(--space-8));
     right: var(--space-4);
   }
 }
