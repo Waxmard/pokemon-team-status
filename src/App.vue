@@ -1080,6 +1080,7 @@ function refreshSoulLinkDraftMetadata(member) {
   if (!draftAction.value) return
   draftAction.value.catchLocation = member?.catchLocation ?? null
   draftAction.value.pairId = member?.pairId ?? null
+  draftAction.value.nickname = member?.nickname ?? null
 }
 
 // --- Soul Link confirm draft handler ---
@@ -1449,6 +1450,7 @@ function handleSoulLinkSwapSuggestion({
       spriteVariant: teamMember.spriteVariant || 'default',
       catchLocation: teamMember.catchLocation || null,
       pairId: teamMember.pairId || null,
+      nickname: teamMember.nickname || null,
     }
   } else {
     handleSoulLinkImmediateSwap(candidateId)
