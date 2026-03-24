@@ -385,4 +385,19 @@ function handlePin(type) {
     display: none;
   }
 }
+
+@media (min-width: 1024px) {
+  .suggestion-inline :deep(.sprite-wrapper) {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .suggestion-swap-icon {
+    font-size: 1rem;
+  }
+
+  .suggestion-indicator {
+    font-size: 0.8rem;
+  }
+}
 </style>

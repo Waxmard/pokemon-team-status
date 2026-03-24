@@ -262,4 +262,10 @@ onUnmounted(() => {
     margin: 0;
   }
 }
+
+@media (min-width: 1024px) {
+  .gym-list {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
 </style>

@@ -85,4 +85,10 @@ defineEmits([
     display: contents;
   }
 }
+
+@media (min-width: 1024px) {
+  .soul-link-player-view {
+    display: contents;
+  }
+}
 </style>

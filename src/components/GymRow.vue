@@ -260,4 +260,25 @@ const rowBackgroundStyle = computed(() => {
   cursor: grabbing;
 }
 
+@media (min-width: 1024px) {
+  .type-icon {
+    width: 64px;
+    height: 64px;
+  }
+
+  .berry-corner :deep(.sprite-wrapper) {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .score-corner {
+    font-size: 1.1rem;
+  }
+
+  .drag-handle {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
+  }
+}
 </style>

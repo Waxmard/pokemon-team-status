@@ -567,4 +567,50 @@ function handleDeleteBoxPokemon(id) {
     bottom: var(--space-2);
   }
 }
+
+@media (min-width: 1024px) {
+  .team-section-wrapper {
+    align-self: flex-start;
+  }
+
+  .mode-toggle {
+    width: 56px;
+    height: 56px;
+    left: var(--space-4);
+    right: auto;
+  }
+
+  .mode-toggle :deep(.sprite-wrapper) {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .mode-icon {
+    font-size: 1.75rem;
+  }
+
+  .add-button {
+    width: 44px;
+    height: 44px;
+    bottom: var(--space-2);
+  }
+
+  .add-icon {
+    font-size: 1.4rem;
+  }
+
+  .swap-action-buttons {
+    left: calc(var(--space-4) + 56px + var(--space-2));
+    right: auto;
+  }
+
+  .swap-action-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .action-icon {
+    font-size: 1.1rem;
+  }
+}
 </style>

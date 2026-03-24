@@ -289,4 +289,31 @@ const cardBackgroundStyle = computed(() => {
   background: rgba(255, 255, 255, 0.1);
   white-space: nowrap;
 }
+
+@media (min-width: 1024px) {
+  .sprite-container :deep(.sprite-wrapper) {
+    width: 108px !important;
+    height: 108px !important;
+  }
+
+  .move-type-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .pokemon-badges :deep(.berry-icon) {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .slot-inner > :deep(.partner-sprite) {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .special-move-badge,
+  .ability-badge {
+    font-size: 0.85rem;
+  }
+}
 </style>
