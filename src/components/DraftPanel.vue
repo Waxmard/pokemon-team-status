@@ -1491,20 +1491,4 @@ function onSelectPokemon(value) {
   }
 }
 
-@media (min-width: 1024px) {
-  .wizard-container {
-    min-height: 240px;
-    max-height: 420px;
-  }
-
-  .moves-type-grid,
-  .berry-type-grid {
-    grid-template-columns: repeat(6, 1fr);
-  }
-
-  .suggestion-inline :deep(.sprite-wrapper) {
-    width: 32px !important;
-    height: 32px !important;
-  }
-}
 </style>

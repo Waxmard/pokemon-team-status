@@ -91,19 +91,19 @@
       </div>
 
       <!-- Draft Panel -->
-      <DraftPanel
-        v-else
-        key="panel"
-        :team="team"
-        :box="box"
-        :defeated-gyms="defeatedGyms"
-        :pinned-gym="pinnedGym"
-        :partner-roster="partnerRoster"
-        :is-soul-link-mode="isSoulLinkMode"
-        @confirm="$emit('confirmDraft')"
-        @cancel="cancel"
-        @swapSuggestion="handleSwapSuggestion"
-      />
+      <div v-else key="panel" class="draft-panel-wrapper" @click.self="cancel">
+        <DraftPanel
+          :team="team"
+          :box="box"
+          :defeated-gyms="defeatedGyms"
+          :pinned-gym="pinnedGym"
+          :partner-roster="partnerRoster"
+          :is-soul-link-mode="isSoulLinkMode"
+          @confirm="$emit('confirmDraft')"
+          @cancel="cancel"
+          @swapSuggestion="handleSwapSuggestion"
+        />
+      </div>
     </Transition>
     </div>
     </Transition>
@@ -610,6 +610,26 @@ function handleDeleteBoxPokemon(id) {
 
   .action-icon {
     font-size: 1.1rem;
+  }
+
+  .draft-panel-wrapper {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 100ms ease forwards;
+  }
+
+  .draft-panel-wrapper :deep(.draft-panel) {
+    width: 550px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    animation: scaleIn 100ms ease forwards;
   }
 }
 </style>

@@ -262,8 +262,8 @@ const rowBackgroundStyle = computed(() => {
 
 @media (min-width: 1024px) {
   .type-icon {
-    width: 72px;
-    height: 72px;
+    width: 70px;
+    height: 70px;
   }
 
   .berry-corner :deep(.sprite-wrapper) {
