@@ -779,10 +779,16 @@ export function useSoulLinkStore() {
       throw new Error('No session found with that invite code.')
     }
 
+    const savedSnapshot = await repository.loadSoulLinkSnapshot()
+    const isRejoin = savedSnapshot?.metadata?.sessionId === session.id
+    const savedLocal = isRejoin ? savedSnapshot.local : null
+    const devicePlayerId =
+      savedLocal?.devicePlayerId ?? SOUL_LINK_PLAYER_IDS.PARTNER
+
     const remoteState = session.state
     const remotePlayers = (remoteState.players ?? []).map((player) => ({
       ...player,
-      isLocal: player.id === SOUL_LINK_PLAYER_IDS.PARTNER,
+      isLocal: player.id === devicePlayerId,
     }))
 
     createLocalRun({
@@ -796,9 +802,9 @@ export function useSoulLinkStore() {
       players: remotePlayers,
       rosters: remoteState.rosters,
       local: {
-        devicePlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
-        preferredPlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
-        cachedPlayerSlot: SOUL_LINK_PLAYER_IDS.PARTNER,
+        devicePlayerId,
+        preferredPlayerId: savedLocal?.preferredPlayerId ?? devicePlayerId,
+        cachedPlayerSlot: savedLocal?.cachedPlayerSlot ?? devicePlayerId,
       },
       sync: { version: session.version },
       activity: { syncState: SOUL_LINK_SYNC_STATES.READY },
