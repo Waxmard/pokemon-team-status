@@ -24,6 +24,7 @@ export function useDraftAction() {
       megaSpriteId: null,
       spriteVariant: 'default',
       catchLocation: null,
+      nickname: null,
     }
   }
 
@@ -50,6 +51,7 @@ export function useDraftAction() {
       megaSpriteId: member.megaSpriteId || null,
       spriteVariant: member.spriteVariant || 'default',
       catchLocation: member.catchLocation || null,
+      nickname: member.nickname || null,
     }
   }
 
@@ -76,6 +78,7 @@ export function useDraftAction() {
       megaSpriteId: boxMember.megaSpriteId || null,
       spriteVariant: boxMember.spriteVariant || 'default',
       catchLocation: boxMember.catchLocation || null,
+      nickname: boxMember.nickname || null,
     }
   }
 
@@ -95,6 +98,7 @@ export function useDraftAction() {
       megaSpriteId: null,
       spriteVariant: 'default',
       catchLocation: null,
+      nickname: null,
     }
   }
 
@@ -131,6 +135,12 @@ export function useDraftAction() {
   function updateCatchLocation(location) {
     if (draftAction.value) {
       draftAction.value.catchLocation = location
+    }
+  }
+
+  function updateNickname(nickname) {
+    if (draftAction.value) {
+      draftAction.value.nickname = nickname
     }
   }
 
@@ -209,6 +219,7 @@ export function useDraftAction() {
     updateMoves,
     updateSpecialMove,
     updateCatchLocation,
+    updateNickname,
     updateMegaForm,
     updateReplaceTarget,
     updateSpriteVariant,

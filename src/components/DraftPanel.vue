@@ -3,7 +3,17 @@
       <div class="wizard-container">
         <!-- Shared header with dynamic title -->
         <div class="wizard-header">
-          <h3 class="wizard-title">{{ wizardStepTitle }}</h3>
+          <input
+            v-if="draftAction.pokemon"
+            :value="displayName"
+            :size="Math.max(displayName.length, 1)"
+            class="wizard-title wizard-title-input"
+            type="text"
+            maxlength="32"
+            @blur="handleNicknameBlur"
+            @focus="$event.target.select()"
+          />
+          <h3 v-else class="wizard-title">Choose Pokemon</h3>
 
           <!-- Pokemon step: suggestion button -->
           <template v-if="wizardStep === 'pokemon' && canShowSuggestion">
@@ -337,6 +347,7 @@ const {
   updateMoves,
   updateSpecialMove,
   updateCatchLocation,
+  updateNickname,
   updateMegaForm,
   updateSpriteVariant,
 } = useDraftAction()
@@ -531,8 +542,18 @@ const canConfirm = computed(() => {
   return !!draftAction.value?.pokemon
 })
 
+const displayName = computed(
+  () => draftAction.value?.nickname || draftAction.value?.pokemon?.name || '',
+)
+
+function handleNicknameBlur(event) {
+  const trimmed = event.target.value.trim()
+  const speciesName = draftAction.value?.pokemon?.name
+  updateNickname(trimmed && trimmed !== speciesName ? trimmed : null)
+}
+
 const wizardStepTitle = computed(() => {
-  const name = draftAction.value?.pokemon?.name
+  const name = displayName.value
   if (!name) return 'Choose Pokemon'
   const titles = {
     pokemon: name,
@@ -1088,6 +1109,24 @@ function onSearchInput(value) {
   font-size: 1.1rem;
   margin-bottom: 0;
   text-align: left;
+}
+
+.wizard-title-input {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
+  cursor: text;
+}
+
+.wizard-title-input:focus {
+  outline: none;
 }
 
 .suggestion-group {

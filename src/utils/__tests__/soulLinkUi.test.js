@@ -81,7 +81,7 @@ describe('adaptSoulLinkMemberToUiMember', () => {
     expect(result.name).toBe('Bulbasaur')
     expect(result).not.toHaveProperty('speciesName')
     expect(result).not.toHaveProperty('ownerPlayerId')
-    expect(result).not.toHaveProperty('nickname')
+    expect(result.nickname).toBe(null)
   })
 })
 

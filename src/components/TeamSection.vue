@@ -320,6 +320,7 @@ function handleEditPokemon(id) {
     megaSpriteId: pokemon.megaSpriteId || null,
     spriteVariant: pokemon.spriteVariant || 'default',
     catchLocation: pokemon.catchLocation || null,
+    nickname: pokemon.nickname || null,
   })
 }
 
@@ -341,6 +342,7 @@ function handleEditBoxPokemon(boxPokemonId) {
     megaSpriteId: pokemon.megaSpriteId || null,
     spriteVariant: pokemon.spriteVariant || 'default',
     catchLocation: pokemon.catchLocation || null,
+    nickname: pokemon.nickname || null,
   })
 }
 

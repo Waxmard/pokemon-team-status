@@ -76,6 +76,7 @@ export function buildPokemonMember(source, options = {}) {
       megaTypes: source.megaTypes ?? null,
       megaSpriteId: source.megaSpriteId ?? null,
       spriteVariant: source.spriteVariant ?? 'default',
+      nickname: source.nickname ?? null,
       pairId: source.pairId ?? null,
     }
   }
@@ -93,6 +94,7 @@ export function buildPokemonMember(source, options = {}) {
     megaTypes: source.megaTypes ?? null,
     megaSpriteId: source.megaSpriteId ?? null,
     spriteVariant: source.spriteVariant ?? 'default',
+    nickname: source.nickname ?? null,
     pairId: source.pairId ?? null,
   }
 }

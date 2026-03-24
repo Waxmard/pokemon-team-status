@@ -1268,6 +1268,7 @@ function soulLinkMemberToUiFields(member) {
     megaTypes: member.megaTypes,
     megaSpriteId: member.megaSpriteId,
     spriteVariant: member.spriteVariant,
+    nickname: member.nickname,
     catchLocation: member.catchLocation,
     pairId: member.pairId,
   }
