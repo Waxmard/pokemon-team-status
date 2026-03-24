@@ -96,7 +96,6 @@
             placeholder="Search Pokemon..."
             :get-show="() => true"
             @select="onSelectPokemon"
-            @update:value="onSearchInput"
             clearable
           />
           <div v-if="draftAction.pokemon" class="pokemon-preview">
@@ -701,15 +700,6 @@ function evolveTo(option) {
   }
 }
 
-function clearSelections() {
-  updateAbility(null)
-  updateBerry(null)
-  updateMoves([])
-  updateSpecialMove(null)
-  updateMegaForm(null, null, null)
-  updateSpriteVariant('default')
-}
-
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
@@ -980,19 +970,9 @@ watch(
 function onSelectPokemon(value) {
   const pokemon = getPokemonDataForRules(value, generationRules.value)
   if (pokemon) {
-    clearSelections()
     updatePokemon(pokemon)
     searchQuery.value = pokemon.name
     pokemonInputRef.value?.blur()
-  }
-}
-
-function onSearchInput(value) {
-  // Only reset if the input doesn't match a valid Pokemon name
-  // This prevents resetting after selection when searchQuery is set programmatically
-  const matchesPokemon = !!getPokemonByName(value)
-  if (!matchesPokemon) {
-    updatePokemon(null)
   }
 }
 </script>
