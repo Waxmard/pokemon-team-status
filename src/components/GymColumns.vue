@@ -57,7 +57,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { getMegaSpriteUrl, getSmallSpriteUrl } from '../utils/pokemon.js'
+import { resolveSpriteUrl } from '../utils/pokemon.js'
 import {
   calculateTypeSuggestionScore,
   findGlobalBestSwap,
@@ -165,10 +165,11 @@ const gymColumnTitle = computed(() => {
 })
 
 function getSwapSpriteUrl(pokemon) {
-  const variant = pokemon.spriteVariant || 'default'
-  if (pokemon.megaSpriteId)
-    return getMegaSpriteUrl(pokemon.megaSpriteId, variant)
-  return getSmallSpriteUrl(pokemon.name, variant)
+  return resolveSpriteUrl(pokemon.name, {
+    variant: pokemon.spriteVariant,
+    megaSpriteId: pokemon.megaSpriteId,
+    small: true,
+  })
 }
 
 function handleSwapClick() {

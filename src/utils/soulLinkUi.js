@@ -1,5 +1,5 @@
 import { getAllTypesForRules } from '../data/types.js'
-import { generatePokemonId } from './pokemon.js'
+import { generatePokemonId, pickMemberFields } from './pokemon.js'
 import { calculateBerryTiebreaker, calculateScore } from './typeCalc.js'
 
 export function adaptUiMemberToSoulLinkMember(uiMember, playerId) {
@@ -10,17 +10,7 @@ export function adaptUiMemberToSoulLinkMember(uiMember, playerId) {
     speciesName: uiMember.name,
     ownerPlayerId: playerId,
     types: uiMember.types ?? [],
-    ability: uiMember.ability ?? null,
-    berry: uiMember.berry ?? null,
-    moves: uiMember.moves ?? [],
-    specialMove: uiMember.specialMove ?? null,
-    megaForm: uiMember.megaForm ?? null,
-    megaTypes: uiMember.megaTypes ?? null,
-    megaSpriteId: uiMember.megaSpriteId ?? null,
-    spriteVariant: uiMember.spriteVariant ?? 'default',
-    nickname: uiMember.nickname ?? null,
-    catchLocation: uiMember.catchLocation ?? null,
-    pairId: uiMember.pairId ?? null,
+    ...pickMemberFields(uiMember),
   }
 }
 
@@ -36,18 +26,13 @@ export function buildSoulLinkMemberFromDraft(
     speciesName: draftAction.pokemon.name,
     ownerPlayerId: playerId,
     types: draftAction.pokemon.types ?? [],
-    ability: draftAction.ability ?? null,
-    berry: draftAction.berry ?? null,
+    ...pickMemberFields(draftAction),
     moves: (draftAction.moves ?? []).filter(Boolean),
-    specialMove: draftAction.specialMove ?? null,
-    megaForm: draftAction.megaForm ?? null,
-    megaTypes: draftAction.megaTypes ?? null,
-    megaSpriteId: draftAction.megaSpriteId ?? null,
-    spriteVariant: draftAction.spriteVariant ?? 'default',
-    nickname: draftAction.nickname ?? null,
-    catchLocation: draftAction.catchLocation ?? null,
-    pairId: draftAction.pairId ?? null,
   }
+}
+
+export function cloneSoulLinkMember(member, newId) {
+  return { ...member, id: newId }
 }
 
 export function adaptSoulLinkMemberToUiMember(member) {
@@ -57,17 +42,7 @@ export function adaptSoulLinkMemberToUiMember(member) {
     id: member.id,
     name: member.speciesName,
     types: member.types ?? [],
-    ability: member.ability ?? null,
-    berry: member.berry ?? null,
-    moves: member.moves ?? [],
-    specialMove: member.specialMove ?? null,
-    megaForm: member.megaForm ?? null,
-    megaTypes: member.megaTypes ?? null,
-    megaSpriteId: member.megaSpriteId ?? null,
-    spriteVariant: member.spriteVariant ?? 'default',
-    nickname: member.nickname ?? null,
-    catchLocation: member.catchLocation ?? null,
-    pairId: member.pairId ?? null,
+    ...pickMemberFields(member),
   }
 }
 

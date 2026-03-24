@@ -175,7 +175,11 @@ import {
   sanitizeDraftActionForRules,
   sanitizePokemonCollectionForRules,
 } from './utils/generationRules.js'
-import { buildPokemonMember, generatePokemonId } from './utils/pokemon.js'
+import {
+  buildPokemonMember,
+  generatePokemonId,
+  pickMemberFields,
+} from './utils/pokemon.js'
 import { RUN_MODES } from './utils/runSnapshot.js'
 import {
   findLinkedDeleteTarget as findLinkedDeleteTargetUtil,
@@ -188,6 +192,7 @@ import {
   adaptUiMemberToSoulLinkMember,
   buildSoulLinkMemberFromDraft,
   buildSoulLinkPlayerBoard,
+  cloneSoulLinkMember,
 } from './utils/soulLinkUi.js'
 import { calculateBerryTiebreaker, calculateScore } from './utils/typeCalc.js'
 
@@ -678,17 +683,9 @@ const defeatedGymsList = computed(() => {
 })
 
 function swapInHandToTarget(targetPokemon) {
-  const replacedPokemonData = getRulesetPokemonData(targetPokemon.name)
   updateInHandPokemon({
-    pokemonData: replacedPokemonData,
-    ability: targetPokemon.ability,
-    berry: targetPokemon.berry,
-    moves: targetPokemon.moves,
-    specialMove: targetPokemon.specialMove,
-    megaForm: targetPokemon.megaForm,
-    megaTypes: targetPokemon.megaTypes,
-    megaSpriteId: targetPokemon.megaSpriteId,
-    spriteVariant: targetPokemon.spriteVariant,
+    pokemonData: getRulesetPokemonData(targetPokemon.name),
+    ...pickMemberFields(targetPokemon),
   })
 }
 
@@ -794,14 +791,8 @@ function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
       isTeamPokemon: false,
       boxPokemonId: newBoxMember.id,
       pokemon: pokemonData,
-      ability: teamPokemon.ability,
-      berry: teamPokemon.berry,
+      ...pickMemberFields(teamPokemon),
       moves: [...(teamPokemon.moves || [])],
-      specialMove: teamPokemon.specialMove || null,
-      megaForm: teamPokemon.megaForm || null,
-      megaTypes: teamPokemon.megaTypes || null,
-      megaSpriteId: teamPokemon.megaSpriteId || null,
-      spriteVariant: teamPokemon.spriteVariant || 'default',
     }
   } else {
     // Box editing: handleImmediateSwap already sets correct perspective
@@ -1268,24 +1259,6 @@ function handleSoulLinkCancelSwap() {
   soulLinkSwapOriginalRoster.value = null
 }
 
-function soulLinkMemberToUiFields(member) {
-  return {
-    name: member.speciesName,
-    types: member.types,
-    ability: member.ability,
-    berry: member.berry,
-    moves: member.moves,
-    specialMove: member.specialMove,
-    megaForm: member.megaForm,
-    megaTypes: member.megaTypes,
-    megaSpriteId: member.megaSpriteId,
-    spriteVariant: member.spriteVariant,
-    nickname: member.nickname,
-    catchLocation: member.catchLocation,
-    pairId: member.pairId,
-  }
-}
-
 function handleSoulLinkBoxToTeamSwap(targetId, pid, roster) {
   const boxPokemonId = draftAction.value.boxPokemonId
   const boxedMember = roster.box.find((member) => member.id === boxPokemonId)
@@ -1308,15 +1281,9 @@ function handleSoulLinkBoxToTeamSwap(targetId, pid, roster) {
   if (!targetMember) return
 
   const nextTeamMember = { ...inHandMember, id: generatePokemonId('team') }
-  const newBoxMember = preserveSoulLinkPairingFields(
-    adaptUiMemberToSoulLinkMember(
-      {
-        id: generatePokemonId('box'),
-        ...soulLinkMemberToUiFields(targetMember),
-      },
-      pid,
-    ),
+  const newBoxMember = cloneSoulLinkMember(
     targetMember,
+    generatePokemonId('box'),
   )
 
   setPlayerRoster(pid, {
@@ -1329,7 +1296,7 @@ function handleSoulLinkBoxToTeamSwap(targetId, pid, roster) {
 
   updateInHandPokemon({
     pokemonData: getSoulLinkGenRulesPokemonData(targetMember.speciesName),
-    ...soulLinkMemberToUiFields(targetMember),
+    ...adaptSoulLinkMemberToUiMember(targetMember),
   })
   refreshSoulLinkDraftMetadata(targetMember)
   draftAction.value.boxPokemonId = newBoxMember.id
@@ -1359,15 +1326,9 @@ function handleSoulLinkTeamToBoxSwap(targetId, pid, roster) {
   const targetMember = roster.box.find((m) => m.id === targetId)
   if (!targetMember) return
 
-  const newTeamMember = preserveSoulLinkPairingFields(
-    adaptUiMemberToSoulLinkMember(
-      {
-        id: generatePokemonId('team'),
-        ...soulLinkMemberToUiFields(targetMember),
-      },
-      pid,
-    ),
+  const newTeamMember = cloneSoulLinkMember(
     targetMember,
+    generatePokemonId('team'),
   )
   const nextBoxMember = { ...inHandMember, id: generatePokemonId('box') }
 
@@ -1381,7 +1342,7 @@ function handleSoulLinkTeamToBoxSwap(targetId, pid, roster) {
 
   updateInHandPokemon({
     pokemonData: getSoulLinkGenRulesPokemonData(targetMember.speciesName),
-    ...soulLinkMemberToUiFields(targetMember),
+    ...adaptSoulLinkMemberToUiMember(targetMember),
   })
   refreshSoulLinkDraftMetadata(targetMember)
   draftAction.value.editId = newTeamMember.id
@@ -1414,26 +1375,13 @@ function handleSoulLinkSwapSuggestion({
     const boxMember = roster.box.find((m) => m.id === candidateId)
     if (!teamMember || !boxMember) return
 
-    const newTeamMember = preserveSoulLinkPairingFields(
-      adaptUiMemberToSoulLinkMember(
-        {
-          id: generatePokemonId('team'),
-          ...soulLinkMemberToUiFields(boxMember),
-        },
-        pid,
-      ),
+    const newTeamMember = cloneSoulLinkMember(
       boxMember,
+      generatePokemonId('team'),
     )
-
-    const newBoxMember = preserveSoulLinkPairingFields(
-      adaptUiMemberToSoulLinkMember(
-        {
-          id: generatePokemonId('box'),
-          ...soulLinkMemberToUiFields(teamMember),
-        },
-        pid,
-      ),
+    const newBoxMember = cloneSoulLinkMember(
       teamMember,
+      generatePokemonId('box'),
     )
 
     setPlayerRoster(pid, {
@@ -1451,17 +1399,8 @@ function handleSoulLinkSwapSuggestion({
       isTeamPokemon: false,
       boxPokemonId: newBoxMember.id,
       pokemon: pokemonData,
-      ability: teamMember.ability,
-      berry: teamMember.berry,
+      ...pickMemberFields(teamMember),
       moves: [...(teamMember.moves || [])],
-      specialMove: teamMember.specialMove || null,
-      megaForm: teamMember.megaForm || null,
-      megaTypes: teamMember.megaTypes || null,
-      megaSpriteId: teamMember.megaSpriteId || null,
-      spriteVariant: teamMember.spriteVariant || 'default',
-      catchLocation: teamMember.catchLocation || null,
-      pairId: teamMember.pairId || null,
-      nickname: teamMember.nickname || null,
     }
   } else {
     handleSoulLinkImmediateSwap(candidateId)

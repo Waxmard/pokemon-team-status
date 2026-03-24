@@ -102,47 +102,19 @@ export function useDraftAction() {
     }
   }
 
-  function updatePokemon(pokemon) {
+  function updateField(field, value) {
     if (draftAction.value) {
-      draftAction.value.pokemon = pokemon
+      draftAction.value[field] = value
     }
   }
 
-  function updateAbility(ability) {
-    if (draftAction.value) {
-      draftAction.value.ability = ability
-    }
-  }
-
-  function updateBerry(berry) {
-    if (draftAction.value) {
-      draftAction.value.berry = berry
-    }
-  }
-
-  function updateMoves(moves) {
-    if (draftAction.value) {
-      draftAction.value.moves = moves
-    }
-  }
-
-  function updateSpecialMove(specialMove) {
-    if (draftAction.value) {
-      draftAction.value.specialMove = specialMove
-    }
-  }
-
-  function updateCatchLocation(location) {
-    if (draftAction.value) {
-      draftAction.value.catchLocation = location
-    }
-  }
-
-  function updateNickname(nickname) {
-    if (draftAction.value) {
-      draftAction.value.nickname = nickname
-    }
-  }
+  const updatePokemon = (val) => updateField('pokemon', val)
+  const updateAbility = (val) => updateField('ability', val)
+  const updateBerry = (val) => updateField('berry', val)
+  const updateMoves = (val) => updateField('moves', val)
+  const updateSpecialMove = (val) => updateField('specialMove', val)
+  const updateCatchLocation = (val) => updateField('catchLocation', val)
+  const updateNickname = (val) => updateField('nickname', val)
 
   function updateMegaForm(form, types, spriteId) {
     if (draftAction.value) {
@@ -167,11 +139,7 @@ export function useDraftAction() {
     draftAction.value = null
   }
 
-  function updateSpriteVariant(variant) {
-    if (draftAction.value) {
-      draftAction.value.spriteVariant = variant
-    }
-  }
+  const updateSpriteVariant = (val) => updateField('spriteVariant', val)
 
   function updateInHandPokemon({
     pokemonData,

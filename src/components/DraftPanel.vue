@@ -297,8 +297,8 @@ import {
   buildPokemonMember,
   getBerrySprite,
   getMegaSpriteUrl,
-  getSmallSpriteUrl,
   getSpriteUrl,
+  resolveSpriteUrl,
 } from '../utils/pokemon.js'
 import {
   applyAbilityDefense,
@@ -434,16 +434,18 @@ function toggleSuggestion() {
 }
 
 function getPartnerPreviewSpriteUrl(partner) {
-  const variant = partner.spriteVariant || 'default'
-  if (partner.megaSpriteId)
-    return getMegaSpriteUrl(partner.megaSpriteId, variant)
-  return getSpriteUrl(partner.name, variant)
+  return resolveSpriteUrl(partner.name, {
+    variant: partner.spriteVariant,
+    megaSpriteId: partner.megaSpriteId,
+  })
 }
 
 function getSuggestionSpriteUrl(pokemonName, spriteVariant, megaSpriteId) {
-  const variant = spriteVariant || 'default'
-  if (megaSpriteId) return getMegaSpriteUrl(megaSpriteId, variant)
-  return getSmallSpriteUrl(pokemonName, variant)
+  return resolveSpriteUrl(pokemonName, {
+    variant: spriteVariant,
+    megaSpriteId,
+    small: true,
+  })
 }
 
 // Wizard state
@@ -602,12 +604,10 @@ function cycleSpriteVariant() {
 
 const selectedSpriteUrl = computed(() => {
   if (!draftAction.value?.pokemon) return null
-  const variant = draftAction.value.spriteVariant || 'default'
-  // Use mega sprite if mega form is active
-  if (draftAction.value.megaSpriteId) {
-    return getMegaSpriteUrl(draftAction.value.megaSpriteId, variant)
-  }
-  return getSpriteUrl(draftAction.value.pokemon.name, variant)
+  return resolveSpriteUrl(draftAction.value.pokemon.name, {
+    variant: draftAction.value.spriteVariant,
+    megaSpriteId: draftAction.value.megaSpriteId,
+  })
 })
 
 const autocompleteOptions = computed(() => {

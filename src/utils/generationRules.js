@@ -25,6 +25,24 @@ export function getMemberTypesForRules(
   return (member.types || []).filter((type) => isTypeAvailable(type, ruleset))
 }
 
+function sanitizeBerryAndMega(sanitized, pokemonName, ruleset) {
+  const berryType = BERRIES[sanitized.berry] ?? ITEMS[sanitized.berry]
+  if (berryType && !isTypeAvailable(berryType, ruleset)) {
+    sanitized.berry = null
+  }
+
+  if (ruleset === GENERATION_RULESETS.PRE_GEN_6) {
+    const mega = getMegaEvolution(pokemonName, sanitized.megaForm)
+    sanitized.megaForm = null
+    sanitized.megaTypes = null
+    sanitized.megaSpriteId = null
+
+    if (mega?.ability && sanitized.ability === mega.ability) {
+      sanitized.ability = null
+    }
+  }
+}
+
 export function sanitizePokemonMemberForRules(
   member,
   ruleset = DEFAULT_GENERATION_RULESET,
@@ -37,22 +55,7 @@ export function sanitizePokemonMemberForRules(
     ),
   }
 
-  const berryType = BERRIES[sanitized.berry] ?? ITEMS[sanitized.berry]
-  if (berryType && !isTypeAvailable(berryType, ruleset)) {
-    sanitized.berry = null
-  }
-
-  if (ruleset === GENERATION_RULESETS.PRE_GEN_6) {
-    const mega = getMegaEvolution(sanitized.name, sanitized.megaForm)
-    sanitized.megaForm = null
-    sanitized.megaTypes = null
-    sanitized.megaSpriteId = null
-
-    if (mega?.ability && sanitized.ability === mega.ability) {
-      sanitized.ability = null
-    }
-  }
-
+  sanitizeBerryAndMega(sanitized, sanitized.name, ruleset)
   return sanitized
 }
 
@@ -85,22 +88,7 @@ export function sanitizeDraftActionForRules(
     isTypeAvailable(type, ruleset),
   )
 
-  const berryType = BERRIES[sanitized.berry] ?? ITEMS[sanitized.berry]
-  if (berryType && !isTypeAvailable(berryType, ruleset)) {
-    sanitized.berry = null
-  }
-
-  if (ruleset === GENERATION_RULESETS.PRE_GEN_6) {
-    const mega = getMegaEvolution(sanitized.pokemon?.name, sanitized.megaForm)
-    sanitized.megaForm = null
-    sanitized.megaTypes = null
-    sanitized.megaSpriteId = null
-
-    if (mega?.ability && sanitized.ability === mega.ability) {
-      sanitized.ability = null
-    }
-  }
-
+  sanitizeBerryAndMega(sanitized, sanitized.pokemon?.name, ruleset)
   return sanitized
 }
 

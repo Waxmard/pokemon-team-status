@@ -49,12 +49,7 @@ import { ABILITIES } from '../data/abilities.js'
 import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { hexToRgba } from '../utils/colors.js'
 import { getMemberTypesForRules } from '../utils/generationRules.js'
-import {
-  getBerrySprite,
-  getMegaSpriteUrl,
-  getSmallSpriteUrl,
-  getSpriteUrl,
-} from '../utils/pokemon.js'
+import { getBerrySprite, resolveSpriteUrl } from '../utils/pokemon.js'
 import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
@@ -93,22 +88,20 @@ function handleClick() {
 
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null
-  const variant = props.pokemon.spriteVariant || 'default'
-  // Use mega sprite if mega form is active
-  if (props.pokemon.megaSpriteId) {
-    return getMegaSpriteUrl(props.pokemon.megaSpriteId, variant)
-  }
-  return getSpriteUrl(props.pokemon.name, variant)
+  return resolveSpriteUrl(props.pokemon.name, {
+    variant: props.pokemon.spriteVariant,
+    megaSpriteId: props.pokemon.megaSpriteId,
+  })
 })
 
 const partnerSpriteUrl = computed(() => {
   if (!props.pokemon?.pairedPartner) return null
   const partner = props.pokemon.pairedPartner
-  const variant = partner.spriteVariant || 'default'
-  if (partner.megaSpriteId) {
-    return getMegaSpriteUrl(partner.megaSpriteId, variant)
-  }
-  return getSmallSpriteUrl(partner.name, variant)
+  return resolveSpriteUrl(partner.name, {
+    variant: partner.spriteVariant,
+    megaSpriteId: partner.megaSpriteId,
+    small: true,
+  })
 })
 
 function getExtendedTypes(pokemon, baseTypes) {

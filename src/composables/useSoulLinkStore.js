@@ -1,7 +1,8 @@
-import { computed, ref, toRaw } from 'vue'
+import { computed, ref } from 'vue'
 import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
 import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
 import { createSupabaseRepository } from '../services/supabaseRepository.js'
+import { cloneValue } from '../utils/clone.js'
 import {
   sanitizeDefeatedGymsForRules,
   sanitizePinnedGymForRules,
@@ -28,14 +29,6 @@ const repository = createLocalSoloRunRepository()
 const internalRunState = ref(createDefaultSoulLinkRunState())
 const loadError = ref(false)
 
-function generateUUID() {
-  const bytes = crypto.getRandomValues(new Uint8Array(16))
-  bytes[6] = (bytes[6] & 0x0f) | 0x40
-  bytes[8] = (bytes[8] & 0x3f) | 0x80
-  const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
-}
-
 let _supabaseRepo = null
 function getSupabaseRepository() {
   if (!_supabaseRepo) _supabaseRepo = createSupabaseRepository()
@@ -44,23 +37,6 @@ function getSupabaseRepository() {
 
 let _unsubscribe = null
 let _lastPushedVersion = 0
-
-function cloneValue(value) {
-  // JSON round-trip required here — structuredClone fails on Vue reactive internals
-  return deepFreeze(JSON.parse(JSON.stringify(toRaw(value))))
-}
-
-function deepFreeze(value) {
-  if (value && typeof value === 'object') {
-    for (const nestedValue of Object.values(value)) {
-      deepFreeze(nestedValue)
-    }
-
-    Object.freeze(value)
-  }
-
-  return value
-}
 
 function getSoulLinkRunState(context) {
   return assertSoulLinkRunState(internalRunState.value, context)
@@ -734,7 +710,7 @@ export function useSoulLinkStore() {
 
   async function createSession() {
     const repo = getSupabaseRepository()
-    const sessionId = generateUUID()
+    const sessionId = crypto.randomUUID()
     const soulLinkState = getSoulLinkState('Creating a session')
     const currentRunState = getSoulLinkRunState('Creating a session')
     const remoteState = buildRemoteState(
