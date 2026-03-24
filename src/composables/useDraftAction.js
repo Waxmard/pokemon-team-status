@@ -183,6 +183,7 @@ export function useDraftAction() {
     megaTypes,
     megaSpriteId,
     spriteVariant,
+    nickname,
   }) {
     if (draftAction.value) {
       draftAction.value = {
@@ -196,6 +197,7 @@ export function useDraftAction() {
         megaTypes,
         megaSpriteId,
         spriteVariant: spriteVariant || 'default',
+        nickname: nickname ?? null,
       }
     }
   }
