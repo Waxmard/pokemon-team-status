@@ -265,7 +265,7 @@ onUnmounted(() => {
 
 @media (min-width: 1024px) {
   .gym-list {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 }
 </style>

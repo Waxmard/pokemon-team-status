@@ -1615,21 +1615,7 @@ onMounted(async () => {
 
 @media (min-width: 1024px) {
   .app-container {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-    max-width: 100%;
-  }
-
-  .app-title {
-    flex: 0 0 100%;
-    margin-bottom: var(--space-2);
-  }
-
-  .header-btns {
-    top: auto;
-    bottom: 0;
+    max-width: 1200px;
   }
 }
 </style>
@@ -1812,15 +1798,4 @@ onMounted(async () => {
   }
 }
 
-@media (min-width: 1024px) {
-  .app-container .team-section-wrapper {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .app-container .gym-section-wrapper {
-    flex: 1;
-    min-width: 0;
-  }
-}
 </style>

@@ -387,6 +387,26 @@ function handlePin(type) {
 }
 
 @media (min-width: 1024px) {
+  .gyms-header {
+    top: var(--space-2);
+    right: calc(var(--space-4) + var(--space-4));
+  }
+
+  .suggestion-inline {
+    border: none;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+    position: relative;
+    right: var(--space-3);
+    top: calc(var(--space-1) / 2);
+  }
+
+  .gyms-label {
+    display: none;
+  }
+
   .suggestion-inline :deep(.sprite-wrapper) {
     width: 32px !important;
     height: 32px !important;

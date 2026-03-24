@@ -569,15 +569,15 @@ function handleDeleteBoxPokemon(id) {
 }
 
 @media (min-width: 1024px) {
-  .team-section-wrapper {
-    align-self: flex-start;
+  .slot-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .mode-toggle {
     width: 56px;
     height: 56px;
-    left: var(--space-4);
-    right: auto;
+    left: auto;
+    right: var(--space-4);
   }
 
   .mode-toggle :deep(.sprite-wrapper) {
@@ -592,7 +592,6 @@ function handleDeleteBoxPokemon(id) {
   .add-button {
     width: 44px;
     height: 44px;
-    bottom: var(--space-2);
   }
 
   .add-icon {
@@ -600,8 +599,8 @@ function handleDeleteBoxPokemon(id) {
   }
 
   .swap-action-buttons {
-    left: calc(var(--space-4) + 56px + var(--space-2));
-    right: auto;
+    left: auto;
+    right: calc(var(--space-4) + 56px + var(--space-2));
   }
 
   .swap-action-btn {
