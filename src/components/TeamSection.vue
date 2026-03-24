@@ -15,10 +15,10 @@
       <span class="add-icon">+</span>
     </button>
 
-    <!-- Delete Button (when editing a Pokemon) -->
+    <!-- Delete Button - mobile only (when editing a Pokemon) -->
     <button
       v-if="!readOnly && isEditing && showDraftPanel"
-      class="add-button delete-mode"
+      class="add-button delete-mode mobile-only"
       @click="handleDeleteClick"
     >
       <span class="add-icon">🗑</span>
@@ -44,64 +44,77 @@
 
     <Transition name="section-collapse">
     <div v-show="!isCollapsed" class="team-section">
-    <!-- Grid view (hidden on mobile when editing) -->
-    <div :key="'grid-' + viewMode" :class="{ 'draft-active-mobile': showDraftPanel && !swapMode }">
-      <!-- Team Grid -->
-      <div v-if="viewMode === 'team'" class="slot-grid">
-        <TeamSlot
-          v-for="pokemon in team"
-          :key="pokemon.id"
-          :pokemon="pokemon"
-          :generation-rules="generationRules"
-          :interactive="!readOnly"
-          @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
-          @delete="handleDeleteTeamPokemon"
-        />
-        <!-- Empty slots for swap mode -->
-        <TeamSlot
-          v-for="i in emptyTeamSlotCount"
-          :key="'team-empty-' + i"
-          :pokemon="null"
-          :interactive="!readOnly"
-          @add="swapMode ? handleSwapSelect(null) : startAdd()"
-        />
+    <!-- Single transition for grid/panel switching -->
+    <Transition name="content-fade" mode="out-in">
+      <!-- Grid view -->
+      <div v-if="!showDraftPanel || swapMode" :key="'grid-' + viewMode">
+        <!-- Team Grid -->
+        <div v-if="viewMode === 'team'" class="slot-grid">
+          <TeamSlot
+            v-for="pokemon in team"
+            :key="pokemon.id"
+            :pokemon="pokemon"
+            :generation-rules="generationRules"
+            :interactive="!readOnly"
+            @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
+            @delete="handleDeleteTeamPokemon"
+          />
+          <!-- Empty slots for swap mode -->
+          <TeamSlot
+            v-for="i in emptyTeamSlotCount"
+            :key="'team-empty-' + i"
+            :pokemon="null"
+            :interactive="!readOnly"
+            @add="swapMode ? handleSwapSelect(null) : startAdd()"
+          />
+        </div>
+
+        <!-- Box Grid -->
+        <div v-else class="slot-grid slot-grid-scrollable">
+          <TeamSlot
+            v-for="pokemon in box"
+            :key="pokemon.id"
+            :pokemon="pokemon"
+            :generation-rules="generationRules"
+            :interactive="!readOnly"
+            @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditBoxPokemon(pokemon.id)"
+            @delete="handleDeleteBoxPokemon"
+          />
+          <TeamSlot
+            v-for="i in emptyBoxSlotCount"
+            :key="'box-empty-' + i"
+            :pokemon="null"
+            :interactive="!readOnly"
+            @add="swapMode ? handleSwapSelect(null) : startAddToBox()"
+          />
+        </div>
       </div>
 
-      <!-- Box Grid -->
-      <div v-else class="slot-grid slot-grid-scrollable">
-        <TeamSlot
-          v-for="pokemon in box"
-          :key="pokemon.id"
-          :pokemon="pokemon"
-          :generation-rules="generationRules"
-          :interactive="!readOnly"
-          @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditBoxPokemon(pokemon.id)"
-          @delete="handleDeleteBoxPokemon"
-        />
-        <TeamSlot
-          v-for="i in emptyBoxSlotCount"
-          :key="'box-empty-' + i"
-          :pokemon="null"
-          :interactive="!readOnly"
-          @add="swapMode ? handleSwapSelect(null) : startAddToBox()"
-        />
+      <!-- Draft Panel -->
+      <div v-else key="panel" class="draft-panel-wrapper" @click.self="cancel">
+        <div class="draft-dialog-container">
+          <DraftPanel
+            :team="team"
+            :box="box"
+            :defeated-gyms="defeatedGyms"
+            :pinned-gym="pinnedGym"
+            :partner-roster="partnerRoster"
+            :is-soul-link-mode="isSoulLinkMode"
+            @confirm="$emit('confirmDraft')"
+            @cancel="cancel"
+            @swapSuggestion="handleSwapSuggestion"
+          />
+          <!-- Delete Button - desktop only -->
+          <button
+            v-if="!readOnly && isEditing"
+            class="add-button delete-mode desktop-only"
+            @click="handleDeleteClick"
+          >
+            <span class="add-icon">🗑</span>
+          </button>
+        </div>
       </div>
-    </div>
-
-    <!-- Draft Panel (overlay on desktop, inline on mobile) -->
-    <div v-if="showDraftPanel && !swapMode" class="draft-panel-wrapper" @click.self="cancel">
-      <DraftPanel
-        :team="team"
-        :box="box"
-        :defeated-gyms="defeatedGyms"
-        :pinned-gym="pinnedGym"
-        :partner-roster="partnerRoster"
-        :is-soul-link-mode="isSoulLinkMode"
-        @confirm="$emit('confirmDraft')"
-        @cancel="cancel"
-        @swapSuggestion="handleSwapSuggestion"
-      />
-    </div>
+    </Transition>
     </div>
     </Transition>
   </div>
@@ -471,11 +484,18 @@ function handleDeleteBoxPokemon(id) {
   margin: 0 calc(-1 * var(--space-3));
 }
 
-@media (max-width: 1023px) {
-  .draft-active-mobile {
-    display: none;
-  }
+/* Content fade out/in (grid and panel transitions) */
+.content-fade-enter-active,
+.content-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
+
+.content-fade-enter-from,
+.content-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
 
 .section-collapse-enter-active,
 .section-collapse-leave-active {
@@ -559,7 +579,17 @@ function handleDeleteBoxPokemon(id) {
   }
 }
 
+@media (max-width: 1023px) {
+  .desktop-only {
+    display: none;
+  }
+}
+
 @media (min-width: 1024px) {
+  .mobile-only {
+    display: none;
+  }
+
   .slot-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -611,16 +641,26 @@ function handleDeleteBoxPokemon(id) {
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: fadeIn 100ms ease forwards;
+    animation: fadeIn var(--transition-base) ease forwards;
   }
 
-  .draft-panel-wrapper :deep(.draft-panel) {
+  .draft-dialog-container {
+    position: relative;
+  }
+
+  .draft-dialog-container :deep(.draft-panel) {
     width: 650px;
     max-height: 80vh;
     overflow-y: auto;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-xl);
-    animation: scaleIn 100ms ease forwards;
+    animation: scaleIn var(--transition-base) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .draft-dialog-container .delete-mode {
+    position: absolute;
+    bottom: calc(-1 * var(--space-8) - var(--space-4));
+    right: var(--space-4);
   }
 }
 </style>
