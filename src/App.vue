@@ -497,6 +497,9 @@ watch(swapMode, (isSwapMode) => {
         box: JSON.parse(JSON.stringify(box.value)),
       }
     }
+    if (!isSoloMode.value && !soulLinkSwapOriginalRoster.value) {
+      soulLinkSwapOriginalRoster.value = getSoulLinkRoster()
+    }
   } else {
     swapOriginalState.value = null
   }
@@ -1137,10 +1140,9 @@ function confirmSoulLinkBoxPokemonReplace(pid, newMember) {
     team: roster.team.map((m) =>
       m.id === draftAction.value.replaceTarget ? nextTeamMember : m,
     ),
-    box: [
-      ...roster.box.filter((m) => m.id !== draftAction.value.boxPokemonId),
-      boxMember,
-    ],
+    box: roster.box.map((m) =>
+      m.id === draftAction.value.boxPokemonId ? boxMember : m,
+    ),
   })
 
   updateReciprocalSoulLinkPairId(
@@ -1310,7 +1312,7 @@ function handleSoulLinkBoxToTeamSwap(targetId, pid, roster) {
 
   setPlayerRoster(pid, {
     team: roster.team.map((m) => (m.id === targetId ? nextTeamMember : m)),
-    box: [...roster.box.filter((m) => m.id !== boxPokemonId), newBoxMember],
+    box: roster.box.map((m) => (m.id === boxPokemonId ? newBoxMember : m)),
   })
 
   updateReciprocalSoulLinkPairId(boxPokemonId, nextTeamMember.id)
