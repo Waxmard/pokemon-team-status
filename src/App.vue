@@ -76,8 +76,8 @@
             </button>
           </div>
           <div class="reset-option-group">
-            <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
-              New Solo Run
+            <button class="reset-option" @click="switchToSoloMode">
+              Solo Mode
             </button>
             <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
               New Soul Link Run
@@ -493,8 +493,8 @@ watch(swapMode, (isSwapMode) => {
     // Only capture if not already captured (e.g., by confirmDraft for add-replace)
     if (!swapOriginalState.value) {
       swapOriginalState.value = {
-        team: structuredClone(team.value),
-        box: structuredClone(box.value),
+        team: JSON.parse(JSON.stringify(team.value)),
+        box: JSON.parse(JSON.stringify(box.value)),
       }
     }
   } else {
@@ -554,6 +554,14 @@ async function clearTransientUiState() {
   cancel()
   swapOriginalState.value = null
   soulLinkSwapOriginalRoster.value = null
+}
+
+async function switchToSoloMode() {
+  await clearTransientUiState()
+  unsubscribeSoulLink()
+  setCurrentRunMode(RUN_MODES.SOLO)
+  showResetDialog.value = false
+  showSoulLinkDialog.value = false
 }
 
 async function startNewRun(mode) {
@@ -748,8 +756,8 @@ function handleImmediateSwap(targetId) {
 
 function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
   swapOriginalState.value = {
-    team: structuredClone(team.value),
-    box: structuredClone(box.value),
+    team: JSON.parse(JSON.stringify(team.value)),
+    box: JSON.parse(JSON.stringify(box.value)),
   }
 
   if (isTeamMember) {
@@ -853,8 +861,8 @@ function handleDraftDeletion() {
 
 function enterAddReplaceMode() {
   swapOriginalState.value = {
-    team: structuredClone(team.value),
-    box: structuredClone(box.value),
+    team: JSON.parse(JSON.stringify(team.value)),
+    box: JSON.parse(JSON.stringify(box.value)),
   }
 
   const tempBoxMember = buildPokemonMember(draftAction.value, {
@@ -1260,6 +1268,9 @@ function soulLinkMemberToUiFields(member) {
     megaTypes: member.megaTypes,
     megaSpriteId: member.megaSpriteId,
     spriteVariant: member.spriteVariant,
+    nickname: member.nickname,
+    catchLocation: member.catchLocation,
+    pairId: member.pairId,
   }
 }
 
@@ -1719,7 +1730,7 @@ onMounted(async () => {
   border-radius: var(--radius-lg);
   background: var(--color-surface-light);
   color: var(--color-text-primary);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-family: monospace;
   text-transform: uppercase;
   letter-spacing: 0.15em;

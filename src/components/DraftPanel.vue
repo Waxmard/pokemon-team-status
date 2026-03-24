@@ -3,7 +3,19 @@
       <div class="wizard-container">
         <!-- Shared header with dynamic title -->
         <div class="wizard-header">
-          <h3 class="wizard-title">{{ wizardStepTitle }}</h3>
+          <label v-if="wizardStep === 'pokemon' && draftAction.pokemon" class="wizard-title-field">
+            <span v-if="!displayName" class="wizard-title-placeholder">Pokemon Name</span>
+            <input
+              :value="displayName"
+              :size="Math.max(displayName.length || 12, 1)"
+              class="wizard-title wizard-title-input"
+              type="text"
+              maxlength="32"
+              @blur="handleNicknameBlur"
+              @focus="$event.target.select()"
+            />
+          </label>
+          <h3 v-else class="wizard-title">{{ wizardStepTitle }}</h3>
 
           <!-- Pokemon step: suggestion button -->
           <template v-if="wizardStep === 'pokemon' && canShowSuggestion">
@@ -84,7 +96,6 @@
             placeholder="Search Pokemon..."
             :get-show="() => true"
             @select="onSelectPokemon"
-            @update:value="onSearchInput"
             clearable
           />
           <div v-if="draftAction.pokemon" class="pokemon-preview">
@@ -139,24 +150,14 @@
 
         <!-- Step: Catch Location -->
         <div v-if="wizardStep === 'catchLocation'" class="wizard-step catch-location-step">
-          <div class="catch-location-input-row">
-            <n-auto-complete
-              v-model:value="catchLocationQuery"
-              :options="catchLocationOptions"
-              placeholder="Enter location..."
-              @select="onSelectCatchLocation"
-              @update:value="onCatchLocationInput"
-              clearable
-            />
-            <button
-              v-if="!matchedPartnerForLocation && catchLocationQuery.trim() && catchLocationQuery.trim() !== draftAction.catchLocation"
-              class="save-location-btn"
-              @click="saveCatchLocation"
-              aria-label="Save location"
-            >
-              ✓
-            </button>
-          </div>
+          <n-auto-complete
+            v-model:value="catchLocationQuery"
+            :options="catchLocationOptions"
+            placeholder="Enter location..."
+            @select="onSelectCatchLocation"
+            @update:value="onCatchLocationInput"
+            clearable
+          />
           <div class="pokemon-preview">
             <SpriteImg
               v-if="matchedPartnerForLocation"
@@ -347,6 +348,7 @@ const {
   updateMoves,
   updateSpecialMove,
   updateCatchLocation,
+  updateNickname,
   updateMegaForm,
   updateSpriteVariant,
 } = useDraftAction()
@@ -541,13 +543,23 @@ const canConfirm = computed(() => {
   return !!draftAction.value?.pokemon
 })
 
+const displayName = computed(() => draftAction.value?.nickname || '')
+
+function handleNicknameBlur(event) {
+  const trimmed = event.target.value.trim()
+  const speciesName = draftAction.value?.pokemon?.name
+  updateNickname(trimmed && trimmed !== speciesName ? trimmed : null)
+}
+
 const wizardStepTitle = computed(() => {
+  const name = draftAction.value?.nickname || draftAction.value?.pokemon?.name
+  if (!name) return 'Choose Pokemon'
   const titles = {
-    pokemon: 'Choose Pokemon',
+    pokemon: name,
     catchLocation: 'Catch Location',
-    ability: 'Choose Ability',
-    berry: 'Choose Item',
-    moves: 'Move Types',
+    ability: `${name}'s Ability`,
+    berry: `${name}'s Item`,
+    moves: `${name}'s Move Types`,
   }
   return titles[wizardStep.value]
 })
@@ -686,15 +698,6 @@ function evolveTo(option) {
     updateMegaForm(null, null, null)
     showEvolveOptions.value = false
   }
-}
-
-function clearSelections() {
-  updateAbility(null)
-  updateBerry(null)
-  updateMoves([])
-  updateSpecialMove(null)
-  updateMegaForm(null, null, null)
-  updateSpriteVariant('default')
 }
 
 function capitalize(str) {
@@ -906,19 +909,8 @@ function onSelectCatchLocation(value) {
 
 function onCatchLocationInput(value) {
   catchLocationQuery.value = value
-  // Only auto-set if it matches a partner location
-  const match = partnerUnlinkedLocations.value.find(
-    (loc) => loc.toLowerCase() === value.toLowerCase(),
-  )
-  if (match) {
-    updateCatchLocation(match)
-  }
-}
-
-function saveCatchLocation() {
-  if (catchLocationQuery.value.trim()) {
-    updateCatchLocation(catchLocationQuery.value.trim())
-  }
+  const trimmed = value.trim()
+  updateCatchLocation(trimmed || null)
 }
 
 function unlinkCatchLocation() {
@@ -978,19 +970,9 @@ watch(
 function onSelectPokemon(value) {
   const pokemon = getPokemonDataForRules(value, generationRules.value)
   if (pokemon) {
-    clearSelections()
     updatePokemon(pokemon)
     searchQuery.value = pokemon.name
     pokemonInputRef.value?.blur()
-  }
-}
-
-function onSearchInput(value) {
-  // Only reset if the input doesn't match a valid Pokemon name
-  // This prevents resetting after selection when searchQuery is set programmatically
-  const matchesPokemon = !!getPokemonByName(value)
-  if (!matchesPokemon) {
-    updatePokemon(null)
   }
 }
 </script>
@@ -1107,6 +1089,47 @@ function onSearchInput(value) {
   font-size: 1.1rem;
   margin-bottom: 0;
   text-align: left;
+}
+
+.wizard-title-input {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: text;
+  background-image: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.wizard-title-field {
+  position: relative;
+  display: inline-block;
+}
+
+.wizard-title-placeholder {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background-image: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.wizard-title-field:focus-within .wizard-title-placeholder {
+  display: none;
+}
+
+.wizard-title-input:focus {
+  outline: none;
 }
 
 .suggestion-group {
@@ -1423,17 +1446,6 @@ function onSearchInput(value) {
   overflow: visible;
 }
 
-.catch-location-input-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.catch-location-input-row .n-auto-complete {
-  flex: 1;
-}
-
-.save-location-btn,
 .unlink-location-btn {
   background: transparent;
   border: none;
@@ -1442,13 +1454,6 @@ function onSearchInput(value) {
   cursor: pointer;
   padding: var(--space-1);
   transition: color var(--transition-base);
-}
-
-.save-location-btn {
-  color: var(--color-success);
-}
-
-.unlink-location-btn {
   color: var(--color-danger);
 }
 

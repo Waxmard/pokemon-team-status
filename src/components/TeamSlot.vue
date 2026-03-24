@@ -26,8 +26,8 @@
             </div>
           </div>
         </div>
-        <SpriteImg v-if="pokemon.pairedPartner" :src="partnerSpriteUrl" :alt="pokemon.pairedPartner.name" :width="24"
-          :height="24" class="partner-sprite" />
+        <SpriteImg v-if="pokemon.pairedPartner" :src="partnerSpriteUrl" :alt="pokemon.pairedPartner.name" :width="32"
+          :height="32" class="partner-sprite" />
       </div>
       <div v-else key="empty" class="empty-content">
         <svg class="empty-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -275,9 +275,10 @@ const cardBackgroundStyle = computed(() => {
 
 .partner-sprite {
   position: absolute;
-  bottom: var(--space-1);
+  bottom: calc(-1 * var(--space-2));
   right: var(--space-1);
   opacity: 0.85;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .special-move-badge,
