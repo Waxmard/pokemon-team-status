@@ -872,22 +872,53 @@ watch(
   { immediate: true },
 )
 
-const partnerUnlinkedLocations = computed(() => {
-  if (!props.partnerRoster) return []
-  const locations = new Set()
-  for (const m of props.partnerRoster) {
-    if (m.catchLocation && !m.pairId) {
-      locations.add(m.catchLocation)
-    }
-  }
-  return [...locations]
-})
-
 const catchLocationOptions = computed(() => {
   const query = catchLocationQuery.value.toLowerCase()
-  return partnerUnlinkedLocations.value
-    .filter((loc) => !query || loc.toLowerCase().includes(query))
-    .map((loc) => ({ label: loc, value: loc }))
+  const editId = draftAction.value?.editId || draftAction.value?.boxPokemonId
+
+  const ownLocations = new Set()
+  for (const m of [...props.team, ...props.box]) {
+    if (m.id !== editId && m.catchLocation) {
+      ownLocations.add(m.catchLocation)
+    }
+  }
+
+  const partnerUnlinked = []
+  if (props.partnerRoster) {
+    for (const m of props.partnerRoster) {
+      if (m.catchLocation && !m.pairId) {
+        partnerUnlinked.push(m.catchLocation)
+      }
+    }
+  }
+
+  const options = []
+
+  for (const loc of partnerUnlinked) {
+    if (query && !loc.toLowerCase().includes(query)) continue
+    if (ownLocations.has(loc)) {
+      options.push({
+        label: `${loc} (already used)`,
+        value: loc,
+        disabled: true,
+      })
+    } else {
+      options.push({ label: loc, value: loc })
+    }
+  }
+
+  for (const loc of ownLocations) {
+    if (query && !loc.toLowerCase().includes(query)) continue
+    if (!partnerUnlinked.includes(loc)) {
+      options.push({
+        label: `${loc} (already used)`,
+        value: loc,
+        disabled: true,
+      })
+    }
+  }
+
+  return options
 })
 
 const matchedPartnerForLocation = computed(() => {
@@ -928,8 +959,24 @@ const wizardSteps = computed(() => {
 
 const canGoPrevious = computed(() => wizardStep.value !== 'pokemon')
 
+const isDuplicateCatchLocation = computed(() => {
+  if (!props.isSoulLinkMode || !catchLocationQuery.value) return false
+  const query = catchLocationQuery.value.trim().toLowerCase()
+  if (!query) return false
+
+  const editId = draftAction.value?.editId || draftAction.value?.boxPokemonId
+  return [...props.team, ...props.box].some(
+    (m) =>
+      m.id !== editId &&
+      m.catchLocation &&
+      m.catchLocation.toLowerCase() === query,
+  )
+})
+
 const canGoNext = computed(() => {
   if (wizardStep.value === 'pokemon') return !!draftAction.value?.pokemon
+  if (wizardStep.value === 'catchLocation')
+    return !isDuplicateCatchLocation.value
   if (wizardStep.value === 'ability') return false
   return true
 })
