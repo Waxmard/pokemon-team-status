@@ -1507,5 +1507,10 @@ function onSelectPokemon(value) {
     width: 32px;
     height: 32px;
   }
+
+  .preview-type-label,
+  .preview-catch-location {
+    font-size: 0.85rem;
+  }
 }
 </style>
