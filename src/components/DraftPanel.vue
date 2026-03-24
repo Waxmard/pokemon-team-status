@@ -3,17 +3,19 @@
       <div class="wizard-container">
         <!-- Shared header with dynamic title -->
         <div class="wizard-header">
-          <input
-            v-if="draftAction.pokemon"
-            :value="displayName"
-            :size="Math.max(displayName.length, 1)"
-            class="wizard-title wizard-title-input"
-            type="text"
-            maxlength="32"
-            @blur="handleNicknameBlur"
-            @focus="$event.target.select()"
-          />
-          <h3 v-else class="wizard-title">Choose Pokemon</h3>
+          <label v-if="wizardStep === 'pokemon' && draftAction.pokemon" class="wizard-title-field">
+            <span v-if="!displayName" class="wizard-title-placeholder">Pokemon Name</span>
+            <input
+              :value="displayName"
+              :size="Math.max(displayName.length || 12, 1)"
+              class="wizard-title wizard-title-input"
+              type="text"
+              maxlength="32"
+              @blur="handleNicknameBlur"
+              @focus="$event.target.select()"
+            />
+          </label>
+          <h3 v-else class="wizard-title">{{ wizardStepTitle }}</h3>
 
           <!-- Pokemon step: suggestion button -->
           <template v-if="wizardStep === 'pokemon' && canShowSuggestion">
@@ -542,9 +544,7 @@ const canConfirm = computed(() => {
   return !!draftAction.value?.pokemon
 })
 
-const displayName = computed(
-  () => draftAction.value?.nickname || draftAction.value?.pokemon?.name || '',
-)
+const displayName = computed(() => draftAction.value?.nickname || '')
 
 function handleNicknameBlur(event) {
   const trimmed = event.target.value.trim()
@@ -553,7 +553,7 @@ function handleNicknameBlur(event) {
 }
 
 const wizardStepTitle = computed(() => {
-  const name = displayName.value
+  const name = draftAction.value?.nickname || draftAction.value?.pokemon?.name
   if (!name) return 'Choose Pokemon'
   const titles = {
     pokemon: name,
@@ -1117,12 +1117,35 @@ function onSearchInput(value) {
   min-width: 0;
   padding: 0;
   border: none;
-  background: transparent;
-  color: inherit;
   font-size: 1.1rem;
   font-weight: 700;
-  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
   cursor: text;
+  background-image: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.wizard-title-field {
+  position: relative;
+  display: inline-block;
+}
+
+.wizard-title-placeholder {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background-image: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.wizard-title-field:focus-within .wizard-title-placeholder {
+  display: none;
 }
 
 .wizard-title-input:focus {
