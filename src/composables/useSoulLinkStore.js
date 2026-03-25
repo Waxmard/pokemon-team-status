@@ -256,6 +256,7 @@ function addRosterMember(playerId, rosterKey, member) {
       {
         ...cloneValue(member),
         ownerPlayerId: nextPlayerId,
+        updatedAt: Date.now(),
       },
     ],
   })
@@ -283,6 +284,7 @@ function updateRosterMember(playerId, rosterKey, memberId, updates) {
             ...member,
             ...cloneValue(updates),
             ownerPlayerId: nextPlayerId,
+            updatedAt: Date.now(),
           }
         : member,
     ),
@@ -308,6 +310,10 @@ function removeRosterMember(playerId, rosterKey, memberId) {
     [nextRosterKey]: playerRoster[nextRosterKey].filter(
       (member) => member.id !== memberId,
     ),
+    _tombstones: [
+      ...(playerRoster._tombstones ?? []),
+      { memberId, deletedAt: Date.now() },
+    ],
   })
 }
 
@@ -329,9 +335,13 @@ function updatePlayerGymProgress(playerId, updates) {
 
 function setPlayerRoster(playerId, roster) {
   const pid = assertKnownPlayerId(playerId, 'Setting a Soul Link roster')
+  const currentRoster =
+    getSoulLinkState('Setting a Soul Link roster').rosters[pid] ??
+    createDefaultSoulLinkPlayerRoster()
   updatePlayerRecord('rosters', pid, {
     team: normalizeRosterMembers(roster.team, pid),
     box: normalizeRosterMembers(roster.box, pid),
+    _tombstones: currentRoster._tombstones ?? [],
   })
 }
 
@@ -357,10 +367,10 @@ function getPlayerRoster(playerId) {
     'Accessing a Soul Link roster',
   )
 
-  return cloneValue(
+  const { _tombstones, ...roster } =
     getSoulLinkState('Accessing a Soul Link roster').rosters[nextPlayerId] ??
-      createDefaultSoulLinkPlayerRoster(),
-  )
+    createDefaultSoulLinkPlayerRoster()
+  return cloneValue(roster)
 }
 
 function getPlayerTeam(playerId) {

@@ -50,6 +50,7 @@ export function createDefaultSoulLinkMember(overrides = {}) {
     catchLocation: null,
     ownerPlayerId: SOUL_LINK_PLAYER_IDS.LOCAL,
     pairId: null,
+    updatedAt: null,
     ...overrides,
   }
 }
@@ -58,6 +59,7 @@ export function createDefaultSoulLinkPlayerRoster() {
   return {
     team: [],
     box: [],
+    _tombstones: [],
   }
 }
 
@@ -148,6 +150,95 @@ export function buildRemoteState(soulLinkState, generationRules) {
   }
 }
 
+const TOMBSTONE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+
+function buildMemberMap(roster) {
+  const members = new Map()
+  for (const m of roster.team) {
+    members.set(m.id, { member: m, rosterKey: 'team' })
+  }
+  for (const m of roster.box) {
+    members.set(m.id, { member: m, rosterKey: 'box' })
+  }
+  return members
+}
+
+function buildTombstoneMap(roster) {
+  const tombstones = new Map()
+  for (const t of roster._tombstones ?? []) {
+    tombstones.set(t.memberId, t.deletedAt)
+  }
+  return tombstones
+}
+
+function resolveMemberWinner(
+  id,
+  localMembers,
+  remoteMembers,
+  localTombstones,
+  remoteTombstones,
+) {
+  const localActive = localMembers.get(id)
+  const remoteActive = remoteMembers.get(id)
+  const localDeleted = localTombstones.get(id)
+  const remoteDeleted = remoteTombstones.get(id)
+
+  const localTs = localActive?.member.updatedAt ?? localDeleted ?? 0
+  const remoteTs = remoteActive?.member.updatedAt ?? remoteDeleted ?? 0
+  const preferLocal = localTs >= remoteTs
+
+  return {
+    isDeleted: preferLocal
+      ? !localActive && localDeleted != null
+      : !remoteActive && remoteDeleted != null,
+    entry: preferLocal ? localActive : remoteActive,
+    deletedAt: preferLocal ? localDeleted : remoteDeleted,
+  }
+}
+
+export function mergePlayerRoster(localRoster, remoteRoster) {
+  const localMembers = buildMemberMap(localRoster)
+  const remoteMembers = buildMemberMap(remoteRoster)
+  const localTombstones = buildTombstoneMap(localRoster)
+  const remoteTombstones = buildTombstoneMap(remoteRoster)
+
+  const allIds = new Set([
+    ...localMembers.keys(),
+    ...remoteMembers.keys(),
+    ...localTombstones.keys(),
+    ...remoteTombstones.keys(),
+  ])
+
+  const mergedTeam = []
+  const mergedBox = []
+  const mergedTombstones = []
+  const now = Date.now()
+
+  for (const id of allIds) {
+    const winner = resolveMemberWinner(
+      id,
+      localMembers,
+      remoteMembers,
+      localTombstones,
+      remoteTombstones,
+    )
+
+    if (winner.isDeleted) {
+      if (now - winner.deletedAt < TOMBSTONE_MAX_AGE_MS) {
+        mergedTombstones.push({ memberId: id, deletedAt: winner.deletedAt })
+      }
+    } else if (winner.entry) {
+      if (winner.entry.rosterKey === 'team') {
+        mergedTeam.push(winner.entry.member)
+      } else {
+        mergedBox.push(winner.entry.member)
+      }
+    }
+  }
+
+  return { team: mergedTeam, box: mergedBox, _tombstones: mergedTombstones }
+}
+
 export function mergeRemoteState(localSoulLinkState, remoteState) {
   const localPlayer = localSoulLinkState.players.find((p) => p.isLocal)
   const remotePlayerId = localSoulLinkState.players.find((p) => !p.isLocal)?.id
@@ -162,11 +253,14 @@ export function mergeRemoteState(localSoulLinkState, remoteState) {
     return remoteVersion ? { ...player, name: remoteVersion.name } : player
   })
 
-  const mergedRosters = {
-    ...localSoulLinkState.rosters,
-    [remotePlayerId]:
-      remoteState.rosters?.[remotePlayerId] ??
-      localSoulLinkState.rosters[remotePlayerId],
+  const playerIds = [localPlayer.id, remotePlayerId]
+  const mergedRosters = {}
+
+  for (const pid of playerIds) {
+    const localRoster =
+      localSoulLinkState.rosters[pid] ?? createDefaultSoulLinkPlayerRoster()
+    const remoteRoster = remoteState.rosters?.[pid] ?? localRoster
+    mergedRosters[pid] = mergePlayerRoster(localRoster, remoteRoster)
   }
 
   return {

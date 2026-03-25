@@ -139,6 +139,7 @@ export function normalizeRosterMembers(members, playerId) {
   return cloneValue(members ?? []).map((member) => ({
     ...member,
     ownerPlayerId: playerId,
+    updatedAt: member.updatedAt ?? Date.now(),
   }))
 }
 
@@ -214,6 +215,7 @@ export function normalizeRosters(rosters, playerIds, context) {
         {
           team: normalizeRosterMembers(playerRoster.team, playerId),
           box: normalizeRosterMembers(playerRoster.box, playerId),
+          _tombstones: playerRoster._tombstones ?? [],
         },
       ]
     }),
