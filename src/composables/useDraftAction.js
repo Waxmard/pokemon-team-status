@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { pickMemberFields } from '../utils/pokemon.js'
 
 const draftAction = ref(null)
 const swapMode = ref(false)
@@ -15,16 +16,7 @@ export function useDraftAction() {
     draftAction.value = {
       type: 'add',
       pokemon,
-      ability: null,
-      berry: null,
-      moves: [],
-      specialMove: null,
-      megaForm: null,
-      megaTypes: null,
-      megaSpriteId: null,
-      spriteVariant: 'default',
-      catchLocation: null,
-      nickname: null,
+      ...pickMemberFields({}),
     }
   }
 
@@ -41,17 +33,8 @@ export function useDraftAction() {
       isBoxPokemon: false,
       isTeamPokemon: true,
       pokemon: member.pokemonData,
-      ability: member.ability,
-      berry: member.berry,
+      ...pickMemberFields(member),
       moves: [...(member.moves || [])],
-      specialMove: member.specialMove || null,
-      pairId: member.pairId || null,
-      megaForm: member.megaForm || null,
-      megaTypes: member.megaTypes || null,
-      megaSpriteId: member.megaSpriteId || null,
-      spriteVariant: member.spriteVariant || 'default',
-      catchLocation: member.catchLocation || null,
-      nickname: member.nickname || null,
     }
   }
 
@@ -67,18 +50,9 @@ export function useDraftAction() {
       isBoxPokemon: true,
       boxPokemonId: boxMember.id,
       pokemon: boxMember.pokemonData,
-      ability: boxMember.ability,
-      berry: boxMember.berry,
-      moves: [...(boxMember.moves || [])],
-      specialMove: boxMember.specialMove || null,
-      pairId: boxMember.pairId || null,
       replaceTarget: null,
-      megaForm: boxMember.megaForm || null,
-      megaTypes: boxMember.megaTypes || null,
-      megaSpriteId: boxMember.megaSpriteId || null,
-      spriteVariant: boxMember.spriteVariant || 'default',
-      catchLocation: boxMember.catchLocation || null,
-      nickname: boxMember.nickname || null,
+      ...pickMemberFields(boxMember),
+      moves: [...(boxMember.moves || [])],
     }
   }
 
@@ -89,16 +63,7 @@ export function useDraftAction() {
     draftAction.value = {
       type: 'addToBox',
       pokemon,
-      ability: null,
-      berry: null,
-      moves: [],
-      specialMove: null,
-      megaForm: null,
-      megaTypes: null,
-      megaSpriteId: null,
-      spriteVariant: 'default',
-      catchLocation: null,
-      nickname: null,
+      ...pickMemberFields({}),
     }
   }
 
@@ -141,31 +106,13 @@ export function useDraftAction() {
 
   const updateSpriteVariant = (val) => updateField('spriteVariant', val)
 
-  function updateInHandPokemon({
-    pokemonData,
-    ability,
-    berry,
-    moves,
-    specialMove,
-    megaForm,
-    megaTypes,
-    megaSpriteId,
-    spriteVariant,
-    nickname,
-  }) {
+  function updateInHandPokemon(source) {
     if (draftAction.value) {
       draftAction.value = {
         ...draftAction.value,
-        pokemon: pokemonData,
-        ability,
-        berry,
-        moves: [...(moves || [])],
-        specialMove,
-        megaForm,
-        megaTypes,
-        megaSpriteId,
-        spriteVariant: spriteVariant || 'default',
-        nickname: nickname ?? null,
+        pokemon: source.pokemonData,
+        ...pickMemberFields(source),
+        moves: [...(source.moves || [])],
       }
     }
   }

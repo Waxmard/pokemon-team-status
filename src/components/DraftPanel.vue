@@ -278,6 +278,7 @@ import { NAutoComplete } from 'naive-ui'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { useRunStore } from '../composables/useRunStore.js'
+import { useWizardNavigation } from '../composables/useWizardNavigation.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
 import { getMegaOptions } from '../data/megaEvolutions.js'
@@ -300,6 +301,7 @@ import {
   getSpriteUrl,
   resolveSpriteUrl,
 } from '../utils/pokemon.js'
+import { getSuggestionIndicator } from '../utils/suggestion.js'
 import {
   applyAbilityDefense,
   findBestSwap,
@@ -428,13 +430,11 @@ const swapSuggestion = computed(() => {
   }
 })
 
-const suggestionIndicator = computed(() => {
-  if (!swapSuggestion.value) return null
-  const imp = swapSuggestion.value.improvement
-  if (imp > 0) return { symbol: '\u25B2', cls: 'improvement-up' }
-  if (imp < 0) return { symbol: '\u25BC', cls: 'improvement-down' }
-  return { symbol: '\u2014', cls: 'improvement-neutral' }
-})
+const suggestionIndicator = computed(() =>
+  swapSuggestion.value
+    ? getSuggestionIndicator(swapSuggestion.value.improvement)
+    : null,
+)
 
 function toggleSuggestion() {
   showSuggestion.value = !showSuggestion.value
@@ -456,7 +456,26 @@ function getSuggestionSpriteUrl(pokemonName, spriteVariant, megaSpriteId) {
 }
 
 // Wizard state
-const wizardStep = ref('pokemon')
+const wizardSteps = computed(() => {
+  if (props.isSoulLinkMode) {
+    return ['pokemon', 'catchLocation', 'moves', 'berry', 'ability']
+  }
+  return ['pokemon', 'moves', 'berry', 'ability']
+})
+
+const {
+  currentStep: wizardStep,
+  canGoPrevious,
+  canGoNext,
+  goToNext: goToNextStep,
+  goToPrevious: goToPreviousStep,
+  reset: resetWizardStep,
+} = useWizardNavigation(wizardSteps, (step) => {
+  if (step === 'pokemon') return !!draftAction.value?.pokemon
+  if (step === 'catchLocation') return !isDuplicateCatchLocation.value
+  if (step === 'ability') return false
+  return true
+})
 
 // Template refs for auto-focus
 const pokemonInputRef = ref(null)
@@ -619,17 +638,25 @@ const selectedSpriteUrl = computed(() => {
   })
 })
 
-const autocompleteOptions = computed(() => {
-  if (!searchQuery.value) return []
-  const query = searchQuery.value.toLowerCase()
-  return POKEMON_DATA.filter((p) => p.name.toLowerCase().includes(query))
-    .slice(0, 20)
-    .map((p) => ({
-      label: p.name,
-      value: p.name,
-      pokemon: p,
-    }))
-})
+function filterOptions(
+  items,
+  query,
+  { mapItem = (name) => ({ label: name, value: name }), limit } = {},
+) {
+  if (!query) return limit ? [] : items.map(mapItem)
+  const q = query.toLowerCase()
+  const filtered = items.filter((item) =>
+    (typeof item === 'string' ? item : item.name).toLowerCase().includes(q),
+  )
+  return (limit ? filtered.slice(0, limit) : filtered).map(mapItem)
+}
+
+const autocompleteOptions = computed(() =>
+  filterOptions(POKEMON_DATA, searchQuery.value, {
+    mapItem: (p) => ({ label: p.name, value: p.name, pokemon: p }),
+    limit: 20,
+  }),
+)
 
 const megaOptions = computed(() => {
   if (!effectiveDraftPokemon.value) return []
@@ -818,26 +845,14 @@ function toggleMoveType(type) {
 }
 
 // Special move helpers
-const specialMoveOptions = computed(() => {
-  if (!specialMoveQuery.value) {
-    return SPECIAL_MOVE_NAMES.map((name) => ({ label: name, value: name }))
-  }
-  const query = specialMoveQuery.value.toLowerCase()
-  return SPECIAL_MOVE_NAMES.filter((name) =>
-    name.toLowerCase().includes(query),
-  ).map((name) => ({ label: name, value: name }))
-})
+const specialMoveOptions = computed(() =>
+  filterOptions(SPECIAL_MOVE_NAMES, specialMoveQuery.value),
+)
 
 // Ability autocomplete helpers
-const abilityAutocompleteOptions = computed(() => {
-  if (!abilityQuery.value) {
-    return ABILITY_NAMES.map((name) => ({ label: name, value: name }))
-  }
-  const query = abilityQuery.value.toLowerCase()
-  return ABILITY_NAMES.filter((name) => name.toLowerCase().includes(query)).map(
-    (name) => ({ label: name, value: name }),
-  )
-})
+const abilityAutocompleteOptions = computed(() =>
+  filterOptions(ABILITY_NAMES, abilityQuery.value),
+)
 
 function onSelectAbility(value) {
   if (draftAction.value?.ability === value) {
@@ -961,16 +976,6 @@ function unlinkCatchLocation() {
   updateCatchLocation(null)
 }
 
-// Wizard navigation functions
-const wizardSteps = computed(() => {
-  if (props.isSoulLinkMode) {
-    return ['pokemon', 'catchLocation', 'moves', 'berry', 'ability']
-  }
-  return ['pokemon', 'moves', 'berry', 'ability']
-})
-
-const canGoPrevious = computed(() => wizardStep.value !== 'pokemon')
-
 const isDuplicateCatchLocation = computed(() => {
   if (!props.isSoulLinkMode || !catchLocationQuery.value) return false
   const query = catchLocationQuery.value.trim().toLowerCase()
@@ -985,30 +990,6 @@ const isDuplicateCatchLocation = computed(() => {
   )
 })
 
-const canGoNext = computed(() => {
-  if (wizardStep.value === 'pokemon') return !!draftAction.value?.pokemon
-  if (wizardStep.value === 'catchLocation')
-    return !isDuplicateCatchLocation.value
-  if (wizardStep.value === 'ability') return false
-  return true
-})
-
-function goToNextStep() {
-  const steps = wizardSteps.value
-  const currentIndex = steps.indexOf(wizardStep.value)
-  if (currentIndex < steps.length - 1) {
-    wizardStep.value = steps[currentIndex + 1]
-  }
-}
-
-function goToPreviousStep() {
-  const steps = wizardSteps.value
-  const currentIndex = steps.indexOf(wizardStep.value)
-  if (currentIndex > 0) {
-    wizardStep.value = steps[currentIndex - 1]
-  }
-}
-
 function toggleBerry(value) {
   if (draftAction.value?.berry === value) {
     updateBerry(null)
@@ -1018,13 +999,7 @@ function toggleBerry(value) {
 }
 
 // Reset wizard step when panel opens
-watch(
-  draftAction,
-  () => {
-    wizardStep.value = 'pokemon'
-  },
-  { immediate: true },
-)
+watch(draftAction, () => resetWizardStep(), { immediate: true })
 
 function onSelectPokemon(value) {
   const pokemon = getPokemonDataForRules(value, effectiveGenerationRules.value)
