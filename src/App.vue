@@ -294,6 +294,7 @@ function resetPokemon() {
     cancel()
   } else {
     resetPlayerRoster(viewedSoulLinkPlayerId.value)
+    triggerSync()
     cancel()
   }
   showResetDialog.value = false
@@ -1225,6 +1226,7 @@ function handleSoulLinkConfirmDraft() {
 
   if (!draftAction.value.pokemon) {
     handleSoulLinkDraftDeletion(pid)
+    triggerSync()
     cancel()
     return
   }
