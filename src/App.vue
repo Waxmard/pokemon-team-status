@@ -512,7 +512,9 @@ watch(swapMode, (isSwapMode) => {
       }
     }
     if (!isSoloMode.value && !soulLinkSwapOriginalRoster.value) {
-      soulLinkSwapOriginalRoster.value = getSoulLinkRoster()
+      soulLinkSwapOriginalRoster.value = getPlayerRoster(
+        viewedSoulLinkPlayerId.value,
+      )
     }
   } else {
     swapOriginalState.value = null
