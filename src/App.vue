@@ -1225,6 +1225,7 @@ function handleSoulLinkConfirmDraft() {
 
   if (!draftAction.value.pokemon) {
     handleSoulLinkDraftDeletion(pid)
+    triggerSync()
     cancel()
     return
   }
