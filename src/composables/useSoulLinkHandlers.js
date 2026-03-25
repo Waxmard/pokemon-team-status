@@ -134,6 +134,16 @@ export function useSoulLinkHandlers(
     )
   }
 
+  function tryLinkedDelete(pid, memberId, rosterKey) {
+    const target = findLinkedDeleteTarget(pid, memberId, rosterKey)
+    if (target) {
+      linkedDeleteTarget.value = target
+      return true
+    }
+    removeSoulLinkRosterMember(pid, rosterKey, memberId)
+    return false
+  }
+
   function confirmLinkedDelete() {
     if (!linkedDeleteTarget.value) return
     const pid = viewedSoulLinkPlayerId.value
@@ -152,31 +162,12 @@ export function useSoulLinkHandlers(
   }
 
   function handleSoulLinkDeleteTeamPokemon(id) {
-    const target = findLinkedDeleteTarget(
-      viewedSoulLinkPlayerId.value,
-      id,
-      'team',
-    )
-    if (target) {
-      linkedDeleteTarget.value = target
-      return
-    }
-    removeSoulLinkRosterMember(viewedSoulLinkPlayerId.value, 'team', id)
-    triggerSync()
+    if (!tryLinkedDelete(viewedSoulLinkPlayerId.value, id, 'team'))
+      triggerSync()
   }
 
   function handleSoulLinkDeleteBoxPokemon(id) {
-    const target = findLinkedDeleteTarget(
-      viewedSoulLinkPlayerId.value,
-      id,
-      'box',
-    )
-    if (target) {
-      linkedDeleteTarget.value = target
-      return
-    }
-    removeSoulLinkRosterMember(viewedSoulLinkPlayerId.value, 'box', id)
-    triggerSync()
+    if (!tryLinkedDelete(viewedSoulLinkPlayerId.value, id, 'box')) triggerSync()
   }
 
   function handleSoulLinkDeleteFromDraft() {
@@ -184,27 +175,9 @@ export function useSoulLinkHandlers(
     const pid = viewedSoulLinkPlayerId.value
 
     if (draftAction.value.isBoxPokemon) {
-      const target = findLinkedDeleteTarget(
-        pid,
-        draftAction.value.boxPokemonId,
-        'box',
-      )
-      if (target) {
-        linkedDeleteTarget.value = target
-        return
-      }
-      removeSoulLinkRosterMember(pid, 'box', draftAction.value.boxPokemonId)
+      if (tryLinkedDelete(pid, draftAction.value.boxPokemonId, 'box')) return
     } else if (draftAction.value.editId) {
-      const target = findLinkedDeleteTarget(
-        pid,
-        draftAction.value.editId,
-        'team',
-      )
-      if (target) {
-        linkedDeleteTarget.value = target
-        return
-      }
-      removeSoulLinkRosterMember(pid, 'team', draftAction.value.editId)
+      if (tryLinkedDelete(pid, draftAction.value.editId, 'team')) return
     }
     triggerSync()
     cancel()
@@ -292,17 +265,6 @@ export function useSoulLinkHandlers(
     reconcileSoulLinkPairing(pid, memberId, rosterKey)
   }
 
-  function handleSoulLinkDraftDeletion(pid) {
-    if (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) {
-      removeSoulLinkRosterMember(pid, 'team', draftAction.value.editId)
-    } else if (
-      draftAction.value.type === 'edit' &&
-      draftAction.value.isBoxPokemon
-    ) {
-      removeSoulLinkRosterMember(pid, 'box', draftAction.value.boxPokemonId)
-    }
-  }
-
   function enterSoulLinkAddReplaceMode(pid) {
     soulLinkSwapOriginalRoster.value = getSoulLinkRoster()
 
@@ -341,9 +303,7 @@ export function useSoulLinkHandlers(
     const pid = viewedSoulLinkPlayerId.value
 
     if (!draftAction.value.pokemon) {
-      handleSoulLinkDraftDeletion(pid)
-      triggerSync()
-      cancel()
+      handleSoulLinkDeleteFromDraft()
       return
     }
 
