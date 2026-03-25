@@ -227,7 +227,10 @@ const {
   resetPlayerGymProgress,
   createSession: createSoulLinkSession,
   joinSession: joinSoulLinkSession,
+  updateRosterMember: updateSoulLinkRosterMember,
   syncSession: syncSoulLinkSession,
+  pullState: pullSoulLinkState,
+  pushState: pushSoulLinkState,
   subscribeToSessionUpdates: subscribeSoulLink,
   unsubscribeFromSession: unsubscribeSoulLink,
 } = useSoulLinkStore()
@@ -965,6 +968,19 @@ onMounted(async () => {
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
+
+if (import.meta.env.DEV) {
+  import('./utils/devTools.js').then(({ createDevTools }) => {
+    window.__sl = createDevTools({
+      players: soulLinkPlayers,
+      rosters: soulLinkRosters,
+      sessionMetadata: soulLinkSessionMetadata,
+      updateRosterMember: updateSoulLinkRosterMember,
+      pullState: pullSoulLinkState,
+      pushState: pushSoulLinkState,
+    })
+  })
+}
 </script>
 
 <style scoped>
