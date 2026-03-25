@@ -1,21 +1,15 @@
 import { ref } from 'vue'
 import { getPokemonDataForRules } from '../data/pokemon.js'
-import {
-  buildPokemonMember,
-  generatePokemonId,
-  pickMemberFields,
-} from '../utils/pokemon.js'
+import { buildPokemonMember, pickMemberFields } from '../utils/pokemon.js'
 import {
   findLinkedDeleteTarget as findLinkedDeleteTargetUtil,
   preserveSoulLinkPairingFields,
   reconcileSoulLinkPairing as reconcileSoulLinkPairingUtil,
-  updateReciprocalSoulLinkPairId as updateReciprocalSoulLinkPairIdUtil,
 } from '../utils/soulLinkPairing.js'
 import {
   adaptSoulLinkMemberToUiMember,
   adaptUiMemberToSoulLinkMember,
   buildSoulLinkMemberFromDraft,
-  cloneSoulLinkMember,
 } from '../utils/soulLinkUi.js'
 import { useDraftAction } from './useDraftAction.js'
 import { useSoulLinkStore } from './useSoulLinkStore.js'
@@ -82,14 +76,6 @@ export function useSoulLinkHandlers(
       playerId,
       memberId,
       rosterKey,
-      getPairingContext(),
-    )
-  }
-
-  function updateReciprocalSoulLinkPairId(previousMemberId, nextMemberId) {
-    updateReciprocalSoulLinkPairIdUtil(
-      previousMemberId,
-      nextMemberId,
       getPairingContext(),
     )
   }
@@ -187,50 +173,30 @@ export function useSoulLinkHandlers(
 
   function confirmSoulLinkBoxPokemonReplace(pid, newMember) {
     const roster = getSoulLinkRoster()
+    const boxPokemonId = draftAction.value.boxPokemonId
 
     if (draftAction.value.replaceTarget.startsWith('empty-')) {
       if (roster.team.length >= 6) return
-      const boxedMember = roster.box.find(
-        (m) => m.id === draftAction.value.boxPokemonId,
+      const boxedMember = roster.box.find((m) => m.id === boxPokemonId)
+      const movedMember = preserveSoulLinkPairingFields(
+        { ...newMember, id: boxPokemonId },
+        boxedMember,
       )
-      const movedMember = preserveSoulLinkPairingFields(newMember, boxedMember)
       addRosterMember(pid, 'team', movedMember)
-      removeSoulLinkRosterMember(pid, 'box', draftAction.value.boxPokemonId)
-      updateReciprocalSoulLinkPairId(
-        draftAction.value.boxPokemonId,
-        movedMember.id,
-      )
+      removeSoulLinkRosterMember(pid, 'box', boxPokemonId)
       reconcileSoulLinkPairing(pid, movedMember.id, 'team')
       return
     }
 
-    const boxedMember = roster.box.find(
-      (m) => m.id === draftAction.value.boxPokemonId,
-    )
+    const boxedMember = roster.box.find((m) => m.id === boxPokemonId)
     const replacedTeamMember = roster.team.find(
       (m) => m.id === draftAction.value.replaceTarget,
     )
     if (!boxedMember || !replacedTeamMember) return
 
-    const nextTeamMember = preserveSoulLinkPairingFields(newMember, boxedMember)
-    const uiReplaced = {
-      id: generatePokemonId('box'),
-      name: replacedTeamMember.speciesName,
-      types: replacedTeamMember.types,
-      ability: replacedTeamMember.ability,
-      berry: replacedTeamMember.berry,
-      moves: replacedTeamMember.moves,
-      specialMove: replacedTeamMember.specialMove,
-      megaForm: replacedTeamMember.megaForm,
-      megaTypes: replacedTeamMember.megaTypes,
-      megaSpriteId: replacedTeamMember.megaSpriteId,
-      spriteVariant: replacedTeamMember.spriteVariant,
-      catchLocation: replacedTeamMember.catchLocation,
-      pairId: replacedTeamMember.pairId,
-    }
-    const boxMember = preserveSoulLinkPairingFields(
-      adaptUiMemberToSoulLinkMember(uiReplaced, pid),
-      replacedTeamMember,
+    const nextTeamMember = preserveSoulLinkPairingFields(
+      { ...newMember, id: boxPokemonId },
+      boxedMember,
     )
 
     setPlayerRoster(pid, {
@@ -238,20 +204,12 @@ export function useSoulLinkHandlers(
         m.id === draftAction.value.replaceTarget ? nextTeamMember : m,
       ),
       box: roster.box.map((m) =>
-        m.id === draftAction.value.boxPokemonId ? boxMember : m,
+        m.id === boxPokemonId ? replacedTeamMember : m,
       ),
     })
 
-    updateReciprocalSoulLinkPairId(
-      draftAction.value.boxPokemonId,
-      nextTeamMember.id,
-    )
-    updateReciprocalSoulLinkPairId(
-      draftAction.value.replaceTarget,
-      boxMember.id,
-    )
     reconcileSoulLinkPairing(pid, nextTeamMember.id, 'team')
-    reconcileSoulLinkPairing(pid, boxMember.id, 'box')
+    reconcileSoulLinkPairing(pid, replacedTeamMember.id, 'box')
   }
 
   function confirmSoulLinkMemberUpdate(pid, rosterKey, memberId) {
@@ -355,7 +313,10 @@ export function useSoulLinkHandlers(
     const boxPokemonId = draftAction.value.boxPokemonId
     const boxedMember = roster.box.find((member) => member.id === boxPokemonId)
     const inHandMember = preserveSoulLinkPairingFields(
-      buildSoulLinkMemberFromDraft(draftAction.value, pid, 'team'),
+      {
+        ...buildSoulLinkMemberFromDraft(draftAction.value, pid, 'team'),
+        id: boxPokemonId,
+      },
       boxedMember,
     )
 
@@ -363,7 +324,6 @@ export function useSoulLinkHandlers(
       if (roster.team.length >= 6) return
       addRosterMember(pid, 'team', inHandMember)
       removeSoulLinkRosterMember(pid, 'box', boxPokemonId)
-      updateReciprocalSoulLinkPairId(boxPokemonId, inHandMember.id)
       reconcileSoulLinkPairing(pid, inHandMember.id, 'team')
       exitSwapMode()
       return
@@ -372,44 +332,34 @@ export function useSoulLinkHandlers(
     const targetMember = roster.team.find((m) => m.id === targetId)
     if (!targetMember) return
 
-    const nextTeamMember = { ...inHandMember, id: generatePokemonId('team') }
-    const newBoxMember = cloneSoulLinkMember(
-      targetMember,
-      generatePokemonId('box'),
-    )
-
     setPlayerRoster(pid, {
-      team: roster.team.map((m) => (m.id === targetId ? nextTeamMember : m)),
-      box: roster.box.map((m) => (m.id === boxPokemonId ? newBoxMember : m)),
+      team: roster.team.map((m) => (m.id === targetId ? inHandMember : m)),
+      box: roster.box.map((m) => (m.id === boxPokemonId ? targetMember : m)),
     })
-
-    updateReciprocalSoulLinkPairId(boxPokemonId, nextTeamMember.id)
-    updateReciprocalSoulLinkPairId(targetId, newBoxMember.id)
 
     updateInHandPokemon({
       pokemonData: getSoulLinkGenRulesPokemonData(targetMember.speciesName),
       ...adaptSoulLinkMemberToUiMember(targetMember),
     })
     refreshSoulLinkDraftMetadata(targetMember)
-    draftAction.value.boxPokemonId = newBoxMember.id
+    draftAction.value.boxPokemonId = targetId
   }
 
   function handleSoulLinkTeamToBoxSwap(targetId, pid, roster) {
     const teamPokemonId = draftAction.value.editId
     const teamMember = roster.team.find((member) => member.id === teamPokemonId)
     const inHandMember = preserveSoulLinkPairingFields(
-      buildSoulLinkMemberFromDraft(draftAction.value, pid, 'team'),
+      {
+        ...buildSoulLinkMemberFromDraft(draftAction.value, pid, 'team'),
+        id: teamPokemonId,
+      },
       teamMember,
     )
 
     if (targetId === null) {
-      const boxMember = preserveSoulLinkPairingFields(
-        buildSoulLinkMemberFromDraft(draftAction.value, pid, 'box'),
-        teamMember,
-      )
+      const boxMember = { ...inHandMember, id: teamPokemonId }
       addRosterMember(pid, 'box', boxMember)
       removeSoulLinkRosterMember(pid, 'team', teamPokemonId)
-      updateReciprocalSoulLinkPairId(teamPokemonId, boxMember.id)
       reconcileSoulLinkPairing(pid, boxMember.id, 'box')
       exitSwapMode()
       return
@@ -418,28 +368,17 @@ export function useSoulLinkHandlers(
     const targetMember = roster.box.find((m) => m.id === targetId)
     if (!targetMember) return
 
-    const newTeamMember = cloneSoulLinkMember(
-      targetMember,
-      generatePokemonId('team'),
-    )
-    const nextBoxMember = { ...inHandMember, id: generatePokemonId('box') }
-
     setPlayerRoster(pid, {
-      team: roster.team.map((m) =>
-        m.id === teamPokemonId ? newTeamMember : m,
-      ),
-      box: roster.box.map((m) => (m.id === targetId ? nextBoxMember : m)),
+      team: roster.team.map((m) => (m.id === teamPokemonId ? targetMember : m)),
+      box: roster.box.map((m) => (m.id === targetId ? inHandMember : m)),
     })
-
-    updateReciprocalSoulLinkPairId(targetId, newTeamMember.id)
-    updateReciprocalSoulLinkPairId(teamPokemonId, nextBoxMember.id)
 
     updateInHandPokemon({
       pokemonData: getSoulLinkGenRulesPokemonData(targetMember.speciesName),
       ...adaptSoulLinkMemberToUiMember(targetMember),
     })
     refreshSoulLinkDraftMetadata(targetMember)
-    draftAction.value.editId = newTeamMember.id
+    draftAction.value.editId = targetId
   }
 
   function handleSoulLinkImmediateSwap(targetId) {
@@ -469,29 +408,17 @@ export function useSoulLinkHandlers(
       const boxMember = roster.box.find((m) => m.id === candidateId)
       if (!teamMember || !boxMember) return
 
-      const newTeamMember = cloneSoulLinkMember(
-        boxMember,
-        generatePokemonId('team'),
-      )
-      const newBoxMember = cloneSoulLinkMember(
-        teamMember,
-        generatePokemonId('box'),
-      )
-
       setPlayerRoster(pid, {
-        team: roster.team.map((m) => (m.id === currentId ? newTeamMember : m)),
-        box: roster.box.map((m) => (m.id === candidateId ? newBoxMember : m)),
+        team: roster.team.map((m) => (m.id === currentId ? boxMember : m)),
+        box: roster.box.map((m) => (m.id === candidateId ? teamMember : m)),
       })
-
-      updateReciprocalSoulLinkPairId(candidateId, newTeamMember.id)
-      updateReciprocalSoulLinkPairId(currentId, newBoxMember.id)
 
       const pokemonData = getSoulLinkGenRulesPokemonData(teamMember.speciesName)
       draftAction.value = {
         type: 'edit',
         isBoxPokemon: true,
         isTeamPokemon: false,
-        boxPokemonId: newBoxMember.id,
+        boxPokemonId: currentId,
         pokemon: pokemonData,
         ...pickMemberFields(teamMember),
         moves: [...(teamMember.moves || [])],

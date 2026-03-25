@@ -31,10 +31,6 @@ export function buildSoulLinkMemberFromDraft(
   }
 }
 
-export function cloneSoulLinkMember(member, newId) {
-  return { ...member, id: newId }
-}
-
 export function adaptSoulLinkMemberToUiMember(member) {
   if (!member?.speciesName) return null
 

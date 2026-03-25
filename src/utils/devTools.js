@@ -49,6 +49,8 @@ export function createDevTools({
   rosters,
   sessionMetadata,
   updateRosterMember,
+  removeRosterMember,
+  setPlayerRoster,
   pullState,
   pushState,
 }) {
@@ -162,5 +164,103 @@ export function createDevTools({
     }
   }
 
-  return { inspect, inspectRemote, clearStalePairIds, fixAsymmetricPairings }
+  async function trimTeam(playerId, keepCount = 6) {
+    const roster = rosters.value[playerId]
+    if (!roster) {
+      console.log(`No roster found for ${playerId}`)
+      return
+    }
+    if (roster.team.length <= keepCount) {
+      console.log(
+        `Team already has ${roster.team.length} members (limit: ${keepCount})`,
+      )
+      return
+    }
+
+    const keep = roster.team.slice(0, keepCount)
+    const remove = roster.team.slice(keepCount)
+
+    for (const m of remove) {
+      console.log(`Moving to box: ${m.speciesName} (${m.id})`)
+    }
+
+    setPlayerRoster(playerId, {
+      team: keep,
+      box: [...roster.box, ...remove],
+    })
+
+    console.log(`Trimmed team to ${keepCount}, moved ${remove.length} to box`)
+
+    if (sessionMetadata.value?.sessionId) {
+      await pushState()
+      console.log('Pushed to remote')
+    }
+  }
+
+  function isReciprocated(member) {
+    if (!member.pairId) return false
+    const partner = findMemberById(member.pairId)
+    return partner?.member.pairId === member.id
+  }
+
+  function pickKeeper(members) {
+    const reciprocated = members.filter(isReciprocated)
+    if (reciprocated.length === 1) return reciprocated[0]
+    return members.reduce((a, b) =>
+      (a.updatedAt ?? 0) <= (b.updatedAt ?? 0) ? a : b,
+    )
+  }
+
+  function groupByKey(items, keyFn) {
+    const groups = new Map()
+    for (const item of items) {
+      const key = keyFn(item)
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key).push(item)
+    }
+    return groups
+  }
+
+  async function dedupBox(playerId) {
+    const roster = rosters.value[playerId]
+    if (!roster) {
+      console.log(`No roster found for ${playerId}`)
+      return
+    }
+
+    const groups = groupByKey(
+      roster.box,
+      (m) => `${m.speciesName}|${m.catchLocation}`,
+    )
+
+    let removed = 0
+    for (const [key, members] of groups) {
+      if (members.length <= 1) continue
+      const keeper = pickKeeper(members)
+      for (const m of members) {
+        if (m.id === keeper.id) continue
+        console.log(`Removing duplicate: ${m.speciesName} (${m.id}) [${key}]`)
+        removeRosterMember(playerId, 'box', m.id)
+        removed++
+      }
+    }
+
+    console.log(
+      removed ? `Removed ${removed} duplicate(s)` : 'No duplicates found',
+    )
+
+    if (removed > 0 && sessionMetadata.value?.sessionId) {
+      await pushState()
+      console.log('Pushed to remote')
+    }
+  }
+
+  return {
+    inspect,
+    inspectRemote,
+    clearStalePairIds,
+    fixAsymmetricPairings,
+    trimTeam,
+    dedupBox,
+  }
 }

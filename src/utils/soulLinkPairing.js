@@ -157,27 +157,3 @@ export function reconcileSoulLinkPairing(
     updateRosterMember(playerId, rosterKey, memberId, { pairId: null })
   }
 }
-
-export function updateReciprocalSoulLinkPairId(
-  previousMemberId,
-  nextMemberId,
-  { getPlayerRoster, updateRosterMember, partnerId },
-) {
-  if (!previousMemberId || !nextMemberId || previousMemberId === nextMemberId) {
-    return
-  }
-  if (!partnerId) return
-
-  const partnerRoster = getPlayerRoster(partnerId)
-  const partnerMember = getAllMembers(partnerRoster).find(
-    (member) => member.pairId === previousMemberId,
-  )
-  if (!partnerMember) return
-
-  updateRosterMember(
-    partnerId,
-    findRosterKey(partnerRoster, partnerMember.id),
-    partnerMember.id,
-    { pairId: nextMemberId },
-  )
-}
