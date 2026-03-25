@@ -1,3 +1,11 @@
+export function normalizeCatchLocation(location) {
+  return location?.toLowerCase()?.trim() ?? null
+}
+
+function getAllMembers(roster) {
+  return [...roster.team, ...roster.box]
+}
+
 export function preserveSoulLinkPairingFields(member, sourceMember) {
   if (!member) return member
 
@@ -29,7 +37,7 @@ export function findLinkedDeleteTarget(
   if (!partnerId) return null
 
   const partnerRoster = getPlayerRoster(partnerId)
-  const partnerMember = [...partnerRoster.team, ...partnerRoster.box].find(
+  const partnerMember = getAllMembers(partnerRoster).find(
     (m) => m.id === member.pairId,
   )
   if (!partnerMember) return null
@@ -61,7 +69,7 @@ function displaceOldPairOfPartner(playerId, memberId, matchingPartner, ctx) {
   if (!matchingPartner.pairId || matchingPartner.pairId === memberId) return
 
   const myRoster = ctx.getPlayerRoster(playerId)
-  const oldPairOfPartner = [...myRoster.team, ...myRoster.box].find(
+  const oldPairOfPartner = getAllMembers(myRoster).find(
     (m) => m.id === matchingPartner.pairId,
   )
   if (oldPairOfPartner) {
@@ -85,9 +93,9 @@ export function reconcileSoulLinkPairing(
   if (!member || !partnerId) return
 
   const partnerRoster = getPlayerRoster(partnerId)
-  const allPartnerMembers = [...partnerRoster.team, ...partnerRoster.box]
+  const allPartnerMembers = getAllMembers(partnerRoster)
 
-  const normalizedCatchLocation = member.catchLocation?.toLowerCase() ?? null
+  const normalizedCatchLocation = normalizeCatchLocation(member.catchLocation)
   const existingPartner = member.pairId
     ? allPartnerMembers.find((m) => m.id === member.pairId)
     : null
@@ -106,7 +114,8 @@ export function reconcileSoulLinkPairing(
   }
 
   if (
-    existingPartner?.catchLocation?.toLowerCase() === normalizedCatchLocation
+    normalizeCatchLocation(existingPartner?.catchLocation) ===
+    normalizedCatchLocation
   ) {
     if (existingPartner.pairId !== memberId) {
       updateRosterMember(
@@ -130,8 +139,7 @@ export function reconcileSoulLinkPairing(
 
   const matchingPartner = allPartnerMembers.find(
     (m) =>
-      m.catchLocation &&
-      m.catchLocation.toLowerCase() === normalizedCatchLocation &&
+      normalizeCatchLocation(m.catchLocation) === normalizedCatchLocation &&
       m.id !== member.pairId,
   )
 
@@ -152,28 +160,4 @@ export function reconcileSoulLinkPairing(
   } else {
     updateRosterMember(playerId, rosterKey, memberId, { pairId: null })
   }
-}
-
-export function updateReciprocalSoulLinkPairId(
-  previousMemberId,
-  nextMemberId,
-  { getPlayerRoster, updateRosterMember, partnerId },
-) {
-  if (!previousMemberId || !nextMemberId || previousMemberId === nextMemberId) {
-    return
-  }
-  if (!partnerId) return
-
-  const partnerRoster = getPlayerRoster(partnerId)
-  const partnerMember = [...partnerRoster.team, ...partnerRoster.box].find(
-    (member) => member.pairId === previousMemberId,
-  )
-  if (!partnerMember) return
-
-  updateRosterMember(
-    partnerId,
-    findRosterKey(partnerRoster, partnerMember.id),
-    partnerMember.id,
-    { pairId: nextMemberId },
-  )
 }

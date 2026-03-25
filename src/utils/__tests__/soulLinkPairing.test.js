@@ -3,7 +3,6 @@ import {
   findLinkedDeleteTarget,
   preserveSoulLinkPairingFields,
   reconcileSoulLinkPairing,
-  updateReciprocalSoulLinkPairId,
 } from '../soulLinkPairing.js'
 
 function member(overrides = {}) {
@@ -258,46 +257,5 @@ describe('reconcileSoulLinkPairing', () => {
       'a',
       { pairId: null },
     )
-  })
-})
-
-describe('updateReciprocalSoulLinkPairId', () => {
-  it('updates partner pairId from previous to next', () => {
-    const ctx = createContext({
-      'player-2': roster([member({ id: 'b', pairId: 'old-a' })]),
-    })
-    updateReciprocalSoulLinkPairId('old-a', 'new-a', ctx)
-    expect(ctx.updateRosterMember).toHaveBeenCalledWith(
-      'player-2',
-      'team',
-      'b',
-      { pairId: 'new-a' },
-    )
-  })
-
-  it('no-ops when previousMemberId is null', () => {
-    const ctx = createContext({})
-    updateReciprocalSoulLinkPairId(null, 'new-a', ctx)
-    expect(ctx.updateRosterMember).not.toHaveBeenCalled()
-  })
-
-  it('no-ops when IDs are the same', () => {
-    const ctx = createContext({})
-    updateReciprocalSoulLinkPairId('same', 'same', ctx)
-    expect(ctx.updateRosterMember).not.toHaveBeenCalled()
-  })
-
-  it('no-ops when no partnerId', () => {
-    const ctx = createContext({}, null)
-    updateReciprocalSoulLinkPairId('old', 'new', ctx)
-    expect(ctx.updateRosterMember).not.toHaveBeenCalled()
-  })
-
-  it('no-ops when partner member not found', () => {
-    const ctx = createContext({
-      'player-2': roster([member({ id: 'b', pairId: 'unrelated' })]),
-    })
-    updateReciprocalSoulLinkPairId('old', 'new', ctx)
-    expect(ctx.updateRosterMember).not.toHaveBeenCalled()
   })
 })

@@ -41,6 +41,12 @@ export function getBerrySprite(berryName) {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${slug}.png`
 }
 
+export function resolveSpriteUrl(name, { variant, megaSpriteId, small } = {}) {
+  const v = variant || 'default'
+  if (megaSpriteId) return getMegaSpriteUrl(megaSpriteId, v)
+  return small ? getSmallSpriteUrl(name, v) : getSpriteUrl(name, v)
+}
+
 export function getMegaSpriteUrl(spriteId, variant = 'default') {
   const shinySegment = variant === 'shiny' ? 'shiny/' : ''
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${shinySegment}${spriteId}.png`
@@ -56,45 +62,40 @@ export function generatePokemonId(source = 'team') {
   return `${base}-${source}`
 }
 
+const MEMBER_FIELD_DEFAULTS = {
+  ability: null,
+  berry: null,
+  moves: [],
+  specialMove: null,
+  megaForm: null,
+  megaTypes: null,
+  megaSpriteId: null,
+  spriteVariant: 'default',
+  nickname: null,
+  catchLocation: null,
+  pairId: null,
+}
+
+export function pickMemberFields(source) {
+  const result = {}
+  for (const [field, defaultValue] of Object.entries(MEMBER_FIELD_DEFAULTS)) {
+    result[field] = source[field] ?? defaultValue
+  }
+  return result
+}
+
 /**
  * Build a Pokemon member object from draft action state or an existing Pokemon
  * @param {Object} source - Either draftAction.value or an existing Pokemon object
  * @param {Object} options - Optional overrides (id, etc.)
  */
 export function buildPokemonMember(source, options = {}) {
-  // Handle draftAction format (has .pokemon property)
-  if (source.pokemon) {
-    return {
-      id: options.id ?? generatePokemonId(options.source),
-      name: source.pokemon.name,
-      types: source.pokemon.types,
-      ability: source.ability ?? null,
-      berry: source.berry ?? null,
-      moves: (source.moves ?? []).filter(Boolean),
-      specialMove: source.specialMove ?? null,
-      megaForm: source.megaForm ?? null,
-      megaTypes: source.megaTypes ?? null,
-      megaSpriteId: source.megaSpriteId ?? null,
-      spriteVariant: source.spriteVariant ?? 'default',
-      nickname: source.nickname ?? null,
-      pairId: source.pairId ?? null,
-    }
-  }
-
-  // Handle existing Pokemon object format
+  const isDraft = !!source.pokemon
   return {
     id: options.id ?? generatePokemonId(options.source),
-    name: source.name,
-    types: source.types,
-    ability: source.ability ?? null,
-    berry: source.berry ?? null,
-    moves: source.moves ?? [],
-    specialMove: source.specialMove ?? null,
-    megaForm: source.megaForm ?? null,
-    megaTypes: source.megaTypes ?? null,
-    megaSpriteId: source.megaSpriteId ?? null,
-    spriteVariant: source.spriteVariant ?? 'default',
-    nickname: source.nickname ?? null,
-    pairId: source.pairId ?? null,
+    name: isDraft ? source.pokemon.name : source.name,
+    types: isDraft ? source.pokemon.types : source.types,
+    ...pickMemberFields(source),
+    ...(isDraft && { moves: (source.moves ?? []).filter(Boolean) }),
   }
 }

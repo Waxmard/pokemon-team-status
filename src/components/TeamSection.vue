@@ -135,7 +135,7 @@ import { computed, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { useLongPress } from '../composables/useLongPress.js'
 import { getPokemonDataForRules } from '../data/pokemon.js'
-import { getMegaSpriteUrl, getSpriteUrl } from '../utils/pokemon.js'
+import { resolveSpriteUrl } from '../utils/pokemon.js'
 import DraftPanel from './DraftPanel.vue'
 import SpriteImg from './SpriteImg.vue'
 import TeamSlot from './TeamSlot.vue'
@@ -204,11 +204,10 @@ function getRulesetPokemonData(name) {
 // Sprite URL for the pokemon "in hand" during swap mode
 const swapPokemonSpriteUrl = computed(() => {
   if (!swapMode.value || !draftAction.value?.pokemon) return null
-  const variant = draftAction.value.spriteVariant || 'default'
-  if (draftAction.value.megaSpriteId) {
-    return getMegaSpriteUrl(draftAction.value.megaSpriteId, variant)
-  }
-  return getSpriteUrl(draftAction.value.pokemon.name, variant)
+  return resolveSpriteUrl(draftAction.value.pokemon.name, {
+    variant: draftAction.value.spriteVariant,
+    megaSpriteId: draftAction.value.megaSpriteId,
+  })
 })
 
 const viewMode = ref('team')
