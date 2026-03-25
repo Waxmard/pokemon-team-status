@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { pickMemberFields } from '../utils/pokemon.js'
 
 const draftAction = ref(null)
 const swapMode = ref(false)
@@ -15,16 +16,7 @@ export function useDraftAction() {
     draftAction.value = {
       type: 'add',
       pokemon,
-      ability: null,
-      berry: null,
-      moves: [],
-      specialMove: null,
-      megaForm: null,
-      megaTypes: null,
-      megaSpriteId: null,
-      spriteVariant: 'default',
-      catchLocation: null,
-      nickname: null,
+      ...pickMemberFields({}),
     }
   }
 
@@ -41,17 +33,8 @@ export function useDraftAction() {
       isBoxPokemon: false,
       isTeamPokemon: true,
       pokemon: member.pokemonData,
-      ability: member.ability,
-      berry: member.berry,
+      ...pickMemberFields(member),
       moves: [...(member.moves || [])],
-      specialMove: member.specialMove || null,
-      pairId: member.pairId || null,
-      megaForm: member.megaForm || null,
-      megaTypes: member.megaTypes || null,
-      megaSpriteId: member.megaSpriteId || null,
-      spriteVariant: member.spriteVariant || 'default',
-      catchLocation: member.catchLocation || null,
-      nickname: member.nickname || null,
     }
   }
 
@@ -67,18 +50,9 @@ export function useDraftAction() {
       isBoxPokemon: true,
       boxPokemonId: boxMember.id,
       pokemon: boxMember.pokemonData,
-      ability: boxMember.ability,
-      berry: boxMember.berry,
-      moves: [...(boxMember.moves || [])],
-      specialMove: boxMember.specialMove || null,
-      pairId: boxMember.pairId || null,
       replaceTarget: null,
-      megaForm: boxMember.megaForm || null,
-      megaTypes: boxMember.megaTypes || null,
-      megaSpriteId: boxMember.megaSpriteId || null,
-      spriteVariant: boxMember.spriteVariant || 'default',
-      catchLocation: boxMember.catchLocation || null,
-      nickname: boxMember.nickname || null,
+      ...pickMemberFields(boxMember),
+      moves: [...(boxMember.moves || [])],
     }
   }
 
@@ -89,60 +63,23 @@ export function useDraftAction() {
     draftAction.value = {
       type: 'addToBox',
       pokemon,
-      ability: null,
-      berry: null,
-      moves: [],
-      specialMove: null,
-      megaForm: null,
-      megaTypes: null,
-      megaSpriteId: null,
-      spriteVariant: 'default',
-      catchLocation: null,
-      nickname: null,
+      ...pickMemberFields({}),
     }
   }
 
-  function updatePokemon(pokemon) {
+  function updateField(field, value) {
     if (draftAction.value) {
-      draftAction.value.pokemon = pokemon
+      draftAction.value[field] = value
     }
   }
 
-  function updateAbility(ability) {
-    if (draftAction.value) {
-      draftAction.value.ability = ability
-    }
-  }
-
-  function updateBerry(berry) {
-    if (draftAction.value) {
-      draftAction.value.berry = berry
-    }
-  }
-
-  function updateMoves(moves) {
-    if (draftAction.value) {
-      draftAction.value.moves = moves
-    }
-  }
-
-  function updateSpecialMove(specialMove) {
-    if (draftAction.value) {
-      draftAction.value.specialMove = specialMove
-    }
-  }
-
-  function updateCatchLocation(location) {
-    if (draftAction.value) {
-      draftAction.value.catchLocation = location
-    }
-  }
-
-  function updateNickname(nickname) {
-    if (draftAction.value) {
-      draftAction.value.nickname = nickname
-    }
-  }
+  const updatePokemon = (val) => updateField('pokemon', val)
+  const updateAbility = (val) => updateField('ability', val)
+  const updateBerry = (val) => updateField('berry', val)
+  const updateMoves = (val) => updateField('moves', val)
+  const updateSpecialMove = (val) => updateField('specialMove', val)
+  const updateCatchLocation = (val) => updateField('catchLocation', val)
+  const updateNickname = (val) => updateField('nickname', val)
 
   function updateMegaForm(form, types, spriteId) {
     if (draftAction.value) {
@@ -167,37 +104,15 @@ export function useDraftAction() {
     draftAction.value = null
   }
 
-  function updateSpriteVariant(variant) {
-    if (draftAction.value) {
-      draftAction.value.spriteVariant = variant
-    }
-  }
+  const updateSpriteVariant = (val) => updateField('spriteVariant', val)
 
-  function updateInHandPokemon({
-    pokemonData,
-    ability,
-    berry,
-    moves,
-    specialMove,
-    megaForm,
-    megaTypes,
-    megaSpriteId,
-    spriteVariant,
-    nickname,
-  }) {
+  function updateInHandPokemon(source) {
     if (draftAction.value) {
       draftAction.value = {
         ...draftAction.value,
-        pokemon: pokemonData,
-        ability,
-        berry,
-        moves: [...(moves || [])],
-        specialMove,
-        megaForm,
-        megaTypes,
-        megaSpriteId,
-        spriteVariant: spriteVariant || 'default',
-        nickname: nickname ?? null,
+        pokemon: source.pokemonData,
+        ...pickMemberFields(source),
+        moves: [...(source.moves || [])],
       }
     }
   }

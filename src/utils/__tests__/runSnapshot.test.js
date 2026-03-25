@@ -166,10 +166,12 @@ describe('runSnapshot helpers', () => {
           'player-1': {
             team: [],
             box: [],
+            _tombstones: [],
           },
           'player-2': {
             team: [],
             box: [],
+            _tombstones: [],
           },
         },
         progress: {

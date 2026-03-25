@@ -57,7 +57,8 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { getMegaSpriteUrl, getSmallSpriteUrl } from '../utils/pokemon.js'
+import { resolveSpriteUrl } from '../utils/pokemon.js'
+import { getSuggestionIndicator } from '../utils/suggestion.js'
 import {
   calculateTypeSuggestionScore,
   findGlobalBestSwap,
@@ -151,12 +152,8 @@ const showSwapPreview = computed(
 )
 
 const suggestionIndicator = computed(() => {
-  if (!globalSwap.value) return null
-  if (globalSwap.value.improvement > 0)
-    return { symbol: '\u25B2', cls: 'improvement-up' }
-  if (globalSwap.value.improvement === 0)
-    return { symbol: '\u2014', cls: 'improvement-neutral' }
-  return null
+  if (!globalSwap.value || globalSwap.value.improvement < 0) return null
+  return getSuggestionIndicator(globalSwap.value.improvement)
 })
 
 const gymColumnTitle = computed(() => {
@@ -165,10 +162,11 @@ const gymColumnTitle = computed(() => {
 })
 
 function getSwapSpriteUrl(pokemon) {
-  const variant = pokemon.spriteVariant || 'default'
-  if (pokemon.megaSpriteId)
-    return getMegaSpriteUrl(pokemon.megaSpriteId, variant)
-  return getSmallSpriteUrl(pokemon.name, variant)
+  return resolveSpriteUrl(pokemon.name, {
+    variant: pokemon.spriteVariant,
+    megaSpriteId: pokemon.megaSpriteId,
+    small: true,
+  })
 }
 
 function handleSwapClick() {
