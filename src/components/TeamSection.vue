@@ -99,6 +99,7 @@
             :box="box"
             :defeated-gyms="defeatedGyms"
             :pinned-gym="pinnedGym"
+            :generation-rules="generationRules"
             :partner-roster="partnerRoster"
             :is-soul-link-mode="isSoulLinkMode"
             @confirm="$emit('confirmDraft')"
