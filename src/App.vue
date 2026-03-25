@@ -1052,6 +1052,7 @@ function handleSoulLinkDeleteFromDraft() {
     }
     removeSoulLinkRosterMember(pid, 'team', draftAction.value.editId)
   }
+  triggerSync()
   cancel()
 }
 
