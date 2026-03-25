@@ -13,6 +13,7 @@ import {
   createDefaultSoulLinkPlayerRoster,
   generateInviteCode,
   mergeRemoteState,
+  repairPairings,
   SOUL_LINK_PLAYER_IDS,
   SOUL_LINK_SYNC_STATES,
 } from '../utils/soulLinkModel.js'
@@ -579,6 +580,27 @@ export function useSoulLinkStore() {
     setSyncVersion(session.version)
   }
 
+  async function forceReplaceFromRemote() {
+    const soulLinkState = getSoulLinkState('Force replacing from remote')
+    const sessionId = soulLinkState.metadata.sessionId
+    if (!sessionId) return
+
+    const repo = getSupabaseRepository()
+    const session = await repo.fetchSessionById(sessionId)
+    if (!session) return
+
+    const incomingRosters = session.state.rosters ?? soulLinkState.rosters
+    const playerIds = getPlayerIdsFromPlayers(soulLinkState.players)
+
+    replaceSoulLinkState({
+      ...soulLinkState,
+      rosters: repairPairings(incomingRosters, playerIds),
+    })
+
+    _lastPushedVersion = session.version
+    setSyncVersion(session.version)
+  }
+
   async function pushState() {
     const soulLinkState = getSoulLinkState('Pushing state')
     const sessionId = soulLinkState.metadata.sessionId
@@ -716,6 +738,7 @@ export function useSoulLinkStore() {
     joinSession,
     pushState,
     pullState,
+    forceReplaceFromRemote,
     syncSession,
     deleteRemoteSession,
     subscribeToSessionUpdates,

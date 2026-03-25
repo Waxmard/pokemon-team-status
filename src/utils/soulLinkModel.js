@@ -1,3 +1,5 @@
+import { normalizeCatchLocation } from './soulLinkPairing.js'
+
 export const SOUL_LINK_PLAYER_IDS = {
   LOCAL: 'player-1',
   PARTNER: 'player-2',
@@ -236,7 +238,114 @@ export function mergePlayerRoster(localRoster, remoteRoster) {
     }
   }
 
+  if (mergedTeam.length > 6) {
+    const sorted = [...mergedTeam].sort(
+      (a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0),
+    )
+    const keepInTeam = new Set(sorted.slice(0, 6).map((m) => m.id))
+    const overflow = []
+    const capped = []
+    for (const m of mergedTeam) {
+      if (keepInTeam.has(m.id)) {
+        capped.push(m)
+      } else {
+        overflow.push(m)
+      }
+    }
+    return {
+      team: capped,
+      box: [...mergedBox, ...overflow],
+      _tombstones: mergedTombstones,
+    }
+  }
+
   return { team: mergedTeam, box: mergedBox, _tombstones: mergedTombstones }
+}
+
+function buildLocationMap(members) {
+  const map = new Map()
+  for (const m of members) {
+    const loc = normalizeCatchLocation(m.catchLocation)
+    if (loc && !map.has(loc)) {
+      map.set(loc, m.id)
+    }
+  }
+  return map
+}
+
+function collectAllMembers(rosters, playerIds) {
+  const allMembers = {}
+  for (const pid of playerIds) {
+    const roster = rosters[pid] ?? createDefaultSoulLinkPlayerRoster()
+    allMembers[pid] = [...roster.team, ...roster.box]
+  }
+  return allMembers
+}
+
+function clearInvalidPairIds(allMembers, playerIds, partnerOf) {
+  for (const pid of playerIds) {
+    const partnerIds = new Set(allMembers[partnerOf[pid]].map((m) => m.id))
+    for (const m of allMembers[pid]) {
+      if (m.pairId && !partnerIds.has(m.pairId)) {
+        m.pairId = null
+      }
+    }
+  }
+}
+
+function rebuildPairingsFromLocation(allMembers, playerIds, partnerOf) {
+  const locationMaps = {}
+  const memberById = {}
+  for (const pid of playerIds) {
+    locationMaps[pid] = buildLocationMap(allMembers[pid])
+    memberById[pid] = new Map(allMembers[pid].map((m) => [m.id, m]))
+  }
+
+  for (const pid of playerIds) {
+    const partnerId = partnerOf[pid]
+    const partnerLocMap = locationMaps[partnerId]
+
+    for (const m of allMembers[pid]) {
+      const loc = normalizeCatchLocation(m.catchLocation)
+      if (!loc) continue
+
+      const partnerMemberId = partnerLocMap.get(loc)
+      if (!partnerMemberId) continue
+
+      const partnerMember = memberById[partnerId].get(partnerMemberId)
+      if (!partnerMember) continue
+
+      m.pairId = partnerMemberId
+      partnerMember.pairId = m.id
+    }
+  }
+}
+
+function rebuildRosters(rosters, allMembers, playerIds) {
+  const repaired = {}
+  for (const pid of playerIds) {
+    const roster = rosters[pid] ?? createDefaultSoulLinkPlayerRoster()
+    const teamIds = new Set(roster.team.map((m) => m.id))
+    repaired[pid] = {
+      team: allMembers[pid].filter((m) => teamIds.has(m.id)),
+      box: allMembers[pid].filter((m) => !teamIds.has(m.id)),
+      _tombstones: roster._tombstones ?? [],
+    }
+  }
+  return repaired
+}
+
+export function repairPairings(rosters, playerIds) {
+  if (playerIds.length < 2) return rosters
+
+  const [pidA, pidB] = playerIds
+  const partnerOf = { [pidA]: pidB, [pidB]: pidA }
+  const allMembers = collectAllMembers(rosters, playerIds)
+
+  clearInvalidPairIds(allMembers, playerIds, partnerOf)
+  rebuildPairingsFromLocation(allMembers, playerIds, partnerOf)
+
+  return rebuildRosters(rosters, allMembers, playerIds)
 }
 
 export function mergeRemoteState(localSoulLinkState, remoteState) {
@@ -266,6 +375,6 @@ export function mergeRemoteState(localSoulLinkState, remoteState) {
   return {
     ...localSoulLinkState,
     players: mergedPlayers,
-    rosters: mergedRosters,
+    rosters: repairPairings(mergedRosters, playerIds),
   }
 }

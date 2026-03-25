@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   createDefaultSoulLinkLocalPreferences,
   createDefaultSoulLinkMember,
+  createDefaultSoulLinkPlayerRoster,
   createDefaultSoulLinkState,
   mergePlayerRoster,
+  repairPairings,
   SOUL_LINK_PLAYER_IDS,
   SOUL_LINK_SYNC_STATES,
 } from '../soulLinkModel.js'
@@ -266,5 +268,161 @@ describe('mergePlayerRoster', () => {
     expect(result.team[0].id).toBe('a')
     expect(result.box).toHaveLength(1)
     expect(result.box[0].id).toBe('b')
+  })
+
+  it('enforces team cap of 6 by overflowing newest members to box', () => {
+    const local = {
+      team: [
+        member('a', { updatedAt: BASE_TS }),
+        member('b', { updatedAt: BASE_TS + 1 }),
+        member('c', { updatedAt: BASE_TS + 2 }),
+        member('d', { updatedAt: BASE_TS + 3 }),
+        member('e', { updatedAt: BASE_TS + 4 }),
+        member('f', { updatedAt: BASE_TS + 5 }),
+      ],
+      box: [],
+      _tombstones: [],
+    }
+    const remote = {
+      team: [
+        member('g', { updatedAt: BASE_TS + 10 }),
+        member('h', { updatedAt: BASE_TS + 11 }),
+      ],
+      box: [],
+      _tombstones: [],
+    }
+    const result = mergePlayerRoster(local, remote)
+    expect(result.team).toHaveLength(6)
+    expect(result.box).toHaveLength(2)
+    const teamIds = result.team.map((m) => m.id)
+    expect(teamIds).toContain('a')
+    expect(teamIds).toContain('b')
+    expect(teamIds).toContain('c')
+    expect(teamIds).toContain('d')
+    expect(teamIds).toContain('e')
+    expect(teamIds).toContain('f')
+    const boxIds = result.box.map((m) => m.id)
+    expect(boxIds).toContain('g')
+    expect(boxIds).toContain('h')
+  })
+
+  it('does not modify team when at or under cap', () => {
+    const local = {
+      team: [member('a'), member('b'), member('c')],
+      box: [member('d')],
+      _tombstones: [],
+    }
+    const result = mergePlayerRoster(local, emptyRoster())
+    expect(result.team).toHaveLength(3)
+    expect(result.box).toHaveLength(1)
+  })
+})
+
+describe('repairPairings', () => {
+  const P1 = SOUL_LINK_PLAYER_IDS.LOCAL
+  const P2 = SOUL_LINK_PLAYER_IDS.PARTNER
+  const playerIds = [P1, P2]
+
+  function roster(team = [], box = [], tombstones = []) {
+    return { team, box, _tombstones: tombstones }
+  }
+
+  function slMember(id, overrides = {}) {
+    return {
+      id,
+      speciesName: 'Pikachu',
+      updatedAt: BASE_TS,
+      pairId: null,
+      catchLocation: null,
+      ...overrides,
+    }
+  }
+
+  it('clears pairId pointing to non-existent partner member', () => {
+    const rosters = {
+      [P1]: roster([slMember('a', { pairId: 'missing' })]),
+      [P2]: roster([slMember('b')]),
+    }
+    const result = repairPairings(rosters, playerIds)
+    expect(result[P1].team[0].pairId).toBeNull()
+  })
+
+  it('rebuilds bidirectional pairings from matching catchLocation', () => {
+    const rosters = {
+      [P1]: roster([slMember('a', { catchLocation: 'Route 1' })]),
+      [P2]: roster([slMember('b', { catchLocation: 'route 1' })]),
+    }
+    const result = repairPairings(rosters, playerIds)
+    expect(result[P1].team[0].pairId).toBe('b')
+    expect(result[P2].team[0].pairId).toBe('a')
+  })
+
+  it('clears stale pairId and rebuilds from catchLocation', () => {
+    const rosters = {
+      [P1]: roster([
+        slMember('a', { pairId: 'old', catchLocation: 'Route 2' }),
+      ]),
+      [P2]: roster([
+        slMember('b', { catchLocation: 'Route 2' }),
+        slMember('c', { catchLocation: 'Route 3' }),
+      ]),
+    }
+    const result = repairPairings(rosters, playerIds)
+    expect(result[P1].team[0].pairId).toBe('b')
+    expect(result[P2].team[0].pairId).toBe('a')
+  })
+
+  it('does not modify valid pairings', () => {
+    const rosters = {
+      [P1]: roster([slMember('a', { pairId: 'b', catchLocation: 'Route 1' })]),
+      [P2]: roster([slMember('b', { pairId: 'a', catchLocation: 'Route 1' })]),
+    }
+    const result = repairPairings(rosters, playerIds)
+    expect(result[P1].team[0].pairId).toBe('b')
+    expect(result[P2].team[0].pairId).toBe('a')
+  })
+
+  it('preserves tombstones untouched', () => {
+    const tombstones = [{ memberId: 'x', deletedAt: BASE_TS }]
+    const rosters = {
+      [P1]: roster([], [], tombstones),
+      [P2]: roster(),
+    }
+    const result = repairPairings(rosters, playerIds)
+    expect(result[P1]._tombstones).toEqual(tombstones)
+  })
+
+  it('handles members in box for pairing', () => {
+    const rosters = {
+      [P1]: roster([], [slMember('a', { catchLocation: 'Cave' })]),
+      [P2]: roster([slMember('b', { catchLocation: 'cave' })]),
+    }
+    const result = repairPairings(rosters, playerIds)
+    expect(result[P1].box[0].pairId).toBe('b')
+    expect(result[P2].team[0].pairId).toBe('a')
+  })
+
+  it('first match wins when duplicate catchLocations exist', () => {
+    const rosters = {
+      [P1]: roster([
+        slMember('a1', { catchLocation: 'Route 1' }),
+        slMember('a2', { catchLocation: 'Route 1' }),
+      ]),
+      [P2]: roster([slMember('b', { catchLocation: 'Route 1' })]),
+    }
+    const result = repairPairings(rosters, playerIds)
+    expect(result[P1].team[0].pairId).toBe('b')
+    expect(result[P2].team[0].pairId).toBe('a1')
+  })
+
+  it('returns rosters unchanged when no players have pairIds or catchLocations', () => {
+    const rosters = {
+      [P1]: roster([slMember('a'), slMember('b')]),
+      [P2]: roster([slMember('c')]),
+    }
+    const result = repairPairings(rosters, playerIds)
+    expect(result[P1].team[0].pairId).toBeNull()
+    expect(result[P1].team[1].pairId).toBeNull()
+    expect(result[P2].team[0].pairId).toBeNull()
   })
 })

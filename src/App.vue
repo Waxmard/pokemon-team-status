@@ -148,6 +148,9 @@
               {{ soulLinkSessionMetadata.inviteCode }}
               <span class="session-code-hint">{{ copyLabel }}</span>
             </div>
+            <button class="reset-option soul-link-resync" @click="handleResyncFromRemote">
+              Resync from remote
+            </button>
           </div>
         </div>
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
@@ -233,6 +236,7 @@ const {
   syncSession: syncSoulLinkSession,
   pullState: pullSoulLinkState,
   pushState: pushSoulLinkState,
+  forceReplaceFromRemote: forceReplaceSoulLinkFromRemote,
   subscribeToSessionUpdates: subscribeSoulLink,
   unsubscribeFromSession: unsubscribeSoulLink,
 } = useSoulLinkStore()
@@ -460,6 +464,11 @@ function onCopySuccess() {
   setTimeout(() => {
     copyLabel.value = 'tap to copy'
   }, 2000)
+}
+
+async function handleResyncFromRemote() {
+  await forceReplaceSoulLinkFromRemote()
+  showSoulLinkDialog.value = false
 }
 
 function copyInviteCode() {
@@ -1230,6 +1239,13 @@ if (import.meta.env.DEV) {
     background: rgba(239, 68, 68, 0.08);
     border-color: var(--color-danger);
   }
+}
+
+.soul-link-resync {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  border-color: transparent;
+  padding: var(--space-1) var(--space-2);
 }
 
 .reset-dialog-cancel {

@@ -199,12 +199,15 @@ export function useSoulLinkHandlers(
       boxedMember,
     )
 
+    const now = Date.now()
     setPlayerRoster(pid, {
       team: roster.team.map((m) =>
-        m.id === draftAction.value.replaceTarget ? nextTeamMember : m,
+        m.id === draftAction.value.replaceTarget
+          ? { ...nextTeamMember, updatedAt: now }
+          : m,
       ),
       box: roster.box.map((m) =>
-        m.id === boxPokemonId ? replacedTeamMember : m,
+        m.id === boxPokemonId ? { ...replacedTeamMember, updatedAt: now } : m,
       ),
     })
 
@@ -332,9 +335,14 @@ export function useSoulLinkHandlers(
     const targetMember = roster.team.find((m) => m.id === targetId)
     if (!targetMember) return
 
+    const now = Date.now()
     setPlayerRoster(pid, {
-      team: roster.team.map((m) => (m.id === targetId ? inHandMember : m)),
-      box: roster.box.map((m) => (m.id === boxPokemonId ? targetMember : m)),
+      team: roster.team.map((m) =>
+        m.id === targetId ? { ...inHandMember, updatedAt: now } : m,
+      ),
+      box: roster.box.map((m) =>
+        m.id === boxPokemonId ? { ...targetMember, updatedAt: now } : m,
+      ),
     })
 
     updateInHandPokemon({
@@ -368,9 +376,14 @@ export function useSoulLinkHandlers(
     const targetMember = roster.box.find((m) => m.id === targetId)
     if (!targetMember) return
 
+    const now = Date.now()
     setPlayerRoster(pid, {
-      team: roster.team.map((m) => (m.id === teamPokemonId ? targetMember : m)),
-      box: roster.box.map((m) => (m.id === targetId ? inHandMember : m)),
+      team: roster.team.map((m) =>
+        m.id === teamPokemonId ? { ...targetMember, updatedAt: now } : m,
+      ),
+      box: roster.box.map((m) =>
+        m.id === targetId ? { ...inHandMember, updatedAt: now } : m,
+      ),
     })
 
     updateInHandPokemon({
@@ -408,9 +421,14 @@ export function useSoulLinkHandlers(
       const boxMember = roster.box.find((m) => m.id === candidateId)
       if (!teamMember || !boxMember) return
 
+      const now = Date.now()
       setPlayerRoster(pid, {
-        team: roster.team.map((m) => (m.id === currentId ? boxMember : m)),
-        box: roster.box.map((m) => (m.id === candidateId ? teamMember : m)),
+        team: roster.team.map((m) =>
+          m.id === currentId ? { ...boxMember, updatedAt: now } : m,
+        ),
+        box: roster.box.map((m) =>
+          m.id === candidateId ? { ...teamMember, updatedAt: now } : m,
+        ),
       })
 
       const pokemonData = getSoulLinkGenRulesPokemonData(teamMember.speciesName)
