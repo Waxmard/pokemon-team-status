@@ -832,8 +832,15 @@ export function useSoulLinkStore() {
       return
     }
 
-    // Version conflict — pull and retry once
-    await pullState()
+    // Version conflict — fetch current version, apply partner data, retry once
+    const session = await repo.fetchSessionById(sessionId)
+    if (!session) return
+
+    const currentState = getSoulLinkState('Retrying push after conflict')
+    const merged = mergeRemoteState(currentState, session.state)
+    replaceSoulLinkState(merged)
+    setSyncVersion(session.version)
+
     const refreshedState = getSoulLinkState('Retrying push after conflict')
     const refreshedRunState = getSoulLinkRunState(
       'Retrying push after conflict',

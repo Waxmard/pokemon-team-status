@@ -336,6 +336,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  generationRules: {
+    type: String,
+    default: null,
+  },
 })
 
 defineEmits(['confirm', 'cancel', 'swapSuggestion'])
@@ -358,7 +362,7 @@ const {
   box: storageBox,
   defeatedGyms: storageDefeatedGyms,
   pinnedGym: storagePinnedGym,
-  generationRules,
+  generationRules: storageGenerationRules,
 } = useRunStore()
 
 // Use props when provided, fall back to solo store
@@ -368,6 +372,9 @@ const effectiveDefeatedGyms = computed(
 )
 const effectivePinnedGym = computed(
   () => props.pinnedGym ?? storagePinnedGym.value,
+)
+const effectiveGenerationRules = computed(
+  () => props.generationRules ?? storageGenerationRules.value,
 )
 
 // Suggestion state
@@ -405,7 +412,7 @@ const swapSuggestion = computed(() => {
       effectiveBox.value,
       effectiveDefeatedGyms.value,
       effectivePinnedGym.value,
-      generationRules.value,
+      effectiveGenerationRules.value,
     )
   } else {
     // Editing box member: find best team member to replace
@@ -416,7 +423,7 @@ const swapSuggestion = computed(() => {
       props.team,
       effectiveDefeatedGyms.value,
       effectivePinnedGym.value,
-      generationRules.value,
+      effectiveGenerationRules.value,
     )
   }
 })
@@ -477,13 +484,15 @@ const showSpecialMoveDropdown = ref(false)
 const specialMoveQuery = ref('')
 const abilityQuery = ref('')
 
-const activeTypes = computed(() => getAllTypesForRules(generationRules.value))
+const activeTypes = computed(() =>
+  getAllTypesForRules(effectiveGenerationRules.value),
+)
 
 const effectiveDraftPokemon = computed(() => {
   if (!draftAction.value?.pokemon?.name) return null
   return getPokemonDataForRules(
     draftAction.value.pokemon.name,
-    generationRules.value,
+    effectiveGenerationRules.value,
   )
 })
 
@@ -506,7 +515,7 @@ watch(
   { immediate: true, deep: true },
 )
 
-watch(generationRules, (ruleset) => {
+watch(effectiveGenerationRules, (ruleset) => {
   if (!draftAction.value?.pokemon?.name) return
 
   const sanitizedDraft = sanitizeDraftActionForRules(draftAction.value, ruleset)
@@ -624,7 +633,10 @@ const autocompleteOptions = computed(() => {
 
 const megaOptions = computed(() => {
   if (!effectiveDraftPokemon.value) return []
-  return getMegaOptions(effectiveDraftPokemon.value.name, generationRules.value)
+  return getMegaOptions(
+    effectiveDraftPokemon.value.name,
+    effectiveGenerationRules.value,
+  )
 })
 
 const canEvolve = computed(() => {
@@ -690,7 +702,7 @@ function evolveTo(option) {
   }
 
   // Handle regular evolution (option is just a string name)
-  const pokemon = getPokemonDataForRules(option, generationRules.value)
+  const pokemon = getPokemonDataForRules(option, effectiveGenerationRules.value)
   if (pokemon) {
     updatePokemon(pokemon)
     searchQuery.value = pokemon.name
@@ -748,9 +760,9 @@ const relevantBerries = computed(() => {
       attackType,
       getMemberTypesForRules(
         effectiveDraftPokemon.value,
-        generationRules.value,
+        effectiveGenerationRules.value,
       ),
-      generationRules.value,
+      effectiveGenerationRules.value,
     )
     mult = applyAbilityDefense(mult, attackType, draftAction.value.ability)
     return mult > 1
@@ -1015,7 +1027,7 @@ watch(
 )
 
 function onSelectPokemon(value) {
-  const pokemon = getPokemonDataForRules(value, generationRules.value)
+  const pokemon = getPokemonDataForRules(value, effectiveGenerationRules.value)
   if (pokemon) {
     updatePokemon(pokemon)
     searchQuery.value = pokemon.name
