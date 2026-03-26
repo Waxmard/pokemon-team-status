@@ -19,6 +19,7 @@ vi.mock('../useDraftAction.js', () => ({
 
 vi.mock('../../utils/soulLinkPairing.js', () => ({
   findLinkedDeleteTarget: (...args) => mocks.findLinkedDeleteTarget(...args),
+  normalizeCatchLocation: (value) => value?.toLowerCase()?.trim() ?? null,
   preserveSoulLinkPairingFields: (...args) =>
     mocks.preserveSoulLinkPairingFields(...args),
   reconcileSoulLinkPairing: (...args) =>
@@ -188,6 +189,122 @@ describe('useSoulLinkHandlers', () => {
       }),
     )
     expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
+    expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
+  })
+
+  it('redirects team adds to dead when the matched partner is dead', () => {
+    mocks.store = createStore({
+      getFullPlayerRoster: vi.fn((playerId) =>
+        playerId === 'player-2'
+          ? {
+              team: [],
+              box: [],
+              dead: [{ id: 'partner-dead', catchLocation: 'Route 1' }],
+            }
+          : { team: [], box: [], dead: [] },
+      ),
+    })
+    mocks.draft = createDraftMocks(createDraftAction({ type: 'add' }))
+
+    const handlers = useSoulLinkHandlers(
+      ref('player-1'),
+      ref('gen-6'),
+      ref([{ id: 'player-1' }, { id: 'player-2' }]),
+    )
+
+    const result = handlers.handleSoulLinkConfirmDraft()
+
+    expect(result).toEqual({ placedInDead: true })
+    expect(mocks.store.addRosterMember).toHaveBeenCalledWith(
+      'player-1',
+      'dead',
+      expect.objectContaining({
+        speciesName: 'Eevee',
+        ownerPlayerId: 'player-1',
+        catchLocation: 'Route 1',
+      }),
+    )
+    expect(mocks.reconcileSoulLinkPairing).toHaveBeenCalledWith(
+      'player-1',
+      expect.any(String),
+      'dead',
+      expect.objectContaining({
+        getPlayerRoster: mocks.store.getFullPlayerRoster,
+      }),
+    )
+  })
+
+  it('redirects box adds to dead when the matched partner is dead', () => {
+    mocks.store = createStore({
+      getFullPlayerRoster: vi.fn((playerId) =>
+        playerId === 'player-2'
+          ? {
+              team: [],
+              box: [],
+              dead: [{ id: 'partner-dead', catchLocation: 'Route 1' }],
+            }
+          : { team: [], box: [], dead: [] },
+      ),
+    })
+    mocks.draft = createDraftMocks(createDraftAction({ type: 'addToBox' }))
+
+    const handlers = useSoulLinkHandlers(
+      ref('player-1'),
+      ref('gen-6'),
+      ref([{ id: 'player-1' }, { id: 'player-2' }]),
+    )
+
+    const result = handlers.handleSoulLinkConfirmDraft()
+
+    expect(result).toEqual({ placedInDead: true })
+    expect(mocks.store.addRosterMember).toHaveBeenCalledWith(
+      'player-1',
+      'dead',
+      expect.objectContaining({
+        speciesName: 'Eevee',
+        ownerPlayerId: 'player-1',
+        catchLocation: 'Route 1',
+      }),
+    )
+    expect(mocks.store.addRosterMember).not.toHaveBeenCalledWith(
+      'player-1',
+      'box',
+      expect.anything(),
+    )
+  })
+
+  it('does not enter add-replace mode when a full-team add is redirected to dead', () => {
+    mocks.store = createStore({
+      getPlayerRoster: vi.fn(() => ({
+        team: Array.from({ length: 6 }, (_, index) => ({
+          id: `team-${index}`,
+          speciesName: `Member ${index}`,
+        })),
+        box: [],
+        dead: [],
+      })),
+      getFullPlayerRoster: vi.fn((playerId) =>
+        playerId === 'player-2'
+          ? {
+              team: [],
+              box: [],
+              dead: [{ id: 'partner-dead', catchLocation: 'Route 1' }],
+            }
+          : { team: [], box: [], dead: [] },
+      ),
+    })
+    mocks.draft = createDraftMocks(createDraftAction({ type: 'add' }))
+
+    const handlers = useSoulLinkHandlers(
+      ref('player-1'),
+      ref('gen-6'),
+      ref([{ id: 'player-1' }, { id: 'player-2' }]),
+    )
+
+    const result = handlers.handleSoulLinkConfirmDraft()
+
+    expect(result).toEqual({ placedInDead: true })
+    expect(mocks.draft.enterSwapMode).not.toHaveBeenCalled()
     expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
   })
 

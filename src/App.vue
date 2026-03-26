@@ -401,7 +401,7 @@ const {
   linkedDeleteTarget,
   soulLinkSwapOriginalRoster,
   triggerSync,
-  handleSoulLinkConfirmDraft,
+  handleSoulLinkConfirmDraft: confirmSoulLinkDraft,
   handleSoulLinkImmediateSwap,
   handleSoulLinkCancelSwap,
   handleSoulLinkSwapSuggestion,
@@ -420,6 +420,13 @@ const {
   soulLinkGenerationRules,
   soulLinkPlayers,
 )
+
+function handleSoulLinkConfirmDraft() {
+  const result = confirmSoulLinkDraft()
+  if (result?.placedInDead) {
+    deathBoxMode.value = true
+  }
+}
 
 function handleViewDeathBox() {
   deathBoxMode.value = !deathBoxMode.value

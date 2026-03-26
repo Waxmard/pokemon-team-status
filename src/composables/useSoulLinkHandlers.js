@@ -3,6 +3,7 @@ import { getPokemonDataForRules } from '../data/pokemon.js'
 import { buildPokemonMember, pickMemberFields } from '../utils/pokemon.js'
 import {
   findLinkedDeleteTarget as findLinkedDeleteTargetUtil,
+  normalizeCatchLocation,
   preserveSoulLinkPairingFields,
   reconcileSoulLinkPairing as reconcileSoulLinkPairingUtil,
 } from '../utils/soulLinkPairing.js'
@@ -89,6 +90,22 @@ export function useSoulLinkHandlers(
     draftAction.value.catchLocation = member?.catchLocation ?? null
     draftAction.value.pairId = member?.pairId ?? null
     draftAction.value.nickname = member?.nickname ?? null
+  }
+
+  function findDeadPartnerForDraft() {
+    const partnerId = findPartnerPlayerId()
+    const catchLocation = normalizeCatchLocation(
+      draftAction.value?.catchLocation,
+    )
+    if (!partnerId || !catchLocation) return null
+
+    const partnerRoster = getFullPlayerRoster(partnerId)
+    return (
+      (partnerRoster.dead ?? []).find(
+        (member) =>
+          normalizeCatchLocation(member.catchLocation) === catchLocation,
+      ) ?? null
+    )
   }
 
   // --- Soul Link gym handlers ---
@@ -264,6 +281,17 @@ export function useSoulLinkHandlers(
   }
 
   function handleSoulLinkAddDraft(pid, newMember) {
+    if (findDeadPartnerForDraft()) {
+      const deadMember = buildSoulLinkMemberFromDraft(
+        draftAction.value,
+        pid,
+        'dead',
+      )
+      addRosterMember(pid, 'dead', deadMember)
+      reconcileSoulLinkPairing(pid, deadMember.id, 'dead')
+      return { placedInDead: true }
+    }
+
     const roster = getSoulLinkRoster()
     if (roster.team.length >= 6) {
       enterSoulLinkAddReplaceMode(pid)
@@ -272,7 +300,7 @@ export function useSoulLinkHandlers(
 
     addRosterMember(pid, 'team', newMember)
     reconcileSoulLinkPairing(pid, newMember.id, 'team')
-    return true
+    return { placedInDead: false }
   }
 
   function handleSoulLinkAddToRoster(pid, rosterKey) {
@@ -282,8 +310,20 @@ export function useSoulLinkHandlers(
       rosterKey,
     )
 
+    if (rosterKey !== 'dead' && findDeadPartnerForDraft()) {
+      const deadMember = buildSoulLinkMemberFromDraft(
+        draftAction.value,
+        pid,
+        'dead',
+      )
+      addRosterMember(pid, 'dead', deadMember)
+      reconcileSoulLinkPairing(pid, deadMember.id, 'dead')
+      return { placedInDead: true }
+    }
+
     addRosterMember(pid, rosterKey, newMember)
     reconcileSoulLinkPairing(pid, newMember.id, rosterKey)
+    return { placedInDead: rosterKey === 'dead' }
   }
 
   function handleSoulLinkEditDraft(pid, newMember) {
@@ -300,16 +340,14 @@ export function useSoulLinkHandlers(
       case 'add':
         return handleSoulLinkAddDraft(pid, newMember)
       case 'addToBox':
-        handleSoulLinkAddToRoster(pid, 'box')
-        return true
+        return handleSoulLinkAddToRoster(pid, 'box')
       case 'addToDead':
-        handleSoulLinkAddToRoster(pid, 'dead')
-        return true
+        return handleSoulLinkAddToRoster(pid, 'dead')
       case 'edit':
         handleSoulLinkEditDraft(pid, newMember)
-        return true
+        return { placedInDead: false }
       default:
-        return true
+        return { placedInDead: false }
     }
   }
 
@@ -328,10 +366,12 @@ export function useSoulLinkHandlers(
       'team',
     )
 
-    if (!confirmSoulLinkDraftByType(pid, newMember)) return
+    const result = confirmSoulLinkDraftByType(pid, newMember)
+    if (!result) return
 
     cancel()
     triggerSync()
+    return result
   }
 
   // --- Soul Link swap handlers ---
