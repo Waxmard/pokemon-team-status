@@ -8,6 +8,9 @@
       :pinned-gym="board.pinnedGym"
       :partner-roster="partnerRoster"
       :is-soul-link-mode="true"
+      :player-id="playerId"
+      :dead="board.dead"
+      :death-box-mode="deathBoxMode"
       @confirmDraft="$emit('confirmDraft')"
       @immediateSwap="$emit('immediateSwap', $event)"
       @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
@@ -15,6 +18,11 @@
       @cancelSwap="$emit('cancelSwap')"
       @deletePokemon="$emit('deletePokemon')"
       @swapSuggestion="$emit('swapSuggestion', $event)"
+      @killPokemon="$emit('killPokemon', $event)"
+      @revivePokemon="$emit('revivePokemon', $event)"
+      @exitDeathBox="$emit('exitDeathBox')"
+      @deleteDeadPokemon="$emit('deleteDeadPokemon', $event)"
+      @addToDead="$emit('addToDead')"
     />
 
     <GymColumns
@@ -59,6 +67,14 @@ defineProps({
     type: Array,
     default: null,
   },
+  playerId: {
+    type: String,
+    default: null,
+  },
+  deathBoxMode: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 defineEmits([
@@ -71,6 +87,11 @@ defineEmits([
   'swapSuggestion',
   'defeatGym',
   'undefeatGym',
+  'killPokemon',
+  'revivePokemon',
+  'exitDeathBox',
+  'deleteDeadPokemon',
+  'addToDead',
 ])
 </script>
 

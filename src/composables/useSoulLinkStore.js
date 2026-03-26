@@ -10,6 +10,7 @@ import {
 } from '../utils/runSnapshot.js'
 import {
   buildRemoteState,
+  createDefaultSoulLinkPlayerProgress,
   createDefaultSoulLinkPlayerRoster,
   generateInviteCode,
   mergeRemoteState,
@@ -253,12 +254,12 @@ function addRosterMember(playerId, rosterKey, member) {
   updatePlayerRecord('rosters', nextPlayerId, {
     ...playerRoster,
     [nextRosterKey]: [
-      ...playerRoster[nextRosterKey],
       {
         ...cloneValue(member),
         ownerPlayerId: nextPlayerId,
         updatedAt: Date.now(),
       },
+      ...playerRoster[nextRosterKey],
     ],
   })
 }
@@ -342,6 +343,7 @@ function setPlayerRoster(playerId, roster) {
   updatePlayerRecord('rosters', pid, {
     team: normalizeRosterMembers(roster.team, pid),
     box: normalizeRosterMembers(roster.box, pid),
+    dead: currentRoster.dead ?? [],
     _tombstones: currentRoster._tombstones ?? [],
   })
 }
@@ -368,9 +370,22 @@ function getPlayerRoster(playerId) {
     'Accessing a Soul Link roster',
   )
 
-  const { _tombstones, ...roster } =
+  const { _tombstones, dead, ...roster } =
     getSoulLinkState('Accessing a Soul Link roster').rosters[nextPlayerId] ??
     createDefaultSoulLinkPlayerRoster()
+  return cloneValue(roster)
+}
+
+function getFullPlayerRoster(playerId) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Accessing a full Soul Link roster',
+  )
+
+  const { _tombstones, ...roster } =
+    getSoulLinkState('Accessing a full Soul Link roster').rosters[
+      nextPlayerId
+    ] ?? createDefaultSoulLinkPlayerRoster()
   return cloneValue(roster)
 }
 
@@ -393,6 +408,69 @@ function getPlayerGymProgress(playerId) {
       nextPlayerId
     ] ?? createDefaultSoulLinkPlayerProgress(),
   )
+}
+
+function getPlayerDead(playerId) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Accessing Soul Link dead roster',
+  )
+  const roster =
+    getSoulLinkState('Accessing Soul Link dead roster').rosters[nextPlayerId] ??
+    createDefaultSoulLinkPlayerRoster()
+  return cloneValue(roster.dead ?? [])
+}
+
+function killRosterMember(playerId, rosterKey, memberId) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Killing a Soul Link roster member',
+  )
+  const nextRosterKey = assertRosterKey(
+    rosterKey,
+    'Killing a Soul Link roster member',
+  )
+  const playerRoster =
+    getSoulLinkState('Killing a Soul Link roster member').rosters[
+      nextPlayerId
+    ] ?? createDefaultSoulLinkPlayerRoster()
+
+  const member = playerRoster[nextRosterKey].find((m) => m.id === memberId)
+  if (!member) return
+
+  updatePlayerRecord('rosters', nextPlayerId, {
+    ...playerRoster,
+    [nextRosterKey]: playerRoster[nextRosterKey].filter(
+      (m) => m.id !== memberId,
+    ),
+    dead: [
+      ...(playerRoster.dead ?? []),
+      { ...cloneValue(member), updatedAt: Date.now() },
+    ],
+  })
+}
+
+function reviveRosterMember(playerId, memberId) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Reviving a Soul Link roster member',
+  )
+  const playerRoster =
+    getSoulLinkState('Reviving a Soul Link roster member').rosters[
+      nextPlayerId
+    ] ?? createDefaultSoulLinkPlayerRoster()
+
+  const member = (playerRoster.dead ?? []).find((m) => m.id === memberId)
+  if (!member) return
+
+  updatePlayerRecord('rosters', nextPlayerId, {
+    ...playerRoster,
+    dead: (playerRoster.dead ?? []).filter((m) => m.id !== memberId),
+    box: [
+      { ...cloneValue(member), updatedAt: Date.now() },
+      ...playerRoster.box,
+    ],
+  })
 }
 
 function setSyncState(nextSyncState) {
@@ -580,27 +658,6 @@ export function useSoulLinkStore() {
     setSyncVersion(session.version)
   }
 
-  async function forceReplaceFromRemote() {
-    const soulLinkState = getSoulLinkState('Force replacing from remote')
-    const sessionId = soulLinkState.metadata.sessionId
-    if (!sessionId) return
-
-    const repo = getSupabaseRepository()
-    const session = await repo.fetchSessionById(sessionId)
-    if (!session) return
-
-    const incomingRosters = session.state.rosters ?? soulLinkState.rosters
-    const playerIds = getPlayerIdsFromPlayers(soulLinkState.players)
-
-    replaceSoulLinkState({
-      ...soulLinkState,
-      rosters: repairPairings(incomingRosters, playerIds),
-    })
-
-    _lastPushedVersion = session.version
-    setSyncVersion(session.version)
-  }
-
   async function pushState() {
     const soulLinkState = getSoulLinkState('Pushing state')
     const sessionId = soulLinkState.metadata.sessionId
@@ -728,9 +785,13 @@ export function useSoulLinkStore() {
     removeRosterMember,
     updatePlayerGymProgress,
     getPlayerRoster,
+    getFullPlayerRoster,
     getPlayerTeam,
     getPlayerBox,
+    getPlayerDead,
     getPlayerGymProgress,
+    killRosterMember,
+    reviveRosterMember,
     setPlayerRoster,
     resetPlayerRoster,
     resetPlayerGymProgress,
@@ -738,7 +799,6 @@ export function useSoulLinkStore() {
     joinSession,
     pushState,
     pullState,
-    forceReplaceFromRemote,
     syncSession,
     deleteRemoteSession,
     subscribeToSessionUpdates,

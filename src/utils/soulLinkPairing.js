@@ -3,7 +3,7 @@ export function normalizeCatchLocation(location) {
 }
 
 function getAllMembers(roster) {
-  return [...roster.team, ...roster.box]
+  return [...roster.team, ...roster.box, ...(roster.dead ?? [])]
 }
 
 export function preserveSoulLinkPairingFields(member, sourceMember) {
@@ -22,7 +22,9 @@ export function preserveSoulLinkPairingFields(member, sourceMember) {
 }
 
 function findRosterKey(roster, memberId) {
-  return roster.team.some((m) => m.id === memberId) ? 'team' : 'box'
+  if (roster.team.some((m) => m.id === memberId)) return 'team'
+  if (roster.box.some((m) => m.id === memberId)) return 'box'
+  return 'dead'
 }
 
 export function findLinkedDeleteTarget(

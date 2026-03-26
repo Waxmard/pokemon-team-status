@@ -73,7 +73,7 @@ export function buildSoulLinkPlayerBoard(
   generationRules,
   partnerRoster = null,
 ) {
-  const roster = rosters[playerId] ?? { team: [], box: [] }
+  const roster = rosters[playerId] ?? { team: [], box: [], dead: [] }
   const progress = gymProgress[playerId] ?? {
     defeatedGyms: [],
     pinnedGym: null,
@@ -94,6 +94,13 @@ export function buildSoulLinkPlayerBoard(
       ...m,
       pairedPartner: resolvePairedPartner(m, partnerRoster),
     }))
+  const dead = (roster.dead ?? [])
+    .map(adaptSoulLinkMemberToUiMember)
+    .filter(Boolean)
+    .map((m) => ({
+      ...m,
+      pairedPartner: resolvePairedPartner(m, partnerRoster),
+    }))
 
   const allGyms = getAllTypesForRules(generationRules)
     .map((type) => buildGymScore(type, team, generationRules))
@@ -102,6 +109,7 @@ export function buildSoulLinkPlayerBoard(
   return {
     team,
     box,
+    dead,
     pinnedGym: progress.pinnedGym ?? null,
     remainingGyms: allGyms.filter((gym) => !defeatedGymSet.has(gym.type)),
     defeatedGymsList: allGyms.filter((gym) => defeatedGymSet.has(gym.type)),

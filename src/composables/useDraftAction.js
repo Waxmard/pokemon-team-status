@@ -67,6 +67,35 @@ export function useDraftAction() {
     }
   }
 
+  function startEditDead(deadMember) {
+    if (
+      draftAction.value?.type === 'edit' &&
+      draftAction.value?.deadPokemonId === deadMember.id
+    ) {
+      return cancel()
+    }
+    draftAction.value = {
+      type: 'edit',
+      isDeadPokemon: true,
+      deadPokemonId: deadMember.id,
+      pokemon: deadMember.pokemonData,
+      replaceTarget: null,
+      ...pickMemberFields(deadMember),
+      moves: [...(deadMember.moves || [])],
+    }
+  }
+
+  function startAddToDead(pokemon = null) {
+    if (draftAction.value?.type === 'addToDead') {
+      return cancel()
+    }
+    draftAction.value = {
+      type: 'addToDead',
+      pokemon,
+      ...pickMemberFields({}),
+    }
+  }
+
   function updateField(field, value) {
     if (draftAction.value) {
       draftAction.value[field] = value
@@ -130,6 +159,8 @@ export function useDraftAction() {
     startEdit,
     startEditBox,
     startAddToBox,
+    startEditDead,
+    startAddToDead,
     updatePokemon,
     updateAbility,
     updateBerry,
