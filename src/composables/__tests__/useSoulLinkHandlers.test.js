@@ -49,6 +49,7 @@ function createDraftAction(overrides = {}) {
 function createStore(overrides = {}) {
   return {
     getPlayerRoster: vi.fn(() => ({ team: [], box: [], dead: [] })),
+    getFullPlayerRoster: vi.fn(() => ({ team: [], box: [], dead: [] })),
     getPlayerGymProgress: vi.fn(() => ({ defeatedGyms: [], pinnedGym: null })),
     setPlayerRoster: vi.fn(),
     addRosterMember: vi.fn(),
@@ -109,6 +110,14 @@ describe('useSoulLinkHandlers', () => {
     )
     expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
     expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
+    expect(mocks.reconcileSoulLinkPairing).toHaveBeenCalledWith(
+      'player-1',
+      expect.any(String),
+      'box',
+      expect.objectContaining({
+        getPlayerRoster: mocks.store.getFullPlayerRoster,
+      }),
+    )
   })
 
   it('updates dead roster members and keeps existing reconciliation behavior', () => {
@@ -147,6 +156,35 @@ describe('useSoulLinkHandlers', () => {
     )
     expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
     expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses the full roster accessor for linked-delete lookups', () => {
+    mocks.store = createStore()
+    mocks.draft = createDraftMocks(createDraftAction())
+    mocks.findLinkedDeleteTarget.mockReturnValue({
+      memberId: 'team-1',
+      rosterKey: 'team',
+      partnerPlayerId: 'player-2',
+      partnerMemberId: 'dead-2',
+      partnerRosterKey: 'dead',
+    })
+
+    const handlers = useSoulLinkHandlers(
+      ref('player-1'),
+      ref('gen-6'),
+      ref([{ id: 'player-1' }, { id: 'player-2' }]),
+    )
+
+    handlers.handleSoulLinkDeleteTeamPokemon('team-1')
+
+    expect(mocks.findLinkedDeleteTarget).toHaveBeenCalledWith(
+      'player-1',
+      'team-1',
+      'team',
+      expect.objectContaining({
+        getPlayerRoster: mocks.store.getFullPlayerRoster,
+      }),
+    )
   })
 
   it('enters add-replace mode instead of syncing when the team is full', () => {

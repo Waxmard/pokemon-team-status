@@ -94,14 +94,17 @@ export function buildSoulLinkPlayerBoard(
       ...m,
       pairedPartner: resolvePairedPartner(m, partnerRoster),
     }))
+  const dead = (roster.dead ?? [])
+    .map(adaptSoulLinkMemberToUiMember)
+    .filter(Boolean)
+    .map((m) => ({
+      ...m,
+      pairedPartner: resolvePairedPartner(m, partnerRoster),
+    }))
 
   const allGyms = getAllTypesForRules(generationRules)
     .map((type) => buildGymScore(type, team, generationRules))
     .sort(sortGyms)
-
-  const dead = (roster.dead ?? [])
-    .map(adaptSoulLinkMemberToUiMember)
-    .filter(Boolean)
 
   return {
     team,

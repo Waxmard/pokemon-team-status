@@ -233,6 +233,7 @@ const {
   updatePlayer: updateSoulLinkPlayer,
   startNewLocalSoulLinkRun,
   getPlayerRoster,
+  getFullPlayerRoster,
   setPlayerRoster: setSoulLinkPlayerRoster,
   resetPlayerRoster,
   resetPlayerGymProgress,
@@ -370,8 +371,8 @@ const soulLinkPartnerRoster = computed(() => {
     (p) => p.id !== viewedSoulLinkPlayerId.value,
   )?.id
   if (!partnerId) return null
-  const roster = getPlayerRoster(partnerId)
-  return [...roster.team, ...roster.box]
+  const roster = getFullPlayerRoster(partnerId)
+  return [...roster.team, ...roster.box, ...(roster.dead ?? [])]
     .map(adaptSoulLinkMemberToUiMember)
     .filter(Boolean)
 })

@@ -376,6 +376,19 @@ function getPlayerRoster(playerId) {
   return cloneValue(roster)
 }
 
+function getFullPlayerRoster(playerId) {
+  const nextPlayerId = assertKnownPlayerId(
+    playerId,
+    'Accessing a full Soul Link roster',
+  )
+
+  const { _tombstones, ...roster } =
+    getSoulLinkState('Accessing a full Soul Link roster').rosters[
+      nextPlayerId
+    ] ?? createDefaultSoulLinkPlayerRoster()
+  return cloneValue(roster)
+}
+
 function getPlayerTeam(playerId) {
   return getPlayerRoster(playerId).team
 }
@@ -772,6 +785,7 @@ export function useSoulLinkStore() {
     removeRosterMember,
     updatePlayerGymProgress,
     getPlayerRoster,
+    getFullPlayerRoster,
     getPlayerTeam,
     getPlayerBox,
     getPlayerDead,

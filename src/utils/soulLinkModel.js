@@ -335,7 +335,7 @@ function collectAllMembers(rosters, playerIds) {
   const allMembers = {}
   for (const pid of playerIds) {
     const roster = rosters[pid] ?? createDefaultSoulLinkPlayerRoster()
-    allMembers[pid] = [...roster.team, ...roster.box]
+    allMembers[pid] = [...roster.team, ...roster.box, ...(roster.dead ?? [])]
   }
   return allMembers
 }
@@ -390,7 +390,7 @@ function rebuildRosters(rosters, allMembers, playerIds) {
       box: allMembers[pid].filter(
         (m) => !teamIds.has(m.id) && !deadIds.has(m.id),
       ),
-      dead: roster.dead ?? [],
+      dead: allMembers[pid].filter((m) => deadIds.has(m.id)),
       _tombstones: roster._tombstones ?? [],
     }
   }

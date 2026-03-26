@@ -232,6 +232,97 @@ describe('useSoulLinkStore', () => {
     })
   })
 
+  it('preserves linked pairIds when linked members are killed and revived', () => {
+    const store = useSoulLinkStore()
+
+    store.addRosterMember(
+      SOUL_LINK_PLAYER_IDS.LOCAL,
+      'team',
+      createDefaultSoulLinkMember({
+        id: 'local-linked',
+        speciesName: 'Treecko',
+        catchLocation: 'Route 1',
+        pairId: 'partner-linked',
+      }),
+    )
+    store.addRosterMember(
+      SOUL_LINK_PLAYER_IDS.PARTNER,
+      'team',
+      createDefaultSoulLinkMember({
+        id: 'partner-linked',
+        speciesName: 'Torchic',
+        catchLocation: 'Route 1',
+        pairId: 'local-linked',
+        ownerPlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
+      }),
+    )
+
+    store.killRosterMember(SOUL_LINK_PLAYER_IDS.LOCAL, 'team', 'local-linked')
+    store.killRosterMember(
+      SOUL_LINK_PLAYER_IDS.PARTNER,
+      'team',
+      'partner-linked',
+    )
+
+    expect(store.getPlayerDead(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([
+      expect.objectContaining({
+        id: 'local-linked',
+        pairId: 'partner-linked',
+      }),
+    ])
+    expect(store.getPlayerDead(SOUL_LINK_PLAYER_IDS.PARTNER)).toEqual([
+      expect.objectContaining({
+        id: 'partner-linked',
+        pairId: 'local-linked',
+      }),
+    ])
+
+    store.reviveRosterMember(SOUL_LINK_PLAYER_IDS.LOCAL, 'local-linked')
+    store.reviveRosterMember(SOUL_LINK_PLAYER_IDS.PARTNER, 'partner-linked')
+
+    expect(store.getPlayerBox(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([
+      expect.objectContaining({
+        id: 'local-linked',
+        pairId: 'partner-linked',
+      }),
+    ])
+    expect(store.getPlayerBox(SOUL_LINK_PLAYER_IDS.PARTNER)).toEqual([
+      expect.objectContaining({
+        id: 'partner-linked',
+        pairId: 'local-linked',
+      }),
+    ])
+  })
+
+  it('exposes dead members only through the full roster accessor', () => {
+    const store = useSoulLinkStore()
+
+    store.addRosterMember(
+      SOUL_LINK_PLAYER_IDS.LOCAL,
+      'team',
+      createDefaultSoulLinkMember({
+        id: 'member-dead-1',
+        speciesName: 'Gastly',
+      }),
+    )
+    store.killRosterMember(SOUL_LINK_PLAYER_IDS.LOCAL, 'team', 'member-dead-1')
+
+    expect(store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual({
+      team: [],
+      box: [],
+    })
+    expect(store.getFullPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual({
+      team: [],
+      box: [],
+      dead: [
+        expect.objectContaining({
+          id: 'member-dead-1',
+          speciesName: 'Gastly',
+        }),
+      ],
+    })
+  })
+
   it('tracks local preferences', () => {
     const store = useSoulLinkStore()
 

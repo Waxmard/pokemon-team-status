@@ -21,6 +21,7 @@ export function useSoulLinkHandlers(
 ) {
   const {
     getPlayerRoster,
+    getFullPlayerRoster,
     getPlayerGymProgress,
     setPlayerRoster,
     addRosterMember,
@@ -68,7 +69,7 @@ export function useSoulLinkHandlers(
 
   function getPairingContext() {
     return {
-      getPlayerRoster,
+      getPlayerRoster: getFullPlayerRoster,
       updateRosterMember,
       partnerId: findPartnerPlayerId(),
     }
