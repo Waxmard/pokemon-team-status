@@ -7,7 +7,7 @@
             <span v-if="!displayName" class="wizard-title-placeholder">Pokemon Name</span>
             <input
               :value="displayName"
-              :size="Math.max(displayName.length || 12, 1)"
+              :size="Math.max((displayName.length || 12) + 2, 3)"
               class="wizard-title wizard-title-input"
               type="text"
               maxlength="32"
