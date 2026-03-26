@@ -46,6 +46,8 @@
         :draft-active="hasDraft"
         :persist-pinned-gym="handleSoulLinkPersistPinnedGym"
         :partner-roster="soulLinkPartnerRoster"
+        :player-id="viewedSoulLinkPlayerId"
+        :death-box-mode="deathBoxMode"
         @confirmDraft="handleSoulLinkConfirmDraft"
         @immediateSwap="handleSoulLinkImmediateSwap"
         @deleteTeamPokemon="handleSoulLinkDeleteTeamPokemon"
@@ -55,6 +57,10 @@
         @swapSuggestion="handleSoulLinkSwapSuggestion"
         @defeatGym="handleSoulLinkDefeatGym"
         @undefeatGym="handleSoulLinkUndefeatGym"
+        @killPokemon="(e) => { handleSoulLinkKillPokemon(e); deathBoxMode = true }"
+        @revivePokemon="(e) => { handleSoulLinkRevivePokemon(e); deathBoxMode = false }"
+        @exitDeathBox="deathBoxMode = false"
+        @deleteDeadPokemon="handleSoulLinkDeleteDeadPokemon"
       />
     </div>
   </n-config-provider>
@@ -139,7 +145,7 @@
     <div v-if="showSoulLinkDialog" class="reset-overlay" @click.self="showSoulLinkDialog = false">
       <div class="reset-dialog">
         <h3 class="reset-dialog-title">Soul Link</h3>
-        <div class="reset-dialog-options">
+        <div class="reset-dialog-options soul-link-dialog-options">
           <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
             View {{ otherSoulLinkPlayerName }}
           </button>
@@ -148,10 +154,11 @@
               {{ soulLinkSessionMetadata.inviteCode }}
               <span class="session-code-hint">{{ copyLabel }}</span>
             </div>
-            <button class="reset-option soul-link-resync" @click="handleResyncFromRemote">
-              Resync from remote
-            </button>
           </div>
+          <hr class="dialog-divider" />
+          <button class="reset-option" @click="handleViewDeathBox">
+            {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
+          </button>
         </div>
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
       </div>
@@ -226,6 +233,7 @@ const {
   updatePlayer: updateSoulLinkPlayer,
   startNewLocalSoulLinkRun,
   getPlayerRoster,
+  getFullPlayerRoster,
   setPlayerRoster: setSoulLinkPlayerRoster,
   resetPlayerRoster,
   resetPlayerGymProgress,
@@ -236,7 +244,6 @@ const {
   syncSession: syncSoulLinkSession,
   pullState: pullSoulLinkState,
   pushState: pushSoulLinkState,
-  forceReplaceFromRemote: forceReplaceSoulLinkFromRemote,
   subscribeToSessionUpdates: subscribeSoulLink,
   unsubscribeFromSession: unsubscribeSoulLink,
 } = useSoulLinkStore()
@@ -255,6 +262,7 @@ const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
 
 const showResetDialog = ref(false)
 const showSoulLinkDialog = ref(false)
+const deathBoxMode = ref(false)
 const playerNameInput = ref(null)
 const joinCodeInput = ref(null)
 const joinCodeValue = ref('')
@@ -303,6 +311,7 @@ function resetGyms() {
     resetGymsInStore()
   } else {
     resetPlayerGymProgress(viewedSoulLinkPlayerId.value)
+    triggerSync()
   }
   showResetDialog.value = false
 }
@@ -362,8 +371,8 @@ const soulLinkPartnerRoster = computed(() => {
     (p) => p.id !== viewedSoulLinkPlayerId.value,
   )?.id
   if (!partnerId) return null
-  const roster = getPlayerRoster(partnerId)
-  return [...roster.team, ...roster.box]
+  const roster = getFullPlayerRoster(partnerId)
+  return [...roster.team, ...roster.box, ...(roster.dead ?? [])]
     .map(adaptSoulLinkMemberToUiMember)
     .filter(Boolean)
 })
@@ -392,7 +401,7 @@ const {
   linkedDeleteTarget,
   soulLinkSwapOriginalRoster,
   triggerSync,
-  handleSoulLinkConfirmDraft,
+  handleSoulLinkConfirmDraft: confirmSoulLinkDraft,
   handleSoulLinkImmediateSwap,
   handleSoulLinkCancelSwap,
   handleSoulLinkSwapSuggestion,
@@ -403,11 +412,26 @@ const {
   handleSoulLinkUndefeatGym,
   handleSoulLinkPersistPinnedGym,
   confirmLinkedDelete,
+  handleSoulLinkKillPokemon,
+  handleSoulLinkRevivePokemon,
+  handleSoulLinkDeleteDeadPokemon,
 } = useSoulLinkHandlers(
   viewedSoulLinkPlayerId,
   soulLinkGenerationRules,
   soulLinkPlayers,
 )
+
+function handleSoulLinkConfirmDraft() {
+  const result = confirmSoulLinkDraft()
+  if (result?.placedInDead) {
+    deathBoxMode.value = true
+  }
+}
+
+function handleViewDeathBox() {
+  deathBoxMode.value = !deathBoxMode.value
+  showSoulLinkDialog.value = false
+}
 
 function handleViewOtherSoulLinkPlayer() {
   const other = soulLinkPlayers.value.find(
@@ -416,6 +440,7 @@ function handleViewOtherSoulLinkPlayer() {
   if (other) {
     setCachedPlayerSlot(other.id)
   }
+  deathBoxMode.value = false
   showResetDialog.value = false
   showSoulLinkDialog.value = false
 }
@@ -464,11 +489,6 @@ function onCopySuccess() {
   setTimeout(() => {
     copyLabel.value = 'tap to copy'
   }, 2000)
-}
-
-async function handleResyncFromRemote() {
-  await forceReplaceSoulLinkFromRemote()
-  showSoulLinkDialog.value = false
 }
 
 function copyInviteCode() {
@@ -593,6 +613,7 @@ async function switchToSoloMode() {
   await clearTransientUiState()
   unsubscribeSoulLink()
   setCurrentRunMode(RUN_MODES.SOLO)
+  deathBoxMode.value = false
   showResetDialog.value = false
   showSoulLinkDialog.value = false
 }
@@ -1193,6 +1214,12 @@ if (import.meta.env.DEV) {
   gap: var(--space-2);
 }
 
+.dialog-divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 0;
+}
+
 .reset-option {
   background: transparent;
   border: 1px solid var(--color-border);
@@ -1228,6 +1255,15 @@ if (import.meta.env.DEV) {
   border-top: 1px solid var(--color-border);
 }
 
+.soul-link-dialog-options .reset-option-group {
+  margin-top: var(--space-1);
+  padding-top: var(--space-3);
+}
+
+.soul-link-dialog-options .dialog-divider {
+  margin: var(--space-2) 0;
+}
+
 
 @media (hover: hover) and (pointer: fine) {
   .reset-option:hover:not(:disabled) {
@@ -1239,13 +1275,6 @@ if (import.meta.env.DEV) {
     background: rgba(239, 68, 68, 0.08);
     border-color: var(--color-danger);
   }
-}
-
-.soul-link-resync {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  border-color: transparent;
-  padding: var(--space-1) var(--space-2);
 }
 
 .reset-dialog-cancel {

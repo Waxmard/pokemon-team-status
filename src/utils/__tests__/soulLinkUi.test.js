@@ -175,6 +175,7 @@ describe('buildSoulLinkPlayerBoard', () => {
       'player-1': {
         team: [slMember({ id: 't1', pairId: 'partner-1' })],
         box: [],
+        dead: [],
       },
     }
     const partnerRoster = [
@@ -199,10 +200,40 @@ describe('buildSoulLinkPlayerBoard', () => {
       'player-1': {
         team: [slMember({ id: 't1', pairId: 'partner-1' })],
         box: [],
+        dead: [],
       },
     }
     const board = buildSoulLinkPlayerBoard('player-1', rosters, {}, rules)
     expect(board.team[0].pairedPartner).toBe(null)
+  })
+
+  it('resolves paired partners for dead members', () => {
+    const rosters = {
+      'player-1': {
+        team: [],
+        box: [],
+        dead: [slMember({ id: 'd1', pairId: 'partner-dead' })],
+      },
+    }
+    const partnerRoster = [
+      uiMember({
+        id: 'partner-dead',
+        name: 'Haunter',
+        megaSpriteId: 'haunter-mega',
+      }),
+    ]
+    const board = buildSoulLinkPlayerBoard(
+      'player-1',
+      rosters,
+      {},
+      rules,
+      partnerRoster,
+    )
+    expect(board.dead[0].pairedPartner).toEqual({
+      name: 'Haunter',
+      spriteVariant: 'default',
+      megaSpriteId: 'haunter-mega',
+    })
   })
 
   it('sorts gyms by score ascending', () => {
@@ -216,6 +247,7 @@ describe('buildSoulLinkPlayerBoard', () => {
           }),
         ],
         box: [],
+        dead: [],
       },
     }
     const board = buildSoulLinkPlayerBoard('player-1', rosters, {}, rules)

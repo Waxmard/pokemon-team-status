@@ -46,8 +46,8 @@ export function assertPlayerIdInSet(
 }
 
 export function assertRosterKey(rosterKey, context) {
-  if (rosterKey !== 'team' && rosterKey !== 'box') {
-    throw new Error(`${context} requires a roster key of team or box.`)
+  if (rosterKey !== 'team' && rosterKey !== 'box' && rosterKey !== 'dead') {
+    throw new Error(`${context} requires a roster key of team, box, or dead.`)
   }
 
   return rosterKey
@@ -177,6 +177,9 @@ export function sanitizeSoulLinkRostersForRules(rosters, ruleset) {
         box: roster.box.map((member) =>
           sanitizeSoulLinkRosterMemberForRules(member, ruleset),
         ),
+        dead: (roster.dead ?? []).map((member) =>
+          sanitizeSoulLinkRosterMemberForRules(member, ruleset),
+        ),
       },
     ]),
   )
@@ -215,6 +218,7 @@ export function normalizeRosters(rosters, playerIds, context) {
         {
           team: normalizeRosterMembers(playerRoster.team, playerId),
           box: normalizeRosterMembers(playerRoster.box, playerId),
+          dead: normalizeRosterMembers(playerRoster.dead ?? [], playerId),
           _tombstones: playerRoster._tombstones ?? [],
         },
       ]

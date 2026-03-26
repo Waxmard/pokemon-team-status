@@ -27,11 +27,13 @@ describe('soulLinkModel helpers', () => {
         'player-1': {
           team: [],
           box: [],
+          dead: [],
           _tombstones: [],
         },
         'player-2': {
           team: [],
           box: [],
+          dead: [],
           _tombstones: [],
         },
       },
@@ -323,8 +325,8 @@ describe('repairPairings', () => {
   const P2 = SOUL_LINK_PLAYER_IDS.PARTNER
   const playerIds = [P1, P2]
 
-  function roster(team = [], box = [], tombstones = []) {
-    return { team, box, _tombstones: tombstones }
+  function roster(team = [], box = [], dead = [], tombstones = []) {
+    return { team, box, dead, _tombstones: tombstones }
   }
 
   function slMember(id, overrides = {}) {
@@ -385,7 +387,7 @@ describe('repairPairings', () => {
   it('preserves tombstones untouched', () => {
     const tombstones = [{ memberId: 'x', deletedAt: BASE_TS }]
     const rosters = {
-      [P1]: roster([], [], tombstones),
+      [P1]: roster([], [], [], tombstones),
       [P2]: roster(),
     }
     const result = repairPairings(rosters, playerIds)
@@ -400,6 +402,37 @@ describe('repairPairings', () => {
     const result = repairPairings(rosters, playerIds)
     expect(result[P1].box[0].pairId).toBe('b')
     expect(result[P2].team[0].pairId).toBe('a')
+  })
+
+  it('preserves pairings when both linked members are in dead', () => {
+    const rosters = {
+      [P1]: roster(
+        [],
+        [],
+        [slMember('a', { catchLocation: 'Route 1', pairId: 'b' })],
+      ),
+      [P2]: roster(
+        [],
+        [],
+        [slMember('b', { catchLocation: 'route 1', pairId: 'a' })],
+      ),
+    }
+    const result = repairPairings(rosters, playerIds)
+    expect(result[P1].dead[0].pairId).toBe('b')
+    expect(result[P2].dead[0].pairId).toBe('a')
+  })
+
+  it('clears invalid dead pairIds when the partner no longer exists', () => {
+    const rosters = {
+      [P1]: roster(
+        [],
+        [],
+        [slMember('a', { catchLocation: 'Route 1', pairId: 'missing' })],
+      ),
+      [P2]: roster(),
+    }
+    const result = repairPairings(rosters, playerIds)
+    expect(result[P1].dead[0].pairId).toBeNull()
   })
 
   it('first match wins when duplicate catchLocations exist', () => {

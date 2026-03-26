@@ -7,7 +7,7 @@
             <span v-if="!displayName" class="wizard-title-placeholder">Pokemon Name</span>
             <input
               :value="displayName"
-              :size="Math.max(displayName.length || 12, 1)"
+              :size="Math.max((displayName.length || 12) + 2, 3)"
               class="wizard-title wizard-title-input"
               type="text"
               maxlength="32"
@@ -170,6 +170,20 @@
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
             </svg>
+            <div v-if="matchedPartnerForLocation?.types?.length" class="preview-type-list">
+              <span
+                v-for="(type, index) in matchedPartnerForLocation.types"
+                :key="type"
+                class="preview-type-label"
+              >
+                <span :style="getTypeTextColor(type)">
+                  {{ capitalize(type) }}<span v-if="index < matchedPartnerForLocation.types.length - 1">,</span>
+                </span>
+              </span>
+            </div>
+            <span v-if="matchedPartnerForLocation?.nickname" class="preview-partner-nickname">
+              {{ matchedPartnerForLocation.nickname }}
+            </span>
             <span v-if="draftAction.catchLocation" class="preview-catch-location">
               {{ matchedPartnerForLocation ? draftAction.catchLocation : 'Not Yet Linked' }}
             </span>
@@ -891,6 +905,65 @@ function clearSpecialMove() {
 // Catch location state
 const catchLocationQuery = ref('')
 
+function locationMatchesQuery(location, query) {
+  return !query || location.toLowerCase().includes(query)
+}
+
+function createCatchLocationOption(location, disabled) {
+  return disabled
+    ? {
+        label: `${location} (already used)`,
+        value: location,
+        disabled: true,
+      }
+    : { label: location, value: location }
+}
+
+function collectOwnCatchLocations(team, box, editId) {
+  const ownLocations = new Set()
+
+  for (const member of [...team, ...box]) {
+    if (member.id !== editId && member.catchLocation) {
+      ownLocations.add(member.catchLocation)
+    }
+  }
+
+  return ownLocations
+}
+
+function collectPartnerUnlinkedCatchLocations(partnerRoster) {
+  if (!partnerRoster) return []
+
+  const partnerLocations = new Set()
+
+  for (const member of partnerRoster) {
+    if (member.catchLocation && !member.pairId) {
+      partnerLocations.add(member.catchLocation)
+    }
+  }
+
+  return [...partnerLocations]
+}
+
+function buildPartnerCatchLocationOptions(
+  partnerLocations,
+  ownLocations,
+  query,
+) {
+  return partnerLocations
+    .filter((location) => locationMatchesQuery(location, query))
+    .map((location) =>
+      createCatchLocationOption(location, ownLocations.has(location)),
+    )
+}
+
+function buildOwnCatchLocationOptions(partnerLocations, ownLocations, query) {
+  return [...ownLocations]
+    .filter((location) => locationMatchesQuery(location, query))
+    .filter((location) => !partnerLocations.includes(location))
+    .map((location) => createCatchLocationOption(location, true))
+}
+
 watch(
   () => draftAction.value?.catchLocation,
   (catchLocation) => {
@@ -902,50 +975,15 @@ watch(
 const catchLocationOptions = computed(() => {
   const query = catchLocationQuery.value.toLowerCase()
   const editId = draftAction.value?.editId || draftAction.value?.boxPokemonId
+  const ownLocations = collectOwnCatchLocations(props.team, props.box, editId)
+  const partnerLocations = collectPartnerUnlinkedCatchLocations(
+    props.partnerRoster,
+  )
 
-  const ownLocations = new Set()
-  for (const m of [...props.team, ...props.box]) {
-    if (m.id !== editId && m.catchLocation) {
-      ownLocations.add(m.catchLocation)
-    }
-  }
-
-  const partnerUnlinked = []
-  if (props.partnerRoster) {
-    for (const m of props.partnerRoster) {
-      if (m.catchLocation && !m.pairId) {
-        partnerUnlinked.push(m.catchLocation)
-      }
-    }
-  }
-
-  const options = []
-
-  for (const loc of partnerUnlinked) {
-    if (query && !loc.toLowerCase().includes(query)) continue
-    if (ownLocations.has(loc)) {
-      options.push({
-        label: `${loc} (already used)`,
-        value: loc,
-        disabled: true,
-      })
-    } else {
-      options.push({ label: loc, value: loc })
-    }
-  }
-
-  for (const loc of ownLocations) {
-    if (query && !loc.toLowerCase().includes(query)) continue
-    if (!partnerUnlinked.includes(loc)) {
-      options.push({
-        label: `${loc} (already used)`,
-        value: loc,
-        disabled: true,
-      })
-    }
-  }
-
-  return options
+  return [
+    ...buildPartnerCatchLocationOptions(partnerLocations, ownLocations, query),
+    ...buildOwnCatchLocationOptions(partnerLocations, ownLocations, query),
+  ]
 })
 
 const matchedPartnerForLocation = computed(() => {
@@ -966,8 +1004,8 @@ function onSelectCatchLocation(value) {
 }
 
 function onCatchLocationInput(value) {
-  catchLocationQuery.value = value
-  const trimmed = value.trim()
+  catchLocationQuery.value = value ?? ''
+  const trimmed = (value ?? '').trim()
   updateCatchLocation(trimmed || null)
 }
 
@@ -1463,6 +1501,21 @@ function onSelectPokemon(value) {
   opacity: 0.35;
 }
 
+.preview-partner-nickname {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.28;
+  opacity: 0.92;
+  color: var(--color-text-primary);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .preview-catch-location {
   position: absolute;
   bottom: -2rem;
@@ -1543,7 +1596,8 @@ function onSelectPokemon(value) {
   }
 
   .preview-type-label,
-  .preview-catch-location {
+  .preview-catch-location,
+  .preview-partner-nickname {
     font-size: 0.85rem;
   }
 }

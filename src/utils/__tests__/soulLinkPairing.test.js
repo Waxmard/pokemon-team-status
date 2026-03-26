@@ -14,8 +14,8 @@ function member(overrides = {}) {
   }
 }
 
-function roster(team = [], box = []) {
-  return { team, box }
+function roster(team = [], box = [], dead = []) {
+  return { team, box, dead }
 }
 
 function createContext(rosters, partnerId = 'player-2') {
@@ -81,6 +81,15 @@ describe('findLinkedDeleteTarget', () => {
     })
     const result = findLinkedDeleteTarget('player-1', 'a', 'team', ctx)
     expect(result.partnerRosterKey).toBe('box')
+  })
+
+  it('finds partner in dead roster', () => {
+    const ctx = createContext({
+      'player-1': roster([member({ id: 'a', pairId: 'b' })]),
+      'player-2': roster([], [], [member({ id: 'b' })]),
+    })
+    const result = findLinkedDeleteTarget('player-1', 'a', 'team', ctx)
+    expect(result.partnerRosterKey).toBe('dead')
   })
 
   it('returns null when member has no pairId', () => {
@@ -174,6 +183,26 @@ describe('reconcileSoulLinkPairing', () => {
     expect(ctx.updateRosterMember).toHaveBeenCalledWith(
       'player-2',
       'team',
+      'b',
+      { pairId: 'a' },
+    )
+  })
+
+  it('repairs an existing pair when the partner is in the dead roster', () => {
+    const ctx = createContext({
+      'player-1': roster([
+        member({ id: 'a', catchLocation: 'Route 1', pairId: 'b' }),
+      ]),
+      'player-2': roster(
+        [],
+        [],
+        [member({ id: 'b', catchLocation: 'route 1', pairId: 'stale' })],
+      ),
+    })
+    reconcileSoulLinkPairing('player-1', 'a', 'team', ctx)
+    expect(ctx.updateRosterMember).toHaveBeenCalledWith(
+      'player-2',
+      'dead',
       'b',
       { pairId: 'a' },
     )
