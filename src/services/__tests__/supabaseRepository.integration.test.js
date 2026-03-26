@@ -2,8 +2,11 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { supabase } from '../supabaseClient.js'
 import { createSupabaseRepository } from '../supabaseRepository.js'
 
+const shouldRunIntegrationTests =
+  import.meta.env.RUN_SUPABASE_INTEGRATION_TESTS === 'true'
 const isConfigured = !!supabase
-const describeIf = isConfigured ? describe : describe.skip
+const describeIf =
+  shouldRunIntegrationTests && isConfigured ? describe : describe.skip
 
 const createdSessionIds = []
 
