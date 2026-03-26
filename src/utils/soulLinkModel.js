@@ -298,6 +298,53 @@ function capMergedTeam(mergedRoster) {
   }
 }
 
+function deduplicateByCatchLocation(mergedRoster) {
+  const allEntries = [
+    ...mergedRoster.team.map((m) => ({ member: m, rosterKey: 'team' })),
+    ...mergedRoster.box.map((m) => ({ member: m, rosterKey: 'box' })),
+    ...mergedRoster.dead.map((m) => ({ member: m, rosterKey: 'dead' })),
+  ]
+
+  const byLocation = new Map()
+  for (const entry of allEntries) {
+    const loc = normalizeCatchLocation(entry.member.catchLocation)
+    if (!loc) continue
+    if (!byLocation.has(loc)) {
+      byLocation.set(loc, [])
+    }
+    byLocation.get(loc).push(entry)
+  }
+
+  const idsToRemove = new Set()
+  const newTombstones = []
+  const now = Date.now()
+
+  for (const entries of byLocation.values()) {
+    if (entries.length <= 1) continue
+
+    entries.sort(
+      (a, b) => (b.member.updatedAt ?? 0) - (a.member.updatedAt ?? 0),
+    )
+
+    for (let i = 1; i < entries.length; i++) {
+      idsToRemove.add(entries[i].member.id)
+      newTombstones.push({
+        memberId: entries[i].member.id,
+        deletedAt: now,
+      })
+    }
+  }
+
+  if (idsToRemove.size === 0) return mergedRoster
+
+  return {
+    team: mergedRoster.team.filter((m) => !idsToRemove.has(m.id)),
+    box: mergedRoster.box.filter((m) => !idsToRemove.has(m.id)),
+    dead: mergedRoster.dead.filter((m) => !idsToRemove.has(m.id)),
+    _tombstones: [...mergedRoster._tombstones, ...newTombstones],
+  }
+}
+
 export function mergePlayerRoster(localRoster, remoteRoster) {
   const localMembers = buildMemberMap(localRoster)
   const remoteMembers = buildMemberMap(remoteRoster)
@@ -316,8 +363,9 @@ export function mergePlayerRoster(localRoster, remoteRoster) {
     localTombstones,
     remoteTombstones,
   )
+  const deduped = deduplicateByCatchLocation(mergedRoster)
 
-  return capMergedTeam(mergedRoster)
+  return capMergedTeam(deduped)
 }
 
 function buildLocationMap(members) {
