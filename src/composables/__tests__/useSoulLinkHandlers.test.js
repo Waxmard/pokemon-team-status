@@ -220,6 +220,66 @@ describe('useSoulLinkHandlers', () => {
     )
   })
 
+  it('opens linked-delete confirmation for dead linked members', () => {
+    mocks.store = createStore()
+    mocks.draft = createDraftMocks(createDraftAction({ type: 'edit' }))
+    mocks.findLinkedDeleteTarget.mockReturnValue({
+      memberId: 'dead-1',
+      rosterKey: 'dead',
+      partnerPlayerId: 'player-2',
+      partnerMemberId: 'dead-2',
+      partnerRosterKey: 'dead',
+    })
+
+    const handlers = useSoulLinkHandlers(
+      ref('player-1'),
+      ref('gen-6'),
+      ref([{ id: 'player-1' }, { id: 'player-2' }]),
+    )
+
+    handlers.handleSoulLinkDeleteDeadPokemon({ id: 'dead-1' })
+
+    expect(mocks.findLinkedDeleteTarget).toHaveBeenCalledWith(
+      'player-1',
+      'dead-1',
+      'dead',
+      expect.objectContaining({
+        getPlayerRoster: mocks.store.getFullPlayerRoster,
+      }),
+    )
+    expect(mocks.store.removeRosterMember).not.toHaveBeenCalled()
+    expect(mocks.draft.cancel).not.toHaveBeenCalled()
+    expect(mocks.store.pushState).not.toHaveBeenCalled()
+    expect(handlers.linkedDeleteTarget.value).toEqual({
+      memberId: 'dead-1',
+      rosterKey: 'dead',
+      partnerPlayerId: 'player-2',
+      partnerMemberId: 'dead-2',
+      partnerRosterKey: 'dead',
+    })
+  })
+
+  it('deletes unlinked dead members immediately and closes the draft', () => {
+    mocks.store = createStore()
+    mocks.draft = createDraftMocks(createDraftAction({ type: 'edit' }))
+
+    const handlers = useSoulLinkHandlers(
+      ref('player-1'),
+      ref('gen-6'),
+      ref([{ id: 'player-1' }, { id: 'player-2' }]),
+    )
+
+    handlers.handleSoulLinkDeleteDeadPokemon({ id: 'dead-1' })
+
+    expect(mocks.store.removeRosterMember).toHaveBeenCalledWith(
+      'player-1',
+      'dead',
+      'dead-1',
+    )
+    expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
+    expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
+  })
+
   it('enters add-replace mode instead of syncing when the team is full', () => {
     mocks.store = createStore({
       getPlayerRoster: vi.fn(() => ({

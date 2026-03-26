@@ -30,7 +30,7 @@
       class="add-button delete-mode mobile-only"
       @click="handleDeleteClick"
     >
-      <span class="add-icon">{{ isSoulLinkMode ? '💀' : '🗑' }}</span>
+      <span class="add-icon">{{ deleteActionIcon }}</span>
     </button>
 
     <!-- Mode Toggle Button (long-press to collapse) -->
@@ -142,7 +142,7 @@
             class="add-button delete-mode desktop-only"
             @click="handleDeleteClick"
           >
-            <span class="add-icon">{{ isSoulLinkMode ? '💀' : '🗑' }}</span>
+            <span class="add-icon">{{ deleteActionIcon }}</span>
           </button>
           <!-- Swap Button - desktop only -->
           <button
@@ -397,6 +397,11 @@ const isEditingDead = computed(() => {
   return draftAction.value?.isDeadPokemon && !swapMode.value
 })
 
+const deleteActionIcon = computed(() => {
+  if (isEditingDead.value) return '🗑'
+  return props.isSoulLinkMode ? '💀' : '🗑'
+})
+
 function handleEditPokemon(id) {
   if (props.readOnly) return
   const pokemon = props.team.find((p) => p.id === id)
@@ -469,7 +474,6 @@ function handleDeleteClick() {
     const id = draftAction.value.deadPokemonId
     if (id) {
       emit('deleteDeadPokemon', { id })
-      cancel()
     }
     return
   }

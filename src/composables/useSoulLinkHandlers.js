@@ -529,8 +529,10 @@ export function useSoulLinkHandlers(
 
   function handleSoulLinkDeleteDeadPokemon({ id }) {
     const pid = viewedSoulLinkPlayerId.value
-    removeSoulLinkRosterMember(pid, 'dead', id)
-    triggerSync()
+    if (!tryLinkedDelete(pid, id, 'dead')) {
+      triggerSync()
+      cancel()
+    }
   }
 
   return {
