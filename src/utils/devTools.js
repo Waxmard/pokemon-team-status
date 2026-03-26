@@ -125,31 +125,57 @@ export function createDevTools({
     return null
   }
 
+  function getPairingFixDecision(member, force) {
+    if (!member.pairId) return { type: 'skip' }
+
+    const partnerEntry = findMemberById(member.pairId)
+    if (!partnerEntry) return { type: 'skip' }
+
+    const partner = partnerEntry.member
+    if (partner.pairId === member.id) {
+      return { type: 'skip', partnerEntry }
+    }
+
+    if (partner.pairId && partner.pairId !== member.id && !force) {
+      return { type: 'conflict', partnerEntry }
+    }
+
+    return { type: 'fix', partnerEntry }
+  }
+
+  function logPairingConflict(member, partner) {
+    console.warn(
+      `Conflict: ${member.speciesName} (${member.id}) → ${partner.speciesName} (${partner.id}), but ${partner.speciesName} → ${partner.pairId}. Use { force: true } to override.`,
+    )
+  }
+
+  function applyPairingFix(member, partnerEntry) {
+    const partner = partnerEntry.member
+    const action = partner.pairId ? 'Overriding' : 'Fixing'
+    console.log(
+      `${action}: ${partner.speciesName} (${partner.id}) pairId → ${member.id} (${member.speciesName})`,
+    )
+    updateRosterMember(partnerEntry.pid, partnerEntry.key, partner.id, {
+      pairId: member.id,
+    })
+  }
+
   async function fixAsymmetricPairings({ force = false } = {}) {
     let fixed = 0
     let conflicts = 0
 
-    for (const { member: a } of rosterEntries()) {
-      if (!a.pairId) continue
-      const bEntry = findMemberById(a.pairId)
-      if (!bEntry) continue
+    for (const { member } of rosterEntries()) {
+      const decision = getPairingFixDecision(member, force)
 
-      const b = bEntry.member
-      if (b.pairId === a.id) continue
-
-      if (b.pairId && b.pairId !== a.id && !force) {
-        console.warn(
-          `Conflict: ${a.speciesName} (${a.id}) → ${b.speciesName} (${b.id}), but ${b.speciesName} → ${b.pairId}. Use { force: true } to override.`,
-        )
+      if (decision.type === 'conflict') {
+        logPairingConflict(member, decision.partnerEntry.member)
         conflicts++
         continue
       }
 
-      const action = b.pairId ? 'Overriding' : 'Fixing'
-      console.log(
-        `${action}: ${b.speciesName} (${b.id}) pairId → ${a.id} (${a.speciesName})`,
-      )
-      updateRosterMember(bEntry.pid, bEntry.key, b.id, { pairId: a.id })
+      if (decision.type !== 'fix') continue
+
+      applyPairingFix(member, decision.partnerEntry)
       fixed++
     }
 
@@ -221,6 +247,24 @@ export function createDevTools({
     return groups
   }
 
+  function removeDuplicateBoxMembers(playerId, key, members) {
+    if (members.length <= 1) return 0
+
+    const keeper = pickKeeper(members)
+    let removed = 0
+
+    for (const member of members) {
+      if (member.id === keeper.id) continue
+      console.log(
+        `Removing duplicate: ${member.speciesName} (${member.id}) [${key}]`,
+      )
+      removeRosterMember(playerId, 'box', member.id)
+      removed++
+    }
+
+    return removed
+  }
+
   async function dedupBox(playerId) {
     const roster = rosters.value[playerId]
     if (!roster) {
@@ -235,14 +279,7 @@ export function createDevTools({
 
     let removed = 0
     for (const [key, members] of groups) {
-      if (members.length <= 1) continue
-      const keeper = pickKeeper(members)
-      for (const m of members) {
-        if (m.id === keeper.id) continue
-        console.log(`Removing duplicate: ${m.speciesName} (${m.id}) [${key}]`)
-        removeRosterMember(playerId, 'box', m.id)
-        removed++
-      }
+      removed += removeDuplicateBoxMembers(playerId, key, members)
     }
 
     console.log(

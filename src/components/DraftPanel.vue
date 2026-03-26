@@ -905,6 +905,59 @@ function clearSpecialMove() {
 // Catch location state
 const catchLocationQuery = ref('')
 
+function locationMatchesQuery(location, query) {
+  return !query || location.toLowerCase().includes(query)
+}
+
+function createCatchLocationOption(location, disabled) {
+  return disabled
+    ? {
+        label: `${location} (already used)`,
+        value: location,
+        disabled: true,
+      }
+    : { label: location, value: location }
+}
+
+function collectOwnCatchLocations(team, box, editId) {
+  const ownLocations = new Set()
+
+  for (const member of [...team, ...box]) {
+    if (member.id !== editId && member.catchLocation) {
+      ownLocations.add(member.catchLocation)
+    }
+  }
+
+  return ownLocations
+}
+
+function collectPartnerUnlinkedCatchLocations(partnerRoster) {
+  if (!partnerRoster) return []
+
+  return partnerRoster.flatMap((member) =>
+    member.catchLocation && !member.pairId ? [member.catchLocation] : [],
+  )
+}
+
+function buildPartnerCatchLocationOptions(
+  partnerLocations,
+  ownLocations,
+  query,
+) {
+  return partnerLocations
+    .filter((location) => locationMatchesQuery(location, query))
+    .map((location) =>
+      createCatchLocationOption(location, ownLocations.has(location)),
+    )
+}
+
+function buildOwnCatchLocationOptions(partnerLocations, ownLocations, query) {
+  return [...ownLocations]
+    .filter((location) => locationMatchesQuery(location, query))
+    .filter((location) => !partnerLocations.includes(location))
+    .map((location) => createCatchLocationOption(location, true))
+}
+
 watch(
   () => draftAction.value?.catchLocation,
   (catchLocation) => {
@@ -916,50 +969,15 @@ watch(
 const catchLocationOptions = computed(() => {
   const query = catchLocationQuery.value.toLowerCase()
   const editId = draftAction.value?.editId || draftAction.value?.boxPokemonId
+  const ownLocations = collectOwnCatchLocations(props.team, props.box, editId)
+  const partnerLocations = collectPartnerUnlinkedCatchLocations(
+    props.partnerRoster,
+  )
 
-  const ownLocations = new Set()
-  for (const m of [...props.team, ...props.box]) {
-    if (m.id !== editId && m.catchLocation) {
-      ownLocations.add(m.catchLocation)
-    }
-  }
-
-  const partnerUnlinked = []
-  if (props.partnerRoster) {
-    for (const m of props.partnerRoster) {
-      if (m.catchLocation && !m.pairId) {
-        partnerUnlinked.push(m.catchLocation)
-      }
-    }
-  }
-
-  const options = []
-
-  for (const loc of partnerUnlinked) {
-    if (query && !loc.toLowerCase().includes(query)) continue
-    if (ownLocations.has(loc)) {
-      options.push({
-        label: `${loc} (already used)`,
-        value: loc,
-        disabled: true,
-      })
-    } else {
-      options.push({ label: loc, value: loc })
-    }
-  }
-
-  for (const loc of ownLocations) {
-    if (query && !loc.toLowerCase().includes(query)) continue
-    if (!partnerUnlinked.includes(loc)) {
-      options.push({
-        label: `${loc} (already used)`,
-        value: loc,
-        disabled: true,
-      })
-    }
-  }
-
-  return options
+  return [
+    ...buildPartnerCatchLocationOptions(partnerLocations, ownLocations, query),
+    ...buildOwnCatchLocationOptions(partnerLocations, ownLocations, query),
+  ]
 })
 
 const matchedPartnerForLocation = computed(() => {

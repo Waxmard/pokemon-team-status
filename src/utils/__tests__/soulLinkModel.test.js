@@ -27,11 +27,13 @@ describe('soulLinkModel helpers', () => {
         'player-1': {
           team: [],
           box: [],
+          dead: [],
           _tombstones: [],
         },
         'player-2': {
           team: [],
           box: [],
+          dead: [],
           _tombstones: [],
         },
       },

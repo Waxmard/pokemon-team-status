@@ -202,23 +202,47 @@ function resolveMemberWinner(
   }
 }
 
-export function mergePlayerRoster(localRoster, remoteRoster) {
-  const localMembers = buildMemberMap(localRoster)
-  const remoteMembers = buildMemberMap(remoteRoster)
-  const localTombstones = buildTombstoneMap(localRoster)
-  const remoteTombstones = buildTombstoneMap(remoteRoster)
-
-  const allIds = new Set([
+function getAllRosterIds(
+  localMembers,
+  remoteMembers,
+  localTombstones,
+  remoteTombstones,
+) {
+  return new Set([
     ...localMembers.keys(),
     ...remoteMembers.keys(),
     ...localTombstones.keys(),
     ...remoteTombstones.keys(),
   ])
+}
 
-  const mergedTeam = []
-  const mergedBox = []
-  const mergedDead = []
-  const mergedTombstones = []
+function pushMergedEntry(mergedRoster, entry) {
+  if (entry.rosterKey === 'team') {
+    mergedRoster.team.push(entry.member)
+    return
+  }
+
+  if (entry.rosterKey === 'dead') {
+    mergedRoster.dead.push(entry.member)
+    return
+  }
+
+  mergedRoster.box.push(entry.member)
+}
+
+function collectMergedRoster(
+  allIds,
+  localMembers,
+  remoteMembers,
+  localTombstones,
+  remoteTombstones,
+) {
+  const mergedRoster = {
+    team: [],
+    box: [],
+    dead: [],
+    _tombstones: [],
+  }
   const now = Date.now()
 
   for (const id of allIds) {
@@ -232,47 +256,68 @@ export function mergePlayerRoster(localRoster, remoteRoster) {
 
     if (winner.isDeleted) {
       if (now - winner.deletedAt < TOMBSTONE_MAX_AGE_MS) {
-        mergedTombstones.push({ memberId: id, deletedAt: winner.deletedAt })
+        mergedRoster._tombstones.push({
+          memberId: id,
+          deletedAt: winner.deletedAt,
+        })
       }
-    } else if (winner.entry) {
-      if (winner.entry.rosterKey === 'team') {
-        mergedTeam.push(winner.entry.member)
-      } else if (winner.entry.rosterKey === 'dead') {
-        mergedDead.push(winner.entry.member)
-      } else {
-        mergedBox.push(winner.entry.member)
-      }
+      continue
+    }
+
+    if (winner.entry) {
+      pushMergedEntry(mergedRoster, winner.entry)
     }
   }
 
-  if (mergedTeam.length > 6) {
-    const sorted = [...mergedTeam].sort(
-      (a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0),
-    )
-    const keepInTeam = new Set(sorted.slice(0, 6).map((m) => m.id))
-    const overflow = []
-    const capped = []
-    for (const m of mergedTeam) {
-      if (keepInTeam.has(m.id)) {
-        capped.push(m)
-      } else {
-        overflow.push(m)
-      }
-    }
-    return {
-      team: capped,
-      box: [...mergedBox, ...overflow],
-      dead: mergedDead,
-      _tombstones: mergedTombstones,
+  return mergedRoster
+}
+
+function capMergedTeam(mergedRoster) {
+  if (mergedRoster.team.length <= 6) return mergedRoster
+
+  const sorted = [...mergedRoster.team].sort(
+    (a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0),
+  )
+  const keepInTeam = new Set(sorted.slice(0, 6).map((member) => member.id))
+  const cappedTeam = []
+  const overflow = []
+
+  for (const member of mergedRoster.team) {
+    if (keepInTeam.has(member.id)) {
+      cappedTeam.push(member)
+    } else {
+      overflow.push(member)
     }
   }
 
   return {
-    team: mergedTeam,
-    box: mergedBox,
-    dead: mergedDead,
-    _tombstones: mergedTombstones,
+    team: cappedTeam,
+    box: [...mergedRoster.box, ...overflow],
+    dead: mergedRoster.dead,
+    _tombstones: mergedRoster._tombstones,
   }
+}
+
+export function mergePlayerRoster(localRoster, remoteRoster) {
+  const localMembers = buildMemberMap(localRoster)
+  const remoteMembers = buildMemberMap(remoteRoster)
+  const localTombstones = buildTombstoneMap(localRoster)
+  const remoteTombstones = buildTombstoneMap(remoteRoster)
+  const allIds = getAllRosterIds(
+    localMembers,
+    remoteMembers,
+    localTombstones,
+    remoteTombstones,
+  )
+  const mergedRoster = collectMergedRoster(
+    allIds,
+    localMembers,
+    remoteMembers,
+    localTombstones,
+    remoteTombstones,
+  )
+
+  return capMergedTeam(mergedRoster)
 }
 
 function buildLocationMap(members) {

@@ -262,6 +262,58 @@ export function useSoulLinkHandlers(
     }
   }
 
+  function handleSoulLinkAddDraft(pid, newMember) {
+    const roster = getSoulLinkRoster()
+    if (roster.team.length >= 6) {
+      enterSoulLinkAddReplaceMode(pid)
+      return false
+    }
+
+    addRosterMember(pid, 'team', newMember)
+    reconcileSoulLinkPairing(pid, newMember.id, 'team')
+    return true
+  }
+
+  function handleSoulLinkAddToRoster(pid, rosterKey) {
+    const newMember = buildSoulLinkMemberFromDraft(
+      draftAction.value,
+      pid,
+      rosterKey,
+    )
+
+    addRosterMember(pid, rosterKey, newMember)
+    if (rosterKey !== 'dead') {
+      reconcileSoulLinkPairing(pid, newMember.id, rosterKey)
+    }
+  }
+
+  function handleSoulLinkEditDraft(pid, newMember) {
+    if (draftAction.value.isDeadPokemon) {
+      confirmSoulLinkMemberUpdate(pid, 'dead', draftAction.value.deadPokemonId)
+      return
+    }
+
+    handleSoulLinkConfirmEdit(pid, newMember)
+  }
+
+  function confirmSoulLinkDraftByType(pid, newMember) {
+    switch (draftAction.value.type) {
+      case 'add':
+        return handleSoulLinkAddDraft(pid, newMember)
+      case 'addToBox':
+        handleSoulLinkAddToRoster(pid, 'box')
+        return true
+      case 'addToDead':
+        handleSoulLinkAddToRoster(pid, 'dead')
+        return true
+      case 'edit':
+        handleSoulLinkEditDraft(pid, newMember)
+        return true
+      default:
+        return true
+    }
+  }
+
   function handleSoulLinkConfirmDraft() {
     if (!draftAction.value) return
     const pid = viewedSoulLinkPlayerId.value
@@ -277,41 +329,7 @@ export function useSoulLinkHandlers(
       'team',
     )
 
-    if (draftAction.value.type === 'add') {
-      const roster = getSoulLinkRoster()
-      if (roster.team.length < 6) {
-        addRosterMember(pid, 'team', newMember)
-        reconcileSoulLinkPairing(pid, newMember.id, 'team')
-      } else {
-        enterSoulLinkAddReplaceMode(pid)
-        return
-      }
-    } else if (draftAction.value.type === 'addToBox') {
-      const boxMember = buildSoulLinkMemberFromDraft(
-        draftAction.value,
-        pid,
-        'box',
-      )
-      addRosterMember(pid, 'box', boxMember)
-      reconcileSoulLinkPairing(pid, boxMember.id, 'box')
-    } else if (draftAction.value.type === 'addToDead') {
-      const deadMember = buildSoulLinkMemberFromDraft(
-        draftAction.value,
-        pid,
-        'dead',
-      )
-      addRosterMember(pid, 'dead', deadMember)
-    } else if (draftAction.value.type === 'edit') {
-      if (draftAction.value.isDeadPokemon) {
-        confirmSoulLinkMemberUpdate(
-          pid,
-          'dead',
-          draftAction.value.deadPokemonId,
-        )
-      } else {
-        handleSoulLinkConfirmEdit(pid, newMember)
-      }
-    }
+    if (!confirmSoulLinkDraftByType(pid, newMember)) return
 
     cancel()
     triggerSync()
