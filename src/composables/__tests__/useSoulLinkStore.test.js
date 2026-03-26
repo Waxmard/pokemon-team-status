@@ -232,6 +232,40 @@ describe('useSoulLinkStore', () => {
     })
   })
 
+  it('appends team additions and prepends box and dead additions', () => {
+    const store = useSoulLinkStore()
+
+    const first = createDefaultSoulLinkMember({
+      id: 'team-1',
+      speciesName: 'Treecko',
+    })
+    const second = createDefaultSoulLinkMember({
+      id: 'team-2',
+      speciesName: 'Torchic',
+    })
+    const boxFirst = createDefaultSoulLinkMember({
+      id: 'box-1',
+      speciesName: 'Mudkip',
+    })
+    const boxSecond = createDefaultSoulLinkMember({
+      id: 'box-2',
+      speciesName: 'Ralts',
+    })
+
+    store.addRosterMember(SOUL_LINK_PLAYER_IDS.LOCAL, 'team', first)
+    store.addRosterMember(SOUL_LINK_PLAYER_IDS.LOCAL, 'team', second)
+    store.addRosterMember(SOUL_LINK_PLAYER_IDS.LOCAL, 'box', boxFirst)
+    store.addRosterMember(SOUL_LINK_PLAYER_IDS.LOCAL, 'box', boxSecond)
+
+    const team = store.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)
+    expect(team[0]).toEqual(expect.objectContaining({ id: 'team-1' }))
+    expect(team[1]).toEqual(expect.objectContaining({ id: 'team-2' }))
+
+    const box = store.getPlayerBox(SOUL_LINK_PLAYER_IDS.LOCAL)
+    expect(box[0]).toEqual(expect.objectContaining({ id: 'box-2' }))
+    expect(box[1]).toEqual(expect.objectContaining({ id: 'box-1' }))
+  })
+
   it('preserves linked pairIds when linked members are killed and revived', () => {
     const store = useSoulLinkStore()
 
