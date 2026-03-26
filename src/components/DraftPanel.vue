@@ -966,8 +966,8 @@ function onSelectCatchLocation(value) {
 }
 
 function onCatchLocationInput(value) {
-  catchLocationQuery.value = value
-  const trimmed = value.trim()
+  catchLocationQuery.value = value ?? ''
+  const trimmed = (value ?? '').trim()
   updateCatchLocation(trimmed || null)
 }
 
