@@ -308,6 +308,91 @@ describe('mergePlayerRoster', () => {
     expect(boxIds).toContain('h')
   })
 
+  it('deduplicates members with the same catch location, keeping newest', () => {
+    const local = {
+      team: [
+        member('old-gastly', {
+          speciesName: 'Gastly',
+          catchLocation: 'Pokemon Tower',
+          updatedAt: BASE_TS + 100,
+        }),
+      ],
+      box: [
+        member('new-gastly', {
+          speciesName: 'Gastly',
+          catchLocation: 'Pokemon Tower',
+          updatedAt: BASE_TS + 300,
+        }),
+      ],
+      _tombstones: [],
+    }
+    const result = mergePlayerRoster(local, emptyRoster())
+    const allMembers = [...result.team, ...result.box]
+    const gastlys = allMembers.filter(
+      (m) => m.catchLocation === 'Pokemon Tower',
+    )
+    expect(gastlys).toHaveLength(1)
+    expect(gastlys[0].id).toBe('new-gastly')
+    expect(result._tombstones).toContainEqual(
+      expect.objectContaining({ memberId: 'old-gastly' }),
+    )
+  })
+
+  it('deduplicates cross-device duplicates created with different IDs', () => {
+    const local = {
+      team: [],
+      box: [
+        member('device-a-gastly', {
+          speciesName: 'Gastly',
+          catchLocation: 'Pokemon Tower',
+          updatedAt: BASE_TS + 100,
+        }),
+      ],
+      _tombstones: [],
+    }
+    const remote = {
+      team: [],
+      box: [
+        member('device-b-gastly', {
+          speciesName: 'Gastly',
+          catchLocation: 'pokemon tower',
+          updatedAt: BASE_TS + 200,
+        }),
+      ],
+      _tombstones: [],
+    }
+    const result = mergePlayerRoster(local, remote)
+    expect(result.box).toHaveLength(1)
+    expect(result.box[0].id).toBe('device-b-gastly')
+    expect(result._tombstones).toContainEqual(
+      expect.objectContaining({ memberId: 'device-a-gastly' }),
+    )
+  })
+
+  it('does not deduplicate members with different catch locations', () => {
+    const local = {
+      team: [member('a', { catchLocation: 'Route 1' })],
+      box: [member('b', { catchLocation: 'Route 2' })],
+      _tombstones: [],
+    }
+    const result = mergePlayerRoster(local, emptyRoster())
+    expect(result.team).toHaveLength(1)
+    expect(result.box).toHaveLength(1)
+  })
+
+  it('does not deduplicate members with null catch locations', () => {
+    const local = {
+      team: [
+        member('a', { catchLocation: null }),
+        member('b', { catchLocation: null }),
+      ],
+      box: [],
+      _tombstones: [],
+    }
+    const result = mergePlayerRoster(local, emptyRoster())
+    expect(result.team).toHaveLength(2)
+  })
+
   it('does not modify team when at or under cap', () => {
     const local = {
       team: [member('a'), member('b'), member('c')],

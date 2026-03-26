@@ -251,16 +251,20 @@ function addRosterMember(playerId, rosterKey, member) {
       nextPlayerId
     ] ?? createDefaultSoulLinkPlayerRoster()
 
+  const newMember = {
+    ...cloneValue(member),
+    ownerPlayerId: nextPlayerId,
+    updatedAt: Date.now(),
+  }
+
+  const updatedList =
+    nextRosterKey === 'team'
+      ? [...playerRoster[nextRosterKey], newMember]
+      : [newMember, ...playerRoster[nextRosterKey]]
+
   updatePlayerRecord('rosters', nextPlayerId, {
     ...playerRoster,
-    [nextRosterKey]: [
-      {
-        ...cloneValue(member),
-        ownerPlayerId: nextPlayerId,
-        updatedAt: Date.now(),
-      },
-      ...playerRoster[nextRosterKey],
-    ],
+    [nextRosterKey]: updatedList,
   })
 }
 
