@@ -61,6 +61,7 @@ export function createDefaultSoulLinkPlayerRoster() {
   return {
     team: [],
     box: [],
+    dead: [],
     _tombstones: [],
   }
 }
@@ -162,6 +163,9 @@ function buildMemberMap(roster) {
   for (const m of roster.box) {
     members.set(m.id, { member: m, rosterKey: 'box' })
   }
+  for (const m of roster.dead ?? []) {
+    members.set(m.id, { member: m, rosterKey: 'dead' })
+  }
   return members
 }
 
@@ -213,6 +217,7 @@ export function mergePlayerRoster(localRoster, remoteRoster) {
 
   const mergedTeam = []
   const mergedBox = []
+  const mergedDead = []
   const mergedTombstones = []
   const now = Date.now()
 
@@ -232,6 +237,8 @@ export function mergePlayerRoster(localRoster, remoteRoster) {
     } else if (winner.entry) {
       if (winner.entry.rosterKey === 'team') {
         mergedTeam.push(winner.entry.member)
+      } else if (winner.entry.rosterKey === 'dead') {
+        mergedDead.push(winner.entry.member)
       } else {
         mergedBox.push(winner.entry.member)
       }
@@ -255,11 +262,17 @@ export function mergePlayerRoster(localRoster, remoteRoster) {
     return {
       team: capped,
       box: [...mergedBox, ...overflow],
+      dead: mergedDead,
       _tombstones: mergedTombstones,
     }
   }
 
-  return { team: mergedTeam, box: mergedBox, _tombstones: mergedTombstones }
+  return {
+    team: mergedTeam,
+    box: mergedBox,
+    dead: mergedDead,
+    _tombstones: mergedTombstones,
+  }
 }
 
 function buildLocationMap(members) {
@@ -326,9 +339,13 @@ function rebuildRosters(rosters, allMembers, playerIds) {
   for (const pid of playerIds) {
     const roster = rosters[pid] ?? createDefaultSoulLinkPlayerRoster()
     const teamIds = new Set(roster.team.map((m) => m.id))
+    const deadIds = new Set((roster.dead ?? []).map((m) => m.id))
     repaired[pid] = {
       team: allMembers[pid].filter((m) => teamIds.has(m.id)),
-      box: allMembers[pid].filter((m) => !teamIds.has(m.id)),
+      box: allMembers[pid].filter(
+        (m) => !teamIds.has(m.id) && !deadIds.has(m.id),
+      ),
+      dead: roster.dead ?? [],
       _tombstones: roster._tombstones ?? [],
     }
   }

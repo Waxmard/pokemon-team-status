@@ -15,13 +15,22 @@
       <span class="add-icon">+</span>
     </button>
 
-    <!-- Delete Button - mobile only (when editing a Pokemon) -->
+    <!-- Revive Button - mobile only (when editing a dead Pokemon) -->
+    <button
+      v-if="!readOnly && isEditingDead && showDraftPanel"
+      class="add-button revive-mode mobile-only"
+      @click="handleReviveFromDraft"
+    >
+      <span class="add-icon">❤️</span>
+    </button>
+
+    <!-- Delete/Kill Button - mobile only (when editing a Pokemon) -->
     <button
       v-if="!readOnly && isEditing && showDraftPanel"
       class="add-button delete-mode mobile-only"
       @click="handleDeleteClick"
     >
-      <span class="add-icon">🗑</span>
+      <span class="add-icon">{{ isSoulLinkMode ? '💀' : '🗑' }}</span>
     </button>
 
     <!-- Mode Toggle Button (long-press to collapse) -->
@@ -40,7 +49,7 @@
         <SpriteImg :src="swapPokemonSpriteUrl" :width="32" :height="32" alt="Swap" />
       </template>
       <span v-else-if="isEditingForSwap" class="mode-icon">⇄</span>
-      <span v-else class="mode-icon">{{ viewMode === 'team' ? '⚔️' : '📦' }}</span>
+      <span v-else class="mode-icon">{{ viewMode === 'team' ? '⚔️' : viewMode === 'box' ? '📦' : '💀' }}</span>
     </button>
 
     <Transition name="section-collapse">
@@ -71,7 +80,7 @@
         </div>
 
         <!-- Box Grid -->
-        <div v-else class="slot-grid slot-grid-scrollable">
+        <div v-else-if="viewMode === 'box'" class="slot-grid slot-grid-scrollable">
           <TeamSlot
             v-for="pokemon in box"
             :key="pokemon.id"
@@ -88,6 +97,19 @@
             :interactive="!readOnly"
             @add="swapMode ? handleSwapSelect(null) : startAddToBox()"
           />
+        </div>
+
+        <!-- Dead Grid -->
+        <div v-else-if="viewMode === 'dead'" class="slot-grid slot-grid-scrollable">
+          <div v-for="pokemon in dead" :key="pokemon.id" class="dead-slot">
+            <TeamSlot
+              :pokemon="pokemon"
+              :generation-rules="generationRules"
+              :interactive="!readOnly"
+              @edit="handleEditDeadPokemon(pokemon.id)"
+              @delete="handleDeleteDeadPokemon(pokemon.id)"
+            />
+          </div>
         </div>
       </div>
 
@@ -106,13 +128,21 @@
             @cancel="cancel"
             @swapSuggestion="handleSwapSuggestion"
           />
-          <!-- Delete Button - desktop only -->
+          <!-- Revive Button - desktop only (when editing a dead Pokemon) -->
+          <button
+            v-if="!readOnly && isEditingDead"
+            class="add-button revive-mode desktop-only"
+            @click="handleReviveFromDraft"
+          >
+            <span class="add-icon">❤️</span>
+          </button>
+          <!-- Delete/Kill Button - desktop only -->
           <button
             v-if="!readOnly && isEditing"
             class="add-button delete-mode desktop-only"
             @click="handleDeleteClick"
           >
-            <span class="add-icon">🗑</span>
+            <span class="add-icon">{{ isSoulLinkMode ? '💀' : '🗑' }}</span>
           </button>
           <!-- Swap Button - desktop only -->
           <button
@@ -131,7 +161,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { useLongPress } from '../composables/useLongPress.js'
 import { getPokemonDataForRules } from '../data/pokemon.js'
@@ -177,6 +207,14 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  dead: {
+    type: Array,
+    default: () => [],
+  },
+  deathBoxMode: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits([
@@ -187,6 +225,11 @@ const emit = defineEmits([
   'cancelSwap',
   'deletePokemon',
   'swapSuggestion',
+  'killPokemon',
+  'revivePokemon',
+  'exitDeathBox',
+  'deleteDeadPokemon',
+  'addToDead',
 ])
 
 const {
@@ -196,6 +239,8 @@ const {
   startEdit,
   startEditBox,
   startAddToBox,
+  startEditDead,
+  startAddToDead,
   enterSwapMode,
   exitSwapMode,
   cancel,
@@ -231,6 +276,11 @@ function handleModeClick() {
   // If long press just fired, don't also handle click
   if (longPressFired.value) {
     longPressFired.value = false
+    return
+  }
+  // If in death box, clicking skull exits it
+  if (viewMode.value === 'dead') {
+    emit('exitDeathBox')
     return
   }
   // If collapsed, expand on click
@@ -269,6 +319,14 @@ watch(
   () => props.playerId,
   () => {
     viewMode.value = 'team'
+  },
+)
+
+// Enter/exit death box view from external control
+watch(
+  () => props.deathBoxMode,
+  (isDeathBox) => {
+    viewMode.value = isDeathBox ? 'dead' : 'team'
   },
 )
 
@@ -334,6 +392,11 @@ const isEditing = computed(() => {
   return draftAction.value?.type === 'edit' && !swapMode.value
 })
 
+// Detect when editing a dead Pokemon (for showing revive button)
+const isEditingDead = computed(() => {
+  return draftAction.value?.isDeadPokemon && !swapMode.value
+})
+
 function handleEditPokemon(id) {
   if (props.readOnly) return
   const pokemon = props.team.find((p) => p.id === id)
@@ -386,7 +449,9 @@ function toggleViewMode() {
 
 function handleAddClick() {
   if (props.readOnly) return
-  if (viewMode.value === 'box') {
+  if (viewMode.value === 'dead') {
+    startAddToDead()
+  } else if (viewMode.value === 'box') {
     startAddToBox()
   } else {
     startAdd()
@@ -400,17 +465,83 @@ function handleSwapSuggestion(event) {
 
 function handleDeleteClick() {
   if (props.readOnly) return
+  if (draftAction.value?.isDeadPokemon) {
+    const id = draftAction.value.deadPokemonId
+    if (id) {
+      emit('deleteDeadPokemon', { id })
+      cancel()
+    }
+    return
+  }
+  if (props.isSoulLinkMode) {
+    const rosterKey = draftAction.value?.isBoxPokemon ? 'box' : 'team'
+    const id = draftAction.value?.isBoxPokemon
+      ? draftAction.value.boxPokemonId
+      : draftAction.value?.editId
+    if (id) {
+      emit('killPokemon', { id, rosterKey })
+      cancel()
+    }
+    return
+  }
   emit('deletePokemon')
 }
 
 function handleDeleteTeamPokemon(id) {
   if (props.readOnly) return
+  if (props.isSoulLinkMode) {
+    emit('killPokemon', { id, rosterKey: 'team' })
+    return
+  }
   emit('deleteTeamPokemon', id)
 }
 
 function handleDeleteBoxPokemon(id) {
   if (props.readOnly) return
+  if (props.isSoulLinkMode) {
+    emit('killPokemon', { id, rosterKey: 'box' })
+    return
+  }
   emit('deleteBoxPokemon', id)
+}
+
+function handleEditDeadPokemon(id) {
+  if (props.readOnly) return
+  const pokemon = props.dead.find((p) => p.id === id)
+  if (!pokemon) return
+  const pokemonData = getRulesetPokemonData(pokemon.name)
+  startEditDead({
+    id,
+    pokemonData,
+    ability: pokemon.ability,
+    berry: pokemon.berry || null,
+    moves: pokemon.moves,
+    specialMove: pokemon.specialMove,
+    pairId: pokemon.pairId || null,
+    megaForm: pokemon.megaForm || null,
+    megaTypes: pokemon.megaTypes || null,
+    megaSpriteId: pokemon.megaSpriteId || null,
+    spriteVariant: pokemon.spriteVariant || 'default',
+    catchLocation: pokemon.catchLocation || null,
+    nickname: pokemon.nickname || null,
+  })
+}
+
+function handleReviveFromDraft() {
+  if (props.readOnly) return
+  const id = draftAction.value?.deadPokemonId
+  if (!id) return
+  cancel()
+  emit('revivePokemon', id)
+  // Switch to box view after the deathBoxMode watcher fires
+  nextTick(() => {
+    viewMode.value = 'box'
+  })
+}
+
+function handleDeleteDeadPokemon(id) {
+  if (props.readOnly) return
+  emit('deleteDeadPokemon', { id })
 }
 </script>
 
@@ -686,6 +817,12 @@ function handleDeleteBoxPokemon(id) {
     animation: scaleIn var(--transition-base) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
+  .draft-dialog-container .revive-mode {
+    position: absolute;
+    bottom: calc(-1 * var(--space-8) - var(--space-4));
+    left: var(--space-4);
+  }
+
   .draft-dialog-container .delete-mode {
     position: absolute;
     bottom: calc(-1 * var(--space-8) - var(--space-4));
@@ -697,5 +834,10 @@ function handleDeleteBoxPokemon(id) {
     top: calc(-1 * var(--space-8));
     right: var(--space-4);
   }
+}
+
+.revive-mode {
+  left: var(--space-4);
+  right: auto;
 }
 </style>

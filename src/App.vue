@@ -47,6 +47,7 @@
         :persist-pinned-gym="handleSoulLinkPersistPinnedGym"
         :partner-roster="soulLinkPartnerRoster"
         :player-id="viewedSoulLinkPlayerId"
+        :death-box-mode="deathBoxMode"
         @confirmDraft="handleSoulLinkConfirmDraft"
         @immediateSwap="handleSoulLinkImmediateSwap"
         @deleteTeamPokemon="handleSoulLinkDeleteTeamPokemon"
@@ -56,6 +57,10 @@
         @swapSuggestion="handleSoulLinkSwapSuggestion"
         @defeatGym="handleSoulLinkDefeatGym"
         @undefeatGym="handleSoulLinkUndefeatGym"
+        @killPokemon="(e) => { handleSoulLinkKillPokemon(e); deathBoxMode = true }"
+        @revivePokemon="(e) => { handleSoulLinkRevivePokemon(e); deathBoxMode = false }"
+        @exitDeathBox="deathBoxMode = false"
+        @deleteDeadPokemon="handleSoulLinkDeleteDeadPokemon"
       />
     </div>
   </n-config-provider>
@@ -143,6 +148,9 @@
         <div class="reset-dialog-options">
           <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
             View {{ otherSoulLinkPlayerName }}
+          </button>
+          <button class="reset-option" @click="handleViewDeathBox">
+            {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
           </button>
           <div v-if="hasRemoteSession && isSupabaseAvailable" class="reset-option-group">
             <div class="session-code-display" @click="copyInviteCode">
@@ -252,6 +260,7 @@ const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
 
 const showResetDialog = ref(false)
 const showSoulLinkDialog = ref(false)
+const deathBoxMode = ref(false)
 const playerNameInput = ref(null)
 const joinCodeInput = ref(null)
 const joinCodeValue = ref('')
@@ -401,11 +410,19 @@ const {
   handleSoulLinkUndefeatGym,
   handleSoulLinkPersistPinnedGym,
   confirmLinkedDelete,
+  handleSoulLinkKillPokemon,
+  handleSoulLinkRevivePokemon,
+  handleSoulLinkDeleteDeadPokemon,
 } = useSoulLinkHandlers(
   viewedSoulLinkPlayerId,
   soulLinkGenerationRules,
   soulLinkPlayers,
 )
+
+function handleViewDeathBox() {
+  deathBoxMode.value = !deathBoxMode.value
+  showSoulLinkDialog.value = false
+}
 
 function handleViewOtherSoulLinkPlayer() {
   const other = soulLinkPlayers.value.find(
@@ -414,6 +431,7 @@ function handleViewOtherSoulLinkPlayer() {
   if (other) {
     setCachedPlayerSlot(other.id)
   }
+  deathBoxMode.value = false
   showResetDialog.value = false
   showSoulLinkDialog.value = false
 }
@@ -586,6 +604,7 @@ async function switchToSoloMode() {
   await clearTransientUiState()
   unsubscribeSoulLink()
   setCurrentRunMode(RUN_MODES.SOLO)
+  deathBoxMode.value = false
   showResetDialog.value = false
   showSoulLinkDialog.value = false
 }

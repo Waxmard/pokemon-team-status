@@ -7,6 +7,7 @@
       :persist-pinned-gym="persistPinnedGym"
       :partner-roster="partnerRoster"
       :player-id="playerId"
+      :death-box-mode="deathBoxMode"
       @confirmDraft="$emit('confirmDraft')"
       @immediateSwap="$emit('immediateSwap', $event)"
       @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
@@ -16,6 +17,11 @@
       @swapSuggestion="$emit('swapSuggestion', $event)"
       @defeatGym="$emit('defeatGym', $event)"
       @undefeatGym="$emit('undefeatGym', $event)"
+      @killPokemon="$emit('killPokemon', $event)"
+      @revivePokemon="$emit('revivePokemon', $event)"
+      @exitDeathBox="$emit('exitDeathBox')"
+      @deleteDeadPokemon="$emit('deleteDeadPokemon', $event)"
+      @addToDead="$emit('addToDead')"
     />
   </section>
 </template>
@@ -48,6 +54,10 @@ defineProps({
     type: String,
     default: null,
   },
+  deathBoxMode: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 defineEmits([
@@ -60,6 +70,11 @@ defineEmits([
   'swapSuggestion',
   'defeatGym',
   'undefeatGym',
+  'killPokemon',
+  'revivePokemon',
+  'exitDeathBox',
+  'deleteDeadPokemon',
+  'addToDead',
 ])
 </script>
 

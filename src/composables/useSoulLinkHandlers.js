@@ -26,6 +26,9 @@ export function useSoulLinkHandlers(
     addRosterMember,
     updateRosterMember,
     removeRosterMember: removeSoulLinkRosterMember,
+    killRosterMember,
+    reviveRosterMember,
+    getPlayerDead,
     updatePlayerGymProgress,
     sessionMetadata: soulLinkSessionMetadata,
     pushState: pushSoulLinkState,
@@ -291,8 +294,23 @@ export function useSoulLinkHandlers(
       )
       addRosterMember(pid, 'box', boxMember)
       reconcileSoulLinkPairing(pid, boxMember.id, 'box')
+    } else if (draftAction.value.type === 'addToDead') {
+      const deadMember = buildSoulLinkMemberFromDraft(
+        draftAction.value,
+        pid,
+        'dead',
+      )
+      addRosterMember(pid, 'dead', deadMember)
     } else if (draftAction.value.type === 'edit') {
-      handleSoulLinkConfirmEdit(pid, newMember)
+      if (draftAction.value.isDeadPokemon) {
+        confirmSoulLinkMemberUpdate(
+          pid,
+          'dead',
+          draftAction.value.deadPokemonId,
+        )
+      } else {
+        handleSoulLinkConfirmEdit(pid, newMember)
+      }
     }
 
     cancel()
@@ -449,6 +467,55 @@ export function useSoulLinkHandlers(
     enterSwapMode()
   }
 
+  // --- Soul Link death handlers ---
+
+  function handleSoulLinkKillPokemon({ id, rosterKey }) {
+    const pid = viewedSoulLinkPlayerId.value
+    const target = findLinkedDeleteTarget(pid, id, rosterKey)
+
+    // Kill the member
+    killRosterMember(pid, rosterKey, id)
+
+    // Kill the paired partner too
+    if (target) {
+      killRosterMember(
+        target.partnerPlayerId,
+        target.partnerRosterKey,
+        target.partnerMemberId,
+      )
+    }
+
+    cancel()
+    triggerSync()
+  }
+
+  function handleSoulLinkRevivePokemon(memberId) {
+    const pid = viewedSoulLinkPlayerId.value
+    const deadRoster = getPlayerDead(pid)
+    const member = deadRoster.find((m) => m.id === memberId)
+    if (!member) return
+
+    // Revive the member
+    reviveRosterMember(pid, memberId)
+
+    // Revive the paired partner if they're also dead
+    const partnerPid = findPartnerPlayerId()
+    if (member.pairId && partnerPid) {
+      const partnerDead = getPlayerDead(partnerPid)
+      if (partnerDead.some((m) => m.id === member.pairId)) {
+        reviveRosterMember(partnerPid, member.pairId)
+      }
+    }
+
+    triggerSync()
+  }
+
+  function handleSoulLinkDeleteDeadPokemon({ id }) {
+    const pid = viewedSoulLinkPlayerId.value
+    removeSoulLinkRosterMember(pid, 'dead', id)
+    triggerSync()
+  }
+
   return {
     linkedDeleteTarget,
     soulLinkSwapOriginalRoster,
@@ -464,5 +531,8 @@ export function useSoulLinkHandlers(
     handleSoulLinkUndefeatGym,
     handleSoulLinkPersistPinnedGym,
     confirmLinkedDelete,
+    handleSoulLinkKillPokemon,
+    handleSoulLinkRevivePokemon,
+    handleSoulLinkDeleteDeadPokemon,
   }
 }
