@@ -10,6 +10,7 @@ import {
 } from '../utils/runSnapshot.js'
 import {
   buildRemoteState,
+  createDefaultSoulLinkPlayerProgress,
   createDefaultSoulLinkPlayerRoster,
   generateInviteCode,
   mergeRemoteState,

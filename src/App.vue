@@ -303,6 +303,7 @@ function resetGyms() {
     resetGymsInStore()
   } else {
     resetPlayerGymProgress(viewedSoulLinkPlayerId.value)
+    triggerSync()
   }
   showResetDialog.value = false
 }
