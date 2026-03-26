@@ -254,12 +254,12 @@ function addRosterMember(playerId, rosterKey, member) {
   updatePlayerRecord('rosters', nextPlayerId, {
     ...playerRoster,
     [nextRosterKey]: [
-      ...playerRoster[nextRosterKey],
       {
         ...cloneValue(member),
         ownerPlayerId: nextPlayerId,
         updatedAt: Date.now(),
       },
+      ...playerRoster[nextRosterKey],
     ],
   })
 }
@@ -454,8 +454,8 @@ function reviveRosterMember(playerId, memberId) {
     ...playerRoster,
     dead: (playerRoster.dead ?? []).filter((m) => m.id !== memberId),
     box: [
-      ...playerRoster.box,
       { ...cloneValue(member), updatedAt: Date.now() },
+      ...playerRoster.box,
     ],
   })
 }
