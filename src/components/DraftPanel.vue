@@ -848,12 +848,12 @@ function toggleMoveType(type) {
   const moves = [...(draftAction.value?.moves || [])]
   const existingIndex = moves.indexOf(type)
 
-  if (existingIndex !== -1) {
-    // Remove the move
-    moves.splice(existingIndex, 1)
-  } else {
+  if (existingIndex === -1) {
     // Add the move (no limit)
     moves.push(type)
+  } else {
+    // Remove the move
+    moves.splice(existingIndex, 1)
   }
   updateMoves(moves)
 }
