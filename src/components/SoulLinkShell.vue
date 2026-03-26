@@ -6,6 +6,7 @@
       :draft-active="draftActive"
       :persist-pinned-gym="persistPinnedGym"
       :partner-roster="partnerRoster"
+      :player-id="playerId"
       @confirmDraft="$emit('confirmDraft')"
       @immediateSwap="$emit('immediateSwap', $event)"
       @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
@@ -41,6 +42,10 @@ defineProps({
   },
   partnerRoster: {
     type: Array,
+    default: null,
+  },
+  playerId: {
+    type: String,
     default: null,
   },
 })

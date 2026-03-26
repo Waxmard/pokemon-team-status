@@ -8,6 +8,7 @@
       :pinned-gym="board.pinnedGym"
       :partner-roster="partnerRoster"
       :is-soul-link-mode="true"
+      :player-id="playerId"
       @confirmDraft="$emit('confirmDraft')"
       @immediateSwap="$emit('immediateSwap', $event)"
       @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
@@ -57,6 +58,10 @@ defineProps({
   },
   partnerRoster: {
     type: Array,
+    default: null,
+  },
+  playerId: {
+    type: String,
     default: null,
   },
 })

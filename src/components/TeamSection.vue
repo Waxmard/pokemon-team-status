@@ -173,6 +173,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  playerId: {
+    type: String,
+    default: null,
+  },
 })
 
 const emit = defineEmits([
@@ -259,6 +263,14 @@ function handleConfirmSwap() {
   if (props.readOnly) return
   exitSwapMode()
 }
+
+// Reset to team view when switching players
+watch(
+  () => props.playerId,
+  () => {
+    viewMode.value = 'team'
+  },
+)
 
 // Switch to opposite view when entering swap mode, reset to team view when exiting
 watch(swapMode, (isSwapMode) => {

@@ -170,6 +170,20 @@
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
             </svg>
+            <div v-if="matchedPartnerForLocation?.types?.length" class="preview-type-list">
+              <span
+                v-for="(type, index) in matchedPartnerForLocation.types"
+                :key="type"
+                class="preview-type-label"
+              >
+                <span :style="getTypeTextColor(type)">
+                  {{ capitalize(type) }}<span v-if="index < matchedPartnerForLocation.types.length - 1">,</span>
+                </span>
+              </span>
+            </div>
+            <span v-if="matchedPartnerForLocation?.nickname" class="preview-partner-nickname">
+              {{ matchedPartnerForLocation.nickname }}
+            </span>
             <span v-if="draftAction.catchLocation" class="preview-catch-location">
               {{ matchedPartnerForLocation ? draftAction.catchLocation : 'Not Yet Linked' }}
             </span>
@@ -1463,6 +1477,21 @@ function onSelectPokemon(value) {
   opacity: 0.35;
 }
 
+.preview-partner-nickname {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.28;
+  opacity: 0.92;
+  color: var(--color-text-primary);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .preview-catch-location {
   position: absolute;
   bottom: -2rem;
@@ -1543,7 +1572,8 @@ function onSelectPokemon(value) {
   }
 
   .preview-type-label,
-  .preview-catch-location {
+  .preview-catch-location,
+  .preview-partner-nickname {
     font-size: 0.85rem;
   }
 }

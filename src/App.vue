@@ -46,6 +46,7 @@
         :draft-active="hasDraft"
         :persist-pinned-gym="handleSoulLinkPersistPinnedGym"
         :partner-roster="soulLinkPartnerRoster"
+        :player-id="viewedSoulLinkPlayerId"
         @confirmDraft="handleSoulLinkConfirmDraft"
         @immediateSwap="handleSoulLinkImmediateSwap"
         @deleteTeamPokemon="handleSoulLinkDeleteTeamPokemon"
