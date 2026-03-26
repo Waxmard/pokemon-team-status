@@ -158,6 +158,39 @@ describe('useSoulLinkHandlers', () => {
     expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
   })
 
+  it('reconciles pairing immediately for add-to-dead drafts', () => {
+    mocks.store = createStore()
+    mocks.draft = createDraftMocks(createDraftAction({ type: 'addToDead' }))
+
+    const handlers = useSoulLinkHandlers(
+      ref('player-1'),
+      ref('gen-6'),
+      ref([{ id: 'player-1' }, { id: 'player-2' }]),
+    )
+
+    handlers.handleSoulLinkConfirmDraft()
+
+    expect(mocks.store.addRosterMember).toHaveBeenCalledWith(
+      'player-1',
+      'dead',
+      expect.objectContaining({
+        speciesName: 'Eevee',
+        ownerPlayerId: 'player-1',
+        catchLocation: 'Route 1',
+      }),
+    )
+    expect(mocks.reconcileSoulLinkPairing).toHaveBeenCalledWith(
+      'player-1',
+      expect.any(String),
+      'dead',
+      expect.objectContaining({
+        getPlayerRoster: mocks.store.getFullPlayerRoster,
+      }),
+    )
+    expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
+    expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
+  })
+
   it('uses the full roster accessor for linked-delete lookups', () => {
     mocks.store = createStore()
     mocks.draft = createDraftMocks(createDraftAction())

@@ -934,9 +934,15 @@ function collectOwnCatchLocations(team, box, editId) {
 function collectPartnerUnlinkedCatchLocations(partnerRoster) {
   if (!partnerRoster) return []
 
-  return partnerRoster.flatMap((member) =>
-    member.catchLocation && !member.pairId ? [member.catchLocation] : [],
-  )
+  const partnerLocations = new Set()
+
+  for (const member of partnerRoster) {
+    if (member.catchLocation && !member.pairId) {
+      partnerLocations.add(member.catchLocation)
+    }
+  }
+
+  return [...partnerLocations]
 }
 
 function buildPartnerCatchLocationOptions(

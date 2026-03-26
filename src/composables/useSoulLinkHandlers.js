@@ -283,9 +283,7 @@ export function useSoulLinkHandlers(
     )
 
     addRosterMember(pid, rosterKey, newMember)
-    if (rosterKey !== 'dead') {
-      reconcileSoulLinkPairing(pid, newMember.id, rosterKey)
-    }
+    reconcileSoulLinkPairing(pid, newMember.id, rosterKey)
   }
 
   function handleSoulLinkEditDraft(pid, newMember) {
