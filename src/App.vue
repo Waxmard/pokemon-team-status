@@ -145,12 +145,9 @@
     <div v-if="showSoulLinkDialog" class="reset-overlay" @click.self="showSoulLinkDialog = false">
       <div class="reset-dialog">
         <h3 class="reset-dialog-title">Soul Link</h3>
-        <div class="reset-dialog-options">
+        <div class="reset-dialog-options soul-link-dialog-options">
           <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
             View {{ otherSoulLinkPlayerName }}
-          </button>
-          <button class="reset-option" @click="handleViewDeathBox">
-            {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
           </button>
           <div v-if="hasRemoteSession && isSupabaseAvailable" class="reset-option-group">
             <div class="session-code-display" @click="copyInviteCode">
@@ -158,6 +155,10 @@
               <span class="session-code-hint">{{ copyLabel }}</span>
             </div>
           </div>
+          <hr class="dialog-divider" />
+          <button class="reset-option" @click="handleViewDeathBox">
+            {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
+          </button>
         </div>
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
       </div>
@@ -1205,6 +1206,12 @@ if (import.meta.env.DEV) {
   gap: var(--space-2);
 }
 
+.dialog-divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 0;
+}
+
 .reset-option {
   background: transparent;
   border: 1px solid var(--color-border);
@@ -1238,6 +1245,15 @@ if (import.meta.env.DEV) {
   margin-top: var(--space-4);
   padding-top: var(--space-4);
   border-top: 1px solid var(--color-border);
+}
+
+.soul-link-dialog-options .reset-option-group {
+  margin-top: var(--space-1);
+  padding-top: var(--space-3);
+}
+
+.soul-link-dialog-options .dialog-divider {
+  margin: var(--space-2) 0;
 }
 
 
