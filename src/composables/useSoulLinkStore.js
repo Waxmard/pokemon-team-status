@@ -125,7 +125,7 @@ function replaceSoulLinkState(nextSoulLinkState) {
     soulLink: nextSoulLinkState,
   }
 
-  repository.persistSoulLinkSnapshot(buildPersistableSnapshot())
+  repository.persistSoulLinkSnapshot(buildPersistableSnapshot()).catch(() => {})
   scheduleAutoSync()
 }
 
@@ -211,7 +211,7 @@ function setGenerationRules(nextGenerationRules) {
     },
   }
 
-  repository.persistSoulLinkSnapshot(buildPersistableSnapshot())
+  repository.persistSoulLinkSnapshot(buildPersistableSnapshot()).catch(() => {})
   scheduleAutoSync()
 }
 
@@ -569,7 +569,9 @@ export function useSoulLinkStore() {
       },
     }
 
-    repository.persistSoulLinkSnapshot(buildPersistableSnapshot())
+    repository
+      .persistSoulLinkSnapshot(buildPersistableSnapshot())
+      .catch(() => {})
 
     return runState.value
   }
