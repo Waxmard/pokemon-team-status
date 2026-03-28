@@ -186,6 +186,7 @@ const rowBackgroundStyle = computed(() => {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   pointer-events: none;
+  filter: var(--drop-shadow-icon);
 }
 
 .gym-card-inner .berry-corner {
@@ -210,7 +211,7 @@ const rowBackgroundStyle = computed(() => {
   right: 2px;
   line-height: 1;
   font-size: calc(0.7rem + var(--score-abs) * 0.11rem);
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+  filter: var(--drop-shadow-icon);
 }
 
 .score-corner.improvement-up {
