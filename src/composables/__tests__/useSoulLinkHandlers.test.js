@@ -60,8 +60,6 @@ function createStore(overrides = {}) {
     reviveRosterMember: vi.fn(),
     getPlayerDead: vi.fn(() => []),
     updatePlayerGymProgress: vi.fn(),
-    sessionMetadata: ref({ sessionId: 'session-1' }),
-    pushState: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   }
 }
@@ -110,7 +108,6 @@ describe('useSoulLinkHandlers', () => {
       expect.any(Object),
     )
     expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
-    expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
     expect(mocks.reconcileSoulLinkPairing).toHaveBeenCalledWith(
       'player-1',
       expect.any(String),
@@ -156,7 +153,6 @@ describe('useSoulLinkHandlers', () => {
       expect.any(Object),
     )
     expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
-    expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
   })
 
   it('reconciles pairing immediately for add-to-dead drafts', () => {
@@ -189,7 +185,6 @@ describe('useSoulLinkHandlers', () => {
       }),
     )
     expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
-    expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
   })
 
   it('redirects team adds to dead when the matched partner is dead', () => {
@@ -305,7 +300,6 @@ describe('useSoulLinkHandlers', () => {
 
     expect(result).toEqual({ placedInDead: true })
     expect(mocks.draft.enterSwapMode).not.toHaveBeenCalled()
-    expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
   })
 
   it('uses the full roster accessor for linked-delete lookups', () => {
@@ -366,7 +360,6 @@ describe('useSoulLinkHandlers', () => {
     )
     expect(mocks.store.removeRosterMember).not.toHaveBeenCalled()
     expect(mocks.draft.cancel).not.toHaveBeenCalled()
-    expect(mocks.store.pushState).not.toHaveBeenCalled()
     expect(handlers.linkedDeleteTarget.value).toEqual({
       memberId: 'dead-1',
       rosterKey: 'dead',
@@ -394,7 +387,6 @@ describe('useSoulLinkHandlers', () => {
       'dead-1',
     )
     expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
-    expect(mocks.store.pushState).toHaveBeenCalledTimes(1)
   })
 
   it('enters add-replace mode instead of syncing when the team is full', () => {
@@ -428,7 +420,6 @@ describe('useSoulLinkHandlers', () => {
     )
     expect(mocks.draft.enterSwapMode).toHaveBeenCalledTimes(1)
     expect(mocks.draft.cancel).not.toHaveBeenCalled()
-    expect(mocks.store.pushState).not.toHaveBeenCalled()
     expect(mocks.draft.draftAction.value).toEqual(
       expect.objectContaining({
         type: 'edit',

@@ -32,8 +32,6 @@ export function useSoulLinkHandlers(
     reviveRosterMember,
     getPlayerDead,
     updatePlayerGymProgress,
-    sessionMetadata: soulLinkSessionMetadata,
-    pushState: pushSoulLinkState,
   } = useSoulLinkStore()
 
   const {
@@ -46,11 +44,6 @@ export function useSoulLinkHandlers(
 
   const linkedDeleteTarget = ref(null)
   const soulLinkSwapOriginalRoster = ref(null)
-
-  function triggerSync() {
-    if (!soulLinkSessionMetadata.value?.sessionId) return
-    pushSoulLinkState().catch((err) => console.error('Push failed:', err))
-  }
 
   // --- Soul Link helpers ---
 
@@ -116,7 +109,6 @@ export function useSoulLinkHandlers(
     updatePlayerGymProgress(pid, {
       defeatedGyms: [...progress.defeatedGyms, type],
     })
-    triggerSync()
   }
 
   function handleSoulLinkUndefeatGym(type) {
@@ -125,12 +117,10 @@ export function useSoulLinkHandlers(
     updatePlayerGymProgress(pid, {
       defeatedGyms: progress.defeatedGyms.filter((g) => g !== type),
     })
-    triggerSync()
   }
 
   function handleSoulLinkPersistPinnedGym(type) {
     updatePlayerGymProgress(viewedSoulLinkPlayerId.value, { pinnedGym: type })
-    triggerSync()
   }
 
   // --- Soul Link delete handlers ---
@@ -168,16 +158,14 @@ export function useSoulLinkHandlers(
 
     linkedDeleteTarget.value = null
     cancel()
-    triggerSync()
   }
 
   function handleSoulLinkDeleteTeamPokemon(id) {
-    if (!tryLinkedDelete(viewedSoulLinkPlayerId.value, id, 'team'))
-      triggerSync()
+    tryLinkedDelete(viewedSoulLinkPlayerId.value, id, 'team')
   }
 
   function handleSoulLinkDeleteBoxPokemon(id) {
-    if (!tryLinkedDelete(viewedSoulLinkPlayerId.value, id, 'box')) triggerSync()
+    tryLinkedDelete(viewedSoulLinkPlayerId.value, id, 'box')
   }
 
   function handleSoulLinkDeleteFromDraft() {
@@ -189,7 +177,6 @@ export function useSoulLinkHandlers(
     } else if (draftAction.value.editId) {
       if (tryLinkedDelete(pid, draftAction.value.editId, 'team')) return
     }
-    triggerSync()
     cancel()
   }
 
@@ -373,7 +360,6 @@ export function useSoulLinkHandlers(
     if (!result) return
 
     cancel()
-    triggerSync()
     return result
   }
 
@@ -546,7 +532,6 @@ export function useSoulLinkHandlers(
     }
 
     cancel()
-    triggerSync()
   }
 
   function handleSoulLinkRevivePokemon(memberId) {
@@ -566,14 +551,11 @@ export function useSoulLinkHandlers(
         reviveRosterMember(partnerPid, member.pairId)
       }
     }
-
-    triggerSync()
   }
 
   function handleSoulLinkDeleteDeadPokemon({ id }) {
     const pid = viewedSoulLinkPlayerId.value
     if (!tryLinkedDelete(pid, id, 'dead')) {
-      triggerSync()
       cancel()
     }
   }
@@ -581,7 +563,6 @@ export function useSoulLinkHandlers(
   return {
     linkedDeleteTarget,
     soulLinkSwapOriginalRoster,
-    triggerSync,
     handleSoulLinkConfirmDraft,
     handleSoulLinkImmediateSwap,
     handleSoulLinkCancelSwap,
