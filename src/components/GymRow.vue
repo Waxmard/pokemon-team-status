@@ -207,9 +207,9 @@ const rowBackgroundStyle = computed(() => {
 .gym-card-inner .score-corner {
   position: absolute;
   bottom: 6px;
-  right: 3px;
+  right: 2px;
   line-height: 1;
-  font-size: calc(0.6rem + var(--score-abs) * 0.1rem);
+  font-size: calc(0.7rem + var(--score-abs) * 0.11rem);
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
 }
 
@@ -267,8 +267,8 @@ const rowBackgroundStyle = computed(() => {
     height: 30px !important;
   }
 
-  .score-corner {
-    font-size: calc(1.15rem + var(--score-abs) * 0.2rem);
+  .gym-card-inner .score-corner {
+    font-size: calc(1.1rem + var(--score-abs) * 0.2rem);
   }
 
   .drag-handle {
