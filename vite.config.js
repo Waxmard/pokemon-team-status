@@ -28,7 +28,7 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['types/*.svg', 'icons/*.png'],
+      includeAssets: ['types/*.svg', 'icons/*.png', 'favicon.png'],
       devOptions: {
         enabled: false,
       },
