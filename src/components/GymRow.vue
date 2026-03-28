@@ -44,9 +44,10 @@
       <span
         v-else-if="!suggestionMode"
         class="score-corner"
-        :class="{ positive: score > 0, negative: score < 0 }"
+        :style="{ '--score-abs': Math.abs(score) }"
+        :aria-label="`${score > 0 ? 'Prepared' : 'Vulnerable'}: ${Math.abs(score)}`"
       >
-        {{ score > 0 ? '+' : '' }}{{ score }}
+        {{ scoreSymbol }}
       </span>
     </div>
   </div>
@@ -121,6 +122,12 @@ const improvementClass = computed(() => {
   if (props.improvementScore > 0) return 'improvement-up'
   if (props.improvementScore < 0) return 'improvement-down'
   return 'improvement-neutral'
+})
+
+const scoreSymbol = computed(() => {
+  if (props.score > 0) return '\u{1F44D}'
+  if (props.score < 0) return '\u{1F480}'
+  return '\u{1F44D}'
 })
 
 const rowBackgroundStyle = computed(() => {
@@ -199,22 +206,11 @@ const rowBackgroundStyle = computed(() => {
 
 .gym-card-inner .score-corner {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-light);
-  color: var(--color-text-secondary);
-}
-
-.score-corner.positive {
-  color: var(--color-success);
-}
-
-.score-corner.negative {
-  color: var(--color-danger);
+  bottom: 6px;
+  right: 3px;
+  line-height: 1;
+  font-size: calc(0.6rem + var(--score-abs) * 0.1rem);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
 }
 
 .score-corner.improvement-up {
@@ -272,7 +268,7 @@ const rowBackgroundStyle = computed(() => {
   }
 
   .score-corner {
-    font-size: 1.15rem;
+    font-size: calc(1.15rem + var(--score-abs) * 0.2rem);
   }
 
   .drag-handle {
