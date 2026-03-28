@@ -116,6 +116,7 @@ export function useSoulLinkHandlers(
     updatePlayerGymProgress(pid, {
       defeatedGyms: [...progress.defeatedGyms, type],
     })
+    triggerSync()
   }
 
   function handleSoulLinkUndefeatGym(type) {
@@ -124,10 +125,12 @@ export function useSoulLinkHandlers(
     updatePlayerGymProgress(pid, {
       defeatedGyms: progress.defeatedGyms.filter((g) => g !== type),
     })
+    triggerSync()
   }
 
   function handleSoulLinkPersistPinnedGym(type) {
     updatePlayerGymProgress(viewedSoulLinkPlayerId.value, { pinnedGym: type })
+    triggerSync()
   }
 
   // --- Soul Link delete handlers ---

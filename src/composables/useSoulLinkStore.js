@@ -336,6 +336,7 @@ function updatePlayerGymProgress(playerId, updates) {
   updatePlayerRecord('progress', nextPlayerId, {
     ...playerProgress,
     ...cloneValue(updates),
+    updatedAt: Date.now(),
   })
 }
 
@@ -632,6 +633,7 @@ export function useSoulLinkStore() {
       },
       players: remotePlayers,
       rosters: remoteState.rosters,
+      progress: remoteState.progress,
       local: {
         devicePlayerId,
         preferredPlayerId: savedLocal?.preferredPlayerId ?? devicePlayerId,

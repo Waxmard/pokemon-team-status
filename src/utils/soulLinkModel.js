@@ -77,6 +77,7 @@ export function createDefaultSoulLinkPlayerProgress() {
   return {
     defeatedGyms: [],
     pinnedGym: null,
+    updatedAt: null,
   }
 }
 
@@ -149,6 +150,7 @@ export function buildRemoteState(soulLinkState, generationRules) {
     metadata: soulLinkState.metadata,
     players: soulLinkState.players.map(({ id, name }) => ({ id, name })),
     rosters: soulLinkState.rosters,
+    progress: soulLinkState.progress,
     generationRules,
   }
 }
@@ -482,9 +484,21 @@ export function mergeRemoteState(localSoulLinkState, remoteState) {
     mergedRosters[pid] = mergePlayerRoster(localRoster, remoteRoster)
   }
 
+  const mergedProgress = {}
+  for (const pid of playerIds) {
+    const localProgress =
+      localSoulLinkState.progress[pid] ?? createDefaultSoulLinkPlayerProgress()
+    const remoteProgress =
+      remoteState.progress?.[pid] ?? createDefaultSoulLinkPlayerProgress()
+    const localTs = localProgress.updatedAt ?? 0
+    const remoteTs = remoteProgress.updatedAt ?? 0
+    mergedProgress[pid] = localTs >= remoteTs ? localProgress : remoteProgress
+  }
+
   return {
     ...localSoulLinkState,
     players: mergedPlayers,
     rosters: repairPairings(mergedRosters, playerIds),
+    progress: mergedProgress,
   }
 }
