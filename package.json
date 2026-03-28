@@ -16,10 +16,7 @@
     "test:coverage": "vitest run --coverage",
     "lint:duplication": "jscpd src/",
     "lint:sonar": "eslint --config eslint.config.sonar.mjs src/ scripts/",
-    "prepare": "husky",
-    "release": "commit-and-tag-version",
-    "release:minor": "commit-and-tag-version --release-as minor",
-    "release:major": "commit-and-tag-version --release-as major"
+    "prepare": "husky"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.3",
@@ -31,7 +28,6 @@
     "@biomejs/biome": "2.4.9",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vitest/coverage-v8": "^4.1.0",
-    "commit-and-tag-version": "^12.7.1",
     "eslint": "^10.1.0",
     "eslint-plugin-sonarjs": "^4.0.2",
     "husky": "^9.1.7",
