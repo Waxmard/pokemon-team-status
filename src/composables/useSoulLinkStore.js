@@ -448,8 +448,8 @@ function killRosterMember(playerId, rosterKey, memberId) {
       (m) => m.id !== memberId,
     ),
     dead: [
-      ...(playerRoster.dead ?? []),
       { ...cloneValue(member), updatedAt: Date.now() },
+      ...(playerRoster.dead ?? []),
     ],
   })
 }
