@@ -226,10 +226,15 @@ describe('useSoulLinkStore', () => {
       }),
     ])
     expect(store.getPlayerBox(SOUL_LINK_PLAYER_IDS.PARTNER)).toEqual([])
-    expect(store.getPlayerGymProgress(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual({
-      defeatedGyms: ['rock'],
-      pinnedGym: 'electric',
-    })
+    expect(store.getPlayerGymProgress(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual(
+      expect.objectContaining({
+        defeatedGyms: ['rock'],
+        pinnedGym: 'electric',
+      }),
+    )
+    expect(
+      store.getPlayerGymProgress(SOUL_LINK_PLAYER_IDS.LOCAL).updatedAt,
+    ).toEqual(expect.any(Number))
   })
 
   it('appends team additions and prepends box and dead additions', () => {

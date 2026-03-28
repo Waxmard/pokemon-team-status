@@ -231,6 +231,7 @@ const cardBackgroundStyle = computed(() => {
   align-items: center;
   gap: var(--space-2);
   flex-shrink: 0;
+  filter: var(--drop-shadow-icon);
 }
 
 
@@ -252,6 +253,7 @@ const cardBackgroundStyle = computed(() => {
   width: 32px;
   height: 32px;
   object-fit: contain;
+  filter: var(--drop-shadow-icon);
 }
 
 .pokemon-badges {
@@ -271,7 +273,7 @@ const cardBackgroundStyle = computed(() => {
   bottom: calc(-1 * var(--space-2));
   right: var(--space-1);
   opacity: 0.85;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  filter: var(--drop-shadow-icon);
 }
 
 .special-move-badge,

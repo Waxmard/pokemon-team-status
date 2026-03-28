@@ -180,10 +180,12 @@ describe('runSnapshot helpers', () => {
           'player-1': {
             defeatedGyms: [],
             pinnedGym: null,
+            updatedAt: null,
           },
           'player-2': {
             defeatedGyms: [],
             pinnedGym: null,
+            updatedAt: null,
           },
         },
         sync: {

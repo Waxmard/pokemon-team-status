@@ -1357,6 +1357,7 @@ function onSelectPokemon(value) {
   width: 44px;
   height: 44px;
   object-fit: contain;
+  filter: var(--drop-shadow-icon);
 }
 
 /* Berry grid (3 columns like move types) */
@@ -1375,6 +1376,7 @@ function onSelectPokemon(value) {
   border-radius: var(--radius-lg);
   cursor: pointer;
   aspect-ratio: 1;
+  filter: var(--drop-shadow-icon);
   transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
 }
 
@@ -1400,6 +1402,7 @@ function onSelectPokemon(value) {
   justify-content: center;
   margin: var(--space-4) 0;
   overflow: visible;
+  filter: var(--drop-shadow-icon);
 }
 
 .variant-btn {

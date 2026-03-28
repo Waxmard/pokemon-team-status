@@ -300,7 +300,6 @@ function resetPokemon() {
     cancel()
   } else {
     resetPlayerRoster(viewedSoulLinkPlayerId.value)
-    triggerSync()
     cancel()
   }
   showResetDialog.value = false
@@ -311,7 +310,6 @@ function resetGyms() {
     resetGymsInStore()
   } else {
     resetPlayerGymProgress(viewedSoulLinkPlayerId.value)
-    triggerSync()
   }
   showResetDialog.value = false
 }
@@ -328,7 +326,6 @@ function toggleGenerationRules() {
   }
 
   setSoulLinkGenerationRules(nextRuleset)
-  triggerSync()
 }
 
 const generationRulesLabel = computed(() => {
@@ -400,7 +397,6 @@ const viewedSoulLinkPlayerBoard = computed(() => {
 const {
   linkedDeleteTarget,
   soulLinkSwapOriginalRoster,
-  triggerSync,
   handleSoulLinkConfirmDraft: confirmSoulLinkDraft,
   handleSoulLinkImmediateSwap,
   handleSoulLinkCancelSwap,
@@ -452,7 +448,6 @@ function handleRenameViewedSoulLinkPlayer(nextName) {
   if (!player || !trimmedName || trimmedName === player.name) return
 
   updateSoulLinkPlayer(player.id, { name: trimmedName })
-  triggerSync()
 }
 
 function handleRenameViewedSoulLinkPlayerInput(event) {
@@ -549,9 +544,6 @@ watch(swapMode, (isSwapMode) => {
     }
   } else {
     swapOriginalState.value = null
-    if (!isSoloMode.value) {
-      triggerSync()
-    }
   }
 })
 

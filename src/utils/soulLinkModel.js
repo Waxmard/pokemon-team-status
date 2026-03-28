@@ -77,6 +77,7 @@ export function createDefaultSoulLinkPlayerProgress() {
   return {
     defeatedGyms: [],
     pinnedGym: null,
+    updatedAt: null,
   }
 }
 
@@ -149,6 +150,7 @@ export function buildRemoteState(soulLinkState, generationRules) {
     metadata: soulLinkState.metadata,
     players: soulLinkState.players.map(({ id, name }) => ({ id, name })),
     rosters: soulLinkState.rosters,
+    progress: soulLinkState.progress,
     generationRules,
   }
 }
@@ -216,33 +218,15 @@ function getAllRosterIds(
   ])
 }
 
-function pushMergedEntry(mergedRoster, entry) {
-  if (entry.rosterKey === 'team') {
-    mergedRoster.team.push(entry.member)
-    return
-  }
-
-  if (entry.rosterKey === 'dead') {
-    mergedRoster.dead.push(entry.member)
-    return
-  }
-
-  mergedRoster.box.push(entry.member)
-}
-
-function collectMergedRoster(
+function resolveWinners(
   allIds,
   localMembers,
   remoteMembers,
   localTombstones,
   remoteTombstones,
 ) {
-  const mergedRoster = {
-    team: [],
-    box: [],
-    dead: [],
-    _tombstones: [],
-  }
+  const winners = new Map()
+  const tombstones = []
   const now = Date.now()
 
   for (const id of allIds) {
@@ -256,20 +240,66 @@ function collectMergedRoster(
 
     if (winner.isDeleted) {
       if (now - winner.deletedAt < TOMBSTONE_MAX_AGE_MS) {
-        mergedRoster._tombstones.push({
-          memberId: id,
-          deletedAt: winner.deletedAt,
-        })
+        tombstones.push({ memberId: id, deletedAt: winner.deletedAt })
       }
       continue
     }
 
     if (winner.entry) {
-      pushMergedEntry(mergedRoster, winner.entry)
+      winners.set(id, winner.entry)
     }
   }
 
-  return mergedRoster
+  return { winners, tombstones }
+}
+
+function buildOrderedList(rosterKey, winners, localRoster, remoteRoster) {
+  const list = []
+  const placed = new Set()
+
+  for (const source of [remoteRoster, localRoster]) {
+    for (const m of source[rosterKey] ?? []) {
+      if (placed.has(m.id)) continue
+      const entry = winners.get(m.id)
+      if (entry && entry.rosterKey === rosterKey) {
+        list.push(entry.member)
+        placed.add(m.id)
+      }
+    }
+  }
+
+  for (const [id, entry] of winners) {
+    if (entry.rosterKey === rosterKey && !placed.has(id)) {
+      list.push(entry.member)
+    }
+  }
+
+  return list
+}
+
+function collectMergedRoster(
+  allIds,
+  localMembers,
+  remoteMembers,
+  localTombstones,
+  remoteTombstones,
+  localRoster,
+  remoteRoster,
+) {
+  const { winners, tombstones } = resolveWinners(
+    allIds,
+    localMembers,
+    remoteMembers,
+    localTombstones,
+    remoteTombstones,
+  )
+
+  return {
+    team: buildOrderedList('team', winners, localRoster, remoteRoster),
+    box: buildOrderedList('box', winners, localRoster, remoteRoster),
+    dead: buildOrderedList('dead', winners, localRoster, remoteRoster),
+    _tombstones: tombstones,
+  }
 }
 
 function capMergedTeam(mergedRoster) {
@@ -362,6 +392,8 @@ export function mergePlayerRoster(localRoster, remoteRoster) {
     remoteMembers,
     localTombstones,
     remoteTombstones,
+    localRoster,
+    remoteRoster,
   )
   const deduped = deduplicateByCatchLocation(mergedRoster)
 
@@ -482,9 +514,21 @@ export function mergeRemoteState(localSoulLinkState, remoteState) {
     mergedRosters[pid] = mergePlayerRoster(localRoster, remoteRoster)
   }
 
+  const mergedProgress = {}
+  for (const pid of playerIds) {
+    const localProgress =
+      localSoulLinkState.progress[pid] ?? createDefaultSoulLinkPlayerProgress()
+    const remoteProgress =
+      remoteState.progress?.[pid] ?? createDefaultSoulLinkPlayerProgress()
+    const localTs = localProgress.updatedAt ?? 0
+    const remoteTs = remoteProgress.updatedAt ?? 0
+    mergedProgress[pid] = localTs >= remoteTs ? localProgress : remoteProgress
+  }
+
   return {
     ...localSoulLinkState,
     players: mergedPlayers,
     rosters: repairPairings(mergedRosters, playerIds),
+    progress: mergedProgress,
   }
 }

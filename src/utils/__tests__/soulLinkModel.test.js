@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   createDefaultSoulLinkLocalPreferences,
   createDefaultSoulLinkMember,
+  createDefaultSoulLinkPlayerProgress,
   createDefaultSoulLinkPlayerRoster,
   createDefaultSoulLinkState,
   mergePlayerRoster,
+  mergeRemoteState,
   repairPairings,
   SOUL_LINK_PLAYER_IDS,
   SOUL_LINK_SYNC_STATES,
@@ -41,10 +43,12 @@ describe('soulLinkModel helpers', () => {
         'player-1': {
           defeatedGyms: [],
           pinnedGym: null,
+          updatedAt: null,
         },
         'player-2': {
           defeatedGyms: [],
           pinnedGym: null,
+          updatedAt: null,
         },
       },
       sync: {
@@ -542,5 +546,129 @@ describe('repairPairings', () => {
     expect(result[P1].team[0].pairId).toBeNull()
     expect(result[P1].team[1].pairId).toBeNull()
     expect(result[P2].team[0].pairId).toBeNull()
+  })
+})
+
+describe('mergeRemoteState — progress', () => {
+  const P1 = SOUL_LINK_PLAYER_IDS.LOCAL
+  const P2 = SOUL_LINK_PLAYER_IDS.PARTNER
+
+  function buildLocalState(progressOverrides = {}) {
+    const base = createDefaultSoulLinkState()
+    return {
+      ...base,
+      progress: {
+        [P1]: {
+          defeatedGyms: [],
+          pinnedGym: null,
+          updatedAt: null,
+          ...progressOverrides[P1],
+        },
+        [P2]: {
+          defeatedGyms: [],
+          pinnedGym: null,
+          updatedAt: null,
+          ...progressOverrides[P2],
+        },
+      },
+    }
+  }
+
+  function buildRemote(progressOverrides) {
+    return {
+      metadata: {
+        sessionId: 's1',
+        inviteCode: 'ABC',
+        name: null,
+        createdAt: null,
+      },
+      players: [
+        { id: P1, name: 'Player 1' },
+        { id: P2, name: 'Player 2' },
+      ],
+      rosters: {
+        [P1]: { team: [], box: [], dead: [], _tombstones: [] },
+        [P2]: { team: [], box: [], dead: [], _tombstones: [] },
+      },
+      progress: progressOverrides,
+    }
+  }
+
+  it('keeps local progress when local timestamp is newer', () => {
+    const local = buildLocalState({
+      [P1]: { defeatedGyms: ['electric'], pinnedGym: 'fire', updatedAt: 200 },
+    })
+    const remote = buildRemote({
+      [P1]: { defeatedGyms: [], pinnedGym: null, updatedAt: 100 },
+      [P2]: { defeatedGyms: [], pinnedGym: null, updatedAt: null },
+    })
+    const result = mergeRemoteState(local, remote)
+    expect(result.progress[P1].defeatedGyms).toEqual(['electric'])
+    expect(result.progress[P1].pinnedGym).toBe('fire')
+  })
+
+  it('takes remote progress when remote timestamp is newer', () => {
+    const local = buildLocalState({
+      [P2]: { defeatedGyms: ['rock'], updatedAt: 100 },
+    })
+    const remote = buildRemote({
+      [P1]: { defeatedGyms: [], pinnedGym: null, updatedAt: null },
+      [P2]: {
+        defeatedGyms: ['rock', 'water'],
+        pinnedGym: 'grass',
+        updatedAt: 200,
+      },
+    })
+    const result = mergeRemoteState(local, remote)
+    expect(result.progress[P2].defeatedGyms).toEqual(['rock', 'water'])
+    expect(result.progress[P2].pinnedGym).toBe('grass')
+  })
+
+  it('prefers local on timestamp tie', () => {
+    const local = buildLocalState({
+      [P1]: {
+        defeatedGyms: ['electric'],
+        pinnedGym: 'fire',
+        updatedAt: 100,
+      },
+    })
+    const remote = buildRemote({
+      [P1]: { defeatedGyms: [], pinnedGym: null, updatedAt: 100 },
+      [P2]: { defeatedGyms: [], pinnedGym: null, updatedAt: null },
+    })
+    const result = mergeRemoteState(local, remote)
+    expect(result.progress[P1].defeatedGyms).toEqual(['electric'])
+  })
+
+  it('falls back to defaults when remote progress is missing', () => {
+    const local = buildLocalState({
+      [P1]: { defeatedGyms: ['fairy'], pinnedGym: 'fairy', updatedAt: 100 },
+    })
+    const remote = buildRemote(undefined)
+    const result = mergeRemoteState(local, remote)
+    expect(result.progress[P1].defeatedGyms).toEqual(['fairy'])
+    expect(result.progress[P2]).toEqual(createDefaultSoulLinkPlayerProgress())
+  })
+
+  it('merges both players independently by timestamp', () => {
+    const local = buildLocalState({
+      [P1]: {
+        defeatedGyms: ['electric'],
+        pinnedGym: 'fire',
+        updatedAt: 300,
+      },
+      [P2]: { defeatedGyms: ['rock'], updatedAt: 100 },
+    })
+    const remote = buildRemote({
+      [P1]: { defeatedGyms: [], pinnedGym: null, updatedAt: 200 },
+      [P2]: {
+        defeatedGyms: ['rock', 'water'],
+        pinnedGym: 'grass',
+        updatedAt: 200,
+      },
+    })
+    const result = mergeRemoteState(local, remote)
+    expect(result.progress[P1].defeatedGyms).toEqual(['electric'])
+    expect(result.progress[P2].defeatedGyms).toEqual(['rock', 'water'])
   })
 })
