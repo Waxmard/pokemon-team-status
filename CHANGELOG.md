@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.1.0...v1.2.0) (2026-03-30)
+
+
+### Features
+
+* support multiple soul link runs with local persistence ([#57](https://github.com/Waxmard/pokemon-team-status/issues/57)) ([ae4c8e1](https://github.com/Waxmard/pokemon-team-status/commit/ae4c8e1dca3b7b04a9aab9eaffe632e005d07f6b))
+
 ## [1.1.0](https://github.com/Waxmard/pokemon-team-status/compare/pokemon-team-status-v1.0.1...pokemon-team-status-v1.1.0) (2026-03-28)
 
 
