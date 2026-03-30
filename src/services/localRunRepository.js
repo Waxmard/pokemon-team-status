@@ -142,5 +142,32 @@ export function createLocalSoloRunRepository() {
     clearSoulLinkSnapshot() {
       return saveSetting('soulLinkSnapshot', null)
     },
+
+    loadSoulLinkRunIndex() {
+      return loadSetting('soulLinkRunIndex', null)
+    },
+
+    persistSoulLinkRunIndex(index) {
+      return saveSetting('soulLinkRunIndex', index)
+    },
+
+    loadSoulLinkRun(runId) {
+      return loadSetting(`soulLinkRun:${runId}`, null)
+    },
+
+    persistSoulLinkRun(runId, snapshot) {
+      return saveSetting(`soulLinkRun:${runId}`, snapshot)
+    },
+
+    async deleteSoulLinkRun(runId) {
+      const db = await openDB()
+      const tx = db.transaction('settings', 'readwrite')
+      const store = tx.objectStore('settings')
+      store.delete(`soulLinkRun:${runId}`)
+      return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      })
+    },
   }
 }

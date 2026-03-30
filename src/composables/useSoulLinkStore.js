@@ -862,5 +862,6 @@ export function useSoulLinkStore() {
     deleteRemoteSession,
     subscribeToSessionUpdates,
     unsubscribeFromSession,
+    buildPersistableSnapshot,
   }
 }

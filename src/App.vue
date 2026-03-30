@@ -6,7 +6,7 @@
       </div>
       <div class="header-btns">
         <button class="header-btn" @click="showResetDialog = true" aria-label="Options">✦</button>
-        <button v-if="!isSoloMode && hasRemoteSession" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
+        <button v-if="!isSoloMode" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
       </div>
       <h1 class="app-title">
         <span v-if="isSoloMode" class="title-accent">{{ appTitle }}</span>
@@ -111,8 +111,41 @@
               </button>
             </template>
           </div>
+          <div v-if="inactiveRuns.length > 0" class="reset-option-group">
+            <div class="my-runs-header">Switch Soul Link Run</div>
+            <button
+              v-for="run in inactiveRuns"
+              :key="run.id"
+              class="reset-option"
+              @click="handleSwitchRun(run.id)"
+            >
+              {{ run.name || run.playerNames?.join(' & ') || 'Soul Link Run' }}
+            </button>
+          </div>
         </div>
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
+      </div>
+    </div>
+    </Transition>
+  </Teleport>
+
+  <Teleport to="body">
+    <Transition name="dialog">
+    <div v-if="deleteRunTarget" class="reset-overlay"
+         @click.self="deleteRunTarget = null">
+      <div class="reset-dialog">
+        <h3 class="reset-dialog-title">Delete Run</h3>
+        <p class="linked-delete-text">
+          This run and all its data will be permanently deleted.
+        </p>
+        <div class="reset-dialog-options">
+          <button class="reset-option reset-option-danger"
+                  @click="handleDeleteRun(deleteRunTarget)">
+            Delete
+          </button>
+        </div>
+        <button class="reset-dialog-cancel"
+                @click="deleteRunTarget = null">✕</button>
       </div>
     </div>
     </Transition>
@@ -159,6 +192,11 @@
           <button class="reset-option" @click="handleViewDeathBox">
             {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
           </button>
+          <div v-if="activeRunId" class="reset-option-group">
+            <button class="reset-option reset-option-danger" @click="deleteRunTarget = activeRunId; showSoulLinkDialog = false">
+              Delete This Run
+            </button>
+          </div>
         </div>
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
       </div>
@@ -177,6 +215,7 @@ import { useDraftAction } from './composables/useDraftAction.js'
 import { useRunModeStore } from './composables/useRunModeStore.js'
 import { useRunStore } from './composables/useRunStore.js'
 import { useSoulLinkHandlers } from './composables/useSoulLinkHandlers.js'
+import { useSoulLinkRunManager } from './composables/useSoulLinkRunManager.js'
 import { useSoulLinkStore } from './composables/useSoulLinkStore.js'
 import { getPokemonDataForRules } from './data/pokemon.js'
 import { GENERATION_RULESETS, getAllTypesForRules } from './data/types.js'
@@ -246,6 +285,7 @@ const {
   pushState: pushSoulLinkState,
   subscribeToSessionUpdates: subscribeSoulLink,
   unsubscribeFromSession: unsubscribeSoulLink,
+  buildPersistableSnapshot: buildSoulLinkSnapshot,
 } = useSoulLinkStore()
 
 const {
@@ -260,7 +300,18 @@ const {
 const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
   useRunModeStore()
 
+const {
+  runList,
+  activeRunId,
+  loadRunIndex,
+  saveCurrentRunToIndex,
+  switchToRun,
+  registerNewRun,
+  deleteRun,
+} = useSoulLinkRunManager()
+
 const showResetDialog = ref(false)
+const deleteRunTarget = ref(null)
 const showSoulLinkDialog = ref(false)
 const deathBoxMode = ref(false)
 const playerNameInput = ref(null)
@@ -280,6 +331,10 @@ const appTitle = computed(() =>
 
 const activeGenerationRules = computed(() =>
   isSoloMode.value ? generationRules.value : soulLinkGenerationRules.value,
+)
+
+const inactiveRuns = computed(() =>
+  runList.value.filter((r) => r.id !== activeRunId.value),
 )
 
 const activeLoadError = computed(() =>
@@ -465,9 +520,13 @@ async function handleJoinSession() {
   if (!code) return
   sessionActionPending.value = true
   try {
+    if (!isSoloMode.value) {
+      await saveCurrentRunToIndex(buildSoulLinkSnapshot())
+    }
     unsubscribeSoulLink()
     await joinSoulLinkSession(code)
     setCurrentRunMode(RUN_MODES.SOUL_LINK)
+    await registerNewRun(buildSoulLinkSnapshot())
     subscribeSoulLink()
     showJoinInput.value = false
     joinCodeValue.value = ''
@@ -476,6 +535,42 @@ async function handleJoinSession() {
     console.error('Failed to join session:', error)
   } finally {
     sessionActionPending.value = false
+  }
+}
+
+async function handleSwitchRun(runId) {
+  if (runId === activeRunId.value) return
+  await clearTransientUiState()
+  unsubscribeSoulLink()
+  await switchToRun(runId, buildSoulLinkSnapshot())
+  await loadSoulLinkData()
+  setCurrentRunMode(RUN_MODES.SOUL_LINK)
+
+  if (soulLinkSessionMetadata.value?.sessionId) {
+    syncSoulLinkSession()
+      .then(() => subscribeSoulLink())
+      .catch((err) => console.error('Sync after run switch failed:', err))
+  } else if (isSupabaseAvailable) {
+    createSoulLinkSession()
+      .then(() => subscribeSoulLink())
+      .catch((err) =>
+        console.error('Session creation after run switch failed:', err),
+      )
+  }
+
+  showResetDialog.value = false
+}
+
+async function handleDeleteRun(runId) {
+  const { wasActive, nextRunId } = await deleteRun(runId)
+  deleteRunTarget.value = null
+
+  if (!wasActive) return
+
+  if (nextRunId) {
+    await handleSwitchRun(nextRunId)
+  } else {
+    await switchToSoloMode()
   }
 }
 
@@ -618,8 +713,12 @@ async function startNewRun(mode) {
     await startNewSoloRun()
     setCurrentRunMode(RUN_MODES.SOLO)
   } else {
+    if (!isSoloMode.value) {
+      await saveCurrentRunToIndex(buildSoulLinkSnapshot())
+    }
     startNewLocalSoulLinkRun()
     setCurrentRunMode(RUN_MODES.SOUL_LINK)
+    await registerNewRun(buildSoulLinkSnapshot())
     if (isSupabaseAvailable) {
       try {
         await createSoulLinkSession()
@@ -974,6 +1073,8 @@ function handleVisibilityChange() {
 
 onMounted(async () => {
   document.addEventListener('visibilitychange', handleVisibilityChange)
+
+  loadRunIndex().catch((err) => console.error('Failed to load run index:', err))
 
   const initialRunMode = loadCurrentRunMode()
 
@@ -1350,6 +1451,17 @@ if (import.meta.env.DEV) {
     background: var(--color-surface-light);
   }
 }
+
+.my-runs-header {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+}
+
+
 
 @media (orientation: landscape) and (max-height: 500px) {
   .app-container .team-section-wrapper {
