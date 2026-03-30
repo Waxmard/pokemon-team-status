@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/Waxmard/pokemon-team-status/compare/v1.2.0...v1.2.1) (2026-03-30)
+
+
+### Bug Fixes
+
+* trigger deploy on GitHub release instead of tag push ([#59](https://github.com/Waxmard/pokemon-team-status/issues/59)) ([ca4557f](https://github.com/Waxmard/pokemon-team-status/commit/ca4557f2c2425b5e92b06d2b846e5abb8413b330))
+
 ## [1.2.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.1.0...v1.2.0) (2026-03-30)
 
 
