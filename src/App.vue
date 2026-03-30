@@ -8,9 +8,6 @@
         <button class="header-btn" @click="showResetDialog = true" aria-label="Options">✦</button>
         <button v-if="!isSoloMode && hasRemoteSession" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
       </div>
-      <div v-if="authStore.isAuthenticated.value" class="header-btns-right">
-        <button class="header-btn" @click="handleSignOut" aria-label="Sign Out">Sign Out</button>
-      </div>
       <h1 class="app-title">
         <span v-if="isSoloMode" class="title-accent">{{ appTitle }}</span>
         <span v-else class="title-player-row">
@@ -116,6 +113,11 @@
                 Join Soul Link Run
               </button>
             </template>
+          </div>
+          <div v-if="authStore.isAuthenticated.value" class="reset-option-group">
+            <button class="reset-option reset-option-danger" @click="handleSignOut">
+              Sign Out
+            </button>
           </div>
         </div>
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
@@ -503,6 +505,7 @@ function handleSessionListNewRun() {
 
 async function handleSignOut() {
   await authStore.signOut()
+  authStore.signInWithGoogle()
 }
 
 function handleSessionListJoinByCode() {
@@ -1170,16 +1173,6 @@ if (import.meta.env.DEV) {
   opacity: 1;
 }
 
-.header-btns-right {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 10;
-}
-
-.header-btns-right .header-btn {
-  font-size: 0.75rem;
-}
 
 @media (orientation: landscape) and (max-height: 500px) {
   .app-container {
@@ -1213,10 +1206,6 @@ if (import.meta.env.DEV) {
     bottom: 0;
   }
 
-  .header-btns-right {
-    top: auto;
-    bottom: 0;
-  }
 }
 
 @media (min-width: 1024px) {

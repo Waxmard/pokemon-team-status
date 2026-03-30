@@ -15,7 +15,10 @@ export function createAuthRepository() {
       const client = assertClient()
       const { error } = await client.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin },
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: { prompt: 'select_account' },
+        },
       })
       if (error) throw new Error(`Google sign-in failed: ${error.message}`)
     },
