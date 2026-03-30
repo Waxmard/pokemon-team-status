@@ -7,9 +7,9 @@
       <div class="header-btns">
         <button class="header-btn" @click="showResetDialog = true" aria-label="Options">✦</button>
         <button v-if="!isSoloMode && hasRemoteSession" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
-        <button class="header-btn header-btn-account" @click="showAuthDialog = true" aria-label="Account">
-          {{ authStore.isAuthenticated.value ? '●' : '○' }}
-        </button>
+      </div>
+      <div v-if="authStore.isAuthenticated.value" class="header-btns-right">
+        <button class="header-btn" @click="handleSignOut" aria-label="Sign Out">Sign Out</button>
       </div>
       <h1 class="app-title">
         <span v-if="isSoloMode" class="title-accent">{{ appTitle }}</span>
@@ -172,7 +172,6 @@
     </Transition>
   </Teleport>
 
-  <AuthDialog v-model="showAuthDialog" />
 
   <SessionListDialog
     v-model="showSessionListDialog"
@@ -185,7 +184,6 @@
 <script setup>
 import { NConfigProvider } from 'naive-ui'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import AuthDialog from './components/AuthDialog.vue'
 import GymColumns from './components/GymColumns.vue'
 import SessionListDialog from './components/SessionListDialog.vue'
 import SoulLinkShell from './components/SoulLinkShell.vue'
@@ -282,7 +280,6 @@ const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
 const authStore = useAuthStore()
 const soloCloudSync = useSoloCloudSync()
 
-const showAuthDialog = ref(false)
 const showSessionListDialog = ref(false)
 const showResetDialog = ref(false)
 const showSoulLinkDialog = ref(false)
@@ -502,6 +499,10 @@ async function handleSessionListRejoin(inviteCode) {
 function handleSessionListNewRun() {
   showSessionListDialog.value = false
   startNewRun(RUN_MODES.SOUL_LINK)
+}
+
+async function handleSignOut() {
+  await authStore.signOut()
 }
 
 function handleSessionListJoinByCode() {
@@ -1026,7 +1027,11 @@ function handleVisibilityChange() {
 
 onMounted(async () => {
   document.addEventListener('visibilitychange', handleVisibilityChange)
-  authStore.initialize()
+  await authStore.initialize()
+  if (!authStore.isAuthenticated.value) {
+    authStore.signInWithGoogle()
+    return
+  }
   soloCloudSync.startWatching()
 
   const initialRunMode = loadCurrentRunMode()
@@ -1165,7 +1170,14 @@ if (import.meta.env.DEV) {
   opacity: 1;
 }
 
-.header-btn-account {
+.header-btns-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.header-btns-right .header-btn {
   font-size: 0.75rem;
 }
 
@@ -1197,6 +1209,11 @@ if (import.meta.env.DEV) {
   }
 
   .header-btns {
+    top: auto;
+    bottom: 0;
+  }
+
+  .header-btns-right {
     top: auto;
     bottom: 0;
   }
