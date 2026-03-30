@@ -111,19 +111,12 @@
               </button>
             </template>
           </div>
-          <div v-if="runList.length > 0" class="reset-option-group">
-            <div class="my-runs-header">My Runs</div>
-            <div
-              v-for="run in runList"
-              :key="run.id"
-              class="my-run-row"
-              :class="{ 'my-run-active': run.id === activeRunId }"
-              @click="handleSwitchRun(run.id)"
-            >
-              <div class="my-run-info">
-                <span class="my-run-name">{{ run.name || run.playerNames?.join(' & ') || 'Soul Link Run' }}</span>
-                <span v-if="run.updatedAt" class="my-run-date">{{ formatRunDate(run.updatedAt) }}</span>
-              </div>
+          <div v-if="inactiveRuns.length > 0" class="reset-option-group">
+            <div class="my-runs-header">Switch Soul Link Run</div>
+            <div v-for="run in inactiveRuns" :key="run.id" class="my-run-row">
+              <button class="reset-option my-run-btn" @click="handleSwitchRun(run.id)">
+                {{ run.name || run.playerNames?.join(' & ') || 'Soul Link Run' }}
+              </button>
               <button
                 class="my-run-delete"
                 aria-label="Delete run"
@@ -335,6 +328,10 @@ const appTitle = computed(() =>
 
 const activeGenerationRules = computed(() =>
   isSoloMode.value ? generationRules.value : soulLinkGenerationRules.value,
+)
+
+const inactiveRuns = computed(() =>
+  runList.value.filter((r) => r.id !== activeRunId.value),
 )
 
 const activeLoadError = computed(() =>
@@ -1464,37 +1461,11 @@ if (import.meta.env.DEV) {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: background var(--transition-base), border-color var(--transition-base);
 }
 
-.my-run-active {
-  border-color: var(--color-primary);
-}
-
-.my-run-info {
+.my-run-btn {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-
-.my-run-name {
-  font-size: 0.9rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.my-run-date {
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
 }
 
 .my-run-delete {
@@ -1510,13 +1481,6 @@ if (import.meta.env.DEV) {
 
 .my-run-delete:hover {
   color: var(--color-danger);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .my-run-row:hover:not(.my-run-active) {
-    background: var(--color-surface-light);
-    border-color: var(--color-text-muted);
-  }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
