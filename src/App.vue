@@ -113,16 +113,14 @@
           </div>
           <div v-if="inactiveRuns.length > 0" class="reset-option-group">
             <div class="my-runs-header">Switch Soul Link Run</div>
-            <div v-for="run in inactiveRuns" :key="run.id" class="my-run-row">
-              <button class="reset-option my-run-btn" @click="handleSwitchRun(run.id)">
-                {{ run.name || run.playerNames?.join(' & ') || 'Soul Link Run' }}
-              </button>
-              <button
-                class="my-run-delete"
-                aria-label="Delete run"
-                @click.stop="deleteRunTarget = run.id"
-              >✕</button>
-            </div>
+            <button
+              v-for="run in inactiveRuns"
+              :key="run.id"
+              class="reset-option"
+              @click="handleSwitchRun(run.id)"
+            >
+              {{ run.name || run.playerNames?.join(' & ') || 'Soul Link Run' }}
+            </button>
           </div>
         </div>
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
@@ -194,6 +192,11 @@
           <button class="reset-option" @click="handleViewDeathBox">
             {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
           </button>
+          <div v-if="activeRunId" class="reset-option-group">
+            <button class="reset-option reset-option-danger" @click="deleteRunTarget = activeRunId; showSoulLinkDialog = false">
+              Delete This Run
+            </button>
+          </div>
         </div>
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
       </div>
@@ -1457,31 +1460,7 @@ if (import.meta.env.DEV) {
   margin-bottom: var(--space-1);
 }
 
-.my-run-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
 
-.my-run-btn {
-  flex: 1;
-  min-width: 0;
-}
-
-.my-run-delete {
-  flex-shrink: 0;
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-  cursor: pointer;
-  padding: var(--space-1);
-  transition: color var(--transition-base);
-}
-
-.my-run-delete:hover {
-  color: var(--color-danger);
-}
 
 @media (orientation: landscape) and (max-height: 500px) {
   .app-container .team-section-wrapper {
