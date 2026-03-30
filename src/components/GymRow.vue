@@ -127,7 +127,7 @@ const improvementClass = computed(() => {
 const scoreSymbol = computed(() => {
   if (props.score > 0) return '\u{1F44D}'
   if (props.score < 0) return '\u{1F44E}'
-  return '\u{1F44E}'
+  return '\u{1FAF3}'
 })
 
 const rowBackgroundStyle = computed(() => {
