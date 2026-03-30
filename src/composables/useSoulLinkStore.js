@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
-import { createAuthRepository } from '../services/authRepository.js'
 import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
+import { supabase } from '../services/supabaseClient.js'
 import { createSupabaseRepository } from '../services/supabaseRepository.js'
 import { cloneValue } from '../utils/clone.js'
 import {
@@ -43,20 +43,18 @@ function getSupabaseRepository() {
   return _supabaseRepo
 }
 
-let _authRepo = null
-function getAuthRepository() {
-  if (!_authRepo) _authRepo = createAuthRepository()
-  return _authRepo
-}
-
 function registerSessionMembership(sessionId) {
   const { user } = useAuthStore()
-  if (!user.value) return
-  getAuthRepository()
-    .joinSessionAsUser(sessionId, user.value.id)
-    .catch((err) =>
-      console.error('Failed to register session membership:', err),
+  if (!user.value || !supabase) return
+  supabase
+    .from('session_members')
+    .upsert(
+      { session_id: sessionId, user_id: user.value.id },
+      { onConflict: 'session_id,user_id' },
     )
+    .then(({ error }) => {
+      if (error) console.error('Failed to register session membership:', error)
+    })
 }
 
 let _unsubscribe = null
@@ -666,15 +664,7 @@ export function useSoulLinkStore() {
     throw lastError
   }
 
-  async function joinSession(inviteCode) {
-    const repo = getSupabaseRepository()
-    const normalizedCode = inviteCode.toUpperCase().trim()
-    const session = await repo.fetchSessionByInviteCode(normalizedCode)
-
-    if (!session) {
-      throw new Error('No session found with that invite code.')
-    }
-
+  async function applyJoinedSession(session) {
     const savedSnapshot = await repository.loadSoulLinkSnapshot()
     const isRejoin = savedSnapshot?.metadata?.sessionId === session.id
     const savedLocal = isRejoin ? savedSnapshot.local : null
@@ -706,8 +696,29 @@ export function useSoulLinkStore() {
       sync: { version: session.version },
       activity: { syncState: SOUL_LINK_SYNC_STATES.READY },
     })
-    registerSessionMembership(session.id)
+  }
 
+  async function joinSession(inviteCode) {
+    const repo = getSupabaseRepository()
+    const session = await repo.joinSessionByCode(inviteCode)
+
+    if (!session) {
+      throw new Error('No session found with that invite code.')
+    }
+
+    await applyJoinedSession(session)
+    return { sessionId: session.id, inviteCode: session.inviteCode }
+  }
+
+  async function joinSessionById(sessionId) {
+    const repo = getSupabaseRepository()
+    const session = await repo.joinSessionById(sessionId)
+
+    if (!session) {
+      throw new Error('No session found with that ID.')
+    }
+
+    await applyJoinedSession(session)
     return { sessionId: session.id, inviteCode: session.inviteCode }
   }
 
@@ -876,6 +887,7 @@ export function useSoulLinkStore() {
     resetPlayerGymProgress,
     createSession,
     joinSession,
+    joinSessionById,
     pushState,
     pullState,
     syncSession,

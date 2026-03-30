@@ -16,7 +16,7 @@
               v-for="session in sessions"
               :key="session.sessionId"
               class="reset-option session-list-item"
-              @click="$emit('rejoin', session.inviteCode)"
+              @click="$emit('rejoin', session.sessionId)"
             >
               <span class="session-list-name">{{ sessionDisplayName(session) }}</span>
               <span class="session-list-meta">{{ formatDate(session.updatedAt) }}</span>

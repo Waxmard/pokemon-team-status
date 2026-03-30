@@ -54,18 +54,26 @@ export function createSupabaseRepository() {
       return data ? mapRow(data) : null
     },
 
-    async fetchSessionByInviteCode(inviteCode) {
+    async joinSessionByCode(inviteCode) {
       const client = assertClient()
-      const { data, error } = await client
-        .from('sessions')
-        .select()
-        .eq('invite_code', inviteCode)
-        .maybeSingle()
+      const { data, error } = await client.rpc('join_session_by_code', {
+        p_invite_code: inviteCode,
+      })
 
       if (error) {
-        throw new Error(
-          `Failed to fetch session by invite code: ${error.message}`,
-        )
+        throw new Error(`Failed to join session by code: ${error.message}`)
+      }
+      return data ? mapRow(data) : null
+    },
+
+    async joinSessionById(sessionId) {
+      const client = assertClient()
+      const { data, error } = await client.rpc('join_session_by_id', {
+        p_session_id: sessionId,
+      })
+
+      if (error) {
+        throw new Error(`Failed to join session by id: ${error.message}`)
       }
       return data ? mapRow(data) : null
     },

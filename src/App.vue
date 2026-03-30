@@ -162,6 +162,10 @@
               {{ soulLinkSessionMetadata.inviteCode }}
               <span class="session-code-hint">{{ copyLabel }}</span>
             </div>
+            <button class="reset-option" @click="copyJoinLink">
+              Copy Join Link
+              <span v-if="joinLinkCopied" class="session-code-hint">copied!</span>
+            </button>
           </div>
           <hr class="dialog-divider" />
           <button class="reset-option" @click="handleViewDeathBox">
@@ -258,6 +262,7 @@ const {
   resetPlayerGymProgress,
   createSession: createSoulLinkSession,
   joinSession: joinSoulLinkSession,
+  joinSessionById: joinSoulLinkSessionById,
   updateRosterMember: updateSoulLinkRosterMember,
   removeRosterMember: removeSoulLinkRosterMember,
   syncSession: syncSoulLinkSession,
@@ -292,6 +297,7 @@ const joinCodeValue = ref('')
 const showJoinInput = ref(false)
 const sessionActionPending = ref(false)
 const copyLabel = ref('tap to copy')
+const joinLinkCopied = ref(false)
 const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
 const isSupabaseAvailable = !!supabase
 const hasRemoteSession = computed(
@@ -483,12 +489,12 @@ function selectPlayerNameInput() {
 
 // --- Session list dialog handlers ---
 
-async function handleSessionListRejoin(inviteCode) {
+async function handleSessionListRejoin(sessionId) {
   showSessionListDialog.value = false
   sessionActionPending.value = true
   try {
     unsubscribeSoulLink()
-    await joinSoulLinkSession(inviteCode)
+    await joinSoulLinkSessionById(sessionId)
     setCurrentRunMode(RUN_MODES.SOUL_LINK)
     subscribeSoulLink()
   } catch (error) {
@@ -558,6 +564,30 @@ function copyInviteCode() {
     navigator.clipboard.writeText(code).then(onCopySuccess).catch(tryFallback)
   } else {
     tryFallback()
+  }
+}
+
+function copyJoinLink() {
+  const sessionId = soulLinkSessionMetadata.value?.sessionId
+  if (!sessionId) return
+  const link = `${window.location.origin}?join=${sessionId}`
+
+  function onSuccess() {
+    joinLinkCopied.value = true
+    setTimeout(() => {
+      joinLinkCopied.value = false
+    }, 2000)
+  }
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard
+      .writeText(link)
+      .then(onSuccess)
+      .catch(() => {
+        if (fallbackCopy(link)) onSuccess()
+      })
+  } else if (fallbackCopy(link)) {
+    onSuccess()
   }
 }
 
@@ -1036,6 +1066,20 @@ onMounted(async () => {
     return
   }
   soloCloudSync.startWatching()
+
+  const joinSessionId = new URLSearchParams(window.location.search).get('join')
+  if (joinSessionId) {
+    window.history.replaceState({}, '', window.location.pathname)
+    try {
+      unsubscribeSoulLink()
+      await joinSoulLinkSessionById(joinSessionId)
+      setCurrentRunMode(RUN_MODES.SOUL_LINK)
+      subscribeSoulLink()
+    } catch (error) {
+      console.error('Failed to join session from link:', error)
+    }
+    return
+  }
 
   const initialRunMode = loadCurrentRunMode()
 

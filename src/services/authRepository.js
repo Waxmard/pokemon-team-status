@@ -69,22 +69,6 @@ export function createAuthRepository() {
       }))
     },
 
-    async joinSessionAsUser(sessionId, userId) {
-      const client = assertClient()
-      const { error } = await client
-        .from('session_members')
-        .upsert(
-          { session_id: sessionId, user_id: userId },
-          { onConflict: 'session_id,user_id' },
-        )
-
-      if (error) {
-        throw new Error(
-          `Failed to register session membership: ${error.message}`,
-        )
-      }
-    },
-
     async leaveSession(sessionId, userId) {
       const client = assertClient()
       const { error } = await client
