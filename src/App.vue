@@ -6,7 +6,7 @@
       </div>
       <div class="header-btns">
         <button class="header-btn" @click="showResetDialog = true" aria-label="Options">✦</button>
-        <button v-if="!isSoloMode && hasRemoteSession" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
+        <button v-if="!isSoloMode" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
       </div>
       <h1 class="app-title">
         <span v-if="isSoloMode" class="title-accent">{{ appTitle }}</span>
@@ -550,6 +550,12 @@ async function handleSwitchRun(runId) {
     syncSoulLinkSession()
       .then(() => subscribeSoulLink())
       .catch((err) => console.error('Sync after run switch failed:', err))
+  } else if (isSupabaseAvailable) {
+    createSoulLinkSession()
+      .then(() => subscribeSoulLink())
+      .catch((err) =>
+        console.error('Session creation after run switch failed:', err),
+      )
   }
 
   showResetDialog.value = false
