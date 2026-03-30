@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/Waxmard/pokemon-team-status/compare/v1.2.1...v1.2.2) (2026-03-30)
+
+
+### Bug Fixes
+
+* use PAT for Release Please to trigger deploy workflow ([#61](https://github.com/Waxmard/pokemon-team-status/issues/61)) ([2e91c7e](https://github.com/Waxmard/pokemon-team-status/commit/2e91c7e6bd449cc6c5bf523cbd937eb35dc36268))
+
 ## [1.2.1](https://github.com/Waxmard/pokemon-team-status/compare/v1.2.0...v1.2.1) (2026-03-30)
 
 
