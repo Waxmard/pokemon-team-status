@@ -11,5 +11,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase =
   supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey)
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          detectSessionInUrl: true,
+        },
+      })
     : null

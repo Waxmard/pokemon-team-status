@@ -7,6 +7,9 @@
       <div class="header-btns">
         <button class="header-btn" @click="showResetDialog = true" aria-label="Options">✦</button>
         <button v-if="!isSoloMode && hasRemoteSession" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
+        <button class="header-btn header-btn-account" @click="showAuthDialog = true" aria-label="Account">
+          {{ authStore.isAuthenticated.value ? '●' : '○' }}
+        </button>
       </div>
       <h1 class="app-title">
         <span v-if="isSoloMode" class="title-accent">{{ appTitle }}</span>
@@ -90,6 +93,9 @@
               New Soul Link Run
             </button>
             <template v-if="isSupabaseAvailable">
+              <button v-if="authStore.isAuthenticated.value" class="reset-option" @click="showResetDialog = false; showSessionListDialog = true">
+                My Soul Links
+              </button>
               <template v-if="showJoinInput">
                 <div class="session-input-row">
                   <input
@@ -165,17 +171,30 @@
     </div>
     </Transition>
   </Teleport>
+
+  <AuthDialog v-model="showAuthDialog" />
+
+  <SessionListDialog
+    v-model="showSessionListDialog"
+    @rejoin="handleSessionListRejoin"
+    @newSession="handleSessionListNewRun"
+    @joinByCode="handleSessionListJoinByCode"
+  />
 </template>
 
 <script setup>
 import { NConfigProvider } from 'naive-ui'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import AuthDialog from './components/AuthDialog.vue'
 import GymColumns from './components/GymColumns.vue'
+import SessionListDialog from './components/SessionListDialog.vue'
 import SoulLinkShell from './components/SoulLinkShell.vue'
 import TeamSection from './components/TeamSection.vue'
+import { useAuthStore } from './composables/useAuthStore.js'
 import { useDraftAction } from './composables/useDraftAction.js'
 import { useRunModeStore } from './composables/useRunModeStore.js'
 import { useRunStore } from './composables/useRunStore.js'
+import { useSoloCloudSync } from './composables/useSoloCloudSync.js'
 import { useSoulLinkHandlers } from './composables/useSoulLinkHandlers.js'
 import { useSoulLinkStore } from './composables/useSoulLinkStore.js'
 import { getPokemonDataForRules } from './data/pokemon.js'
@@ -260,6 +279,11 @@ const {
 const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
   useRunModeStore()
 
+const authStore = useAuthStore()
+const soloCloudSync = useSoloCloudSync()
+
+const showAuthDialog = ref(false)
+const showSessionListDialog = ref(false)
 const showResetDialog = ref(false)
 const showSoulLinkDialog = ref(false)
 const deathBoxMode = ref(false)
@@ -456,6 +480,34 @@ function handleRenameViewedSoulLinkPlayerInput(event) {
 
 function selectPlayerNameInput() {
   playerNameInput.value?.select()
+}
+
+// --- Session list dialog handlers ---
+
+async function handleSessionListRejoin(inviteCode) {
+  showSessionListDialog.value = false
+  sessionActionPending.value = true
+  try {
+    unsubscribeSoulLink()
+    await joinSoulLinkSession(inviteCode)
+    setCurrentRunMode(RUN_MODES.SOUL_LINK)
+    subscribeSoulLink()
+  } catch (error) {
+    console.error('Failed to rejoin session:', error)
+  } finally {
+    sessionActionPending.value = false
+  }
+}
+
+function handleSessionListNewRun() {
+  showSessionListDialog.value = false
+  startNewRun(RUN_MODES.SOUL_LINK)
+}
+
+function handleSessionListJoinByCode() {
+  showSessionListDialog.value = false
+  showResetDialog.value = true
+  showJoinInput.value = true
 }
 
 // --- Session management ---
@@ -974,6 +1026,8 @@ function handleVisibilityChange() {
 
 onMounted(async () => {
   document.addEventListener('visibilitychange', handleVisibilityChange)
+  authStore.initialize()
+  soloCloudSync.startWatching()
 
   const initialRunMode = loadCurrentRunMode()
 
@@ -1109,6 +1163,10 @@ if (import.meta.env.DEV) {
 .header-btn-link:active {
   filter: grayscale(0);
   opacity: 1;
+}
+
+.header-btn-account {
+  font-size: 0.75rem;
 }
 
 @media (orientation: landscape) and (max-height: 500px) {

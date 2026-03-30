@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
+import { createAuthRepository } from '../services/authRepository.js'
 import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
 import { createSupabaseRepository } from '../services/supabaseRepository.js'
 import { cloneValue } from '../utils/clone.js'
@@ -30,6 +31,7 @@ import {
   sanitizeSoulLinkProgressForRules,
   sanitizeSoulLinkRostersForRules,
 } from '../utils/soulLinkNormalization.js'
+import { useAuthStore } from './useAuthStore.js'
 
 const repository = createLocalSoloRunRepository()
 const internalRunState = ref(createDefaultSoulLinkRunState())
@@ -39,6 +41,22 @@ let _supabaseRepo = null
 function getSupabaseRepository() {
   if (!_supabaseRepo) _supabaseRepo = createSupabaseRepository()
   return _supabaseRepo
+}
+
+let _authRepo = null
+function getAuthRepository() {
+  if (!_authRepo) _authRepo = createAuthRepository()
+  return _authRepo
+}
+
+function registerSessionMembership(sessionId) {
+  const { user } = useAuthStore()
+  if (!user.value) return
+  getAuthRepository()
+    .joinSessionAsUser(sessionId, user.value.id)
+    .catch((err) =>
+      console.error('Failed to register session membership:', err),
+    )
 }
 
 let _unsubscribe = null
@@ -636,6 +654,7 @@ export function useSoulLinkStore() {
         })
         setSyncVersion(session.version)
         setSyncState(SOUL_LINK_SYNC_STATES.READY)
+        registerSessionMembership(session.id)
 
         return { sessionId: session.id, inviteCode: session.inviteCode }
       } catch (error) {
@@ -687,6 +706,7 @@ export function useSoulLinkStore() {
       sync: { version: session.version },
       activity: { syncState: SOUL_LINK_SYNC_STATES.READY },
     })
+    registerSessionMembership(session.id)
 
     return { sessionId: session.id, inviteCode: session.inviteCode }
   }
