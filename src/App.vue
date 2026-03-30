@@ -111,8 +111,50 @@
               </button>
             </template>
           </div>
+          <div v-if="runList.length > 0" class="reset-option-group">
+            <div class="my-runs-header">My Runs</div>
+            <div
+              v-for="run in runList"
+              :key="run.id"
+              class="my-run-row"
+              :class="{ 'my-run-active': run.id === activeRunId }"
+              @click="handleSwitchRun(run.id)"
+            >
+              <div class="my-run-info">
+                <span class="my-run-name">{{ run.name || run.playerNames?.join(' & ') || 'Soul Link Run' }}</span>
+                <span v-if="run.updatedAt" class="my-run-date">{{ formatRunDate(run.updatedAt) }}</span>
+              </div>
+              <button
+                class="my-run-delete"
+                aria-label="Delete run"
+                @click.stop="deleteRunTarget = run.id"
+              >✕</button>
+            </div>
+          </div>
         </div>
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
+      </div>
+    </div>
+    </Transition>
+  </Teleport>
+
+  <Teleport to="body">
+    <Transition name="dialog">
+    <div v-if="deleteRunTarget" class="reset-overlay"
+         @click.self="deleteRunTarget = null">
+      <div class="reset-dialog">
+        <h3 class="reset-dialog-title">Delete Run</h3>
+        <p class="linked-delete-text">
+          This run and all its data will be permanently deleted.
+        </p>
+        <div class="reset-dialog-options">
+          <button class="reset-option reset-option-danger"
+                  @click="handleDeleteRun(deleteRunTarget)">
+            Delete
+          </button>
+        </div>
+        <button class="reset-dialog-cancel"
+                @click="deleteRunTarget = null">✕</button>
       </div>
     </div>
     </Transition>
@@ -177,6 +219,7 @@ import { useDraftAction } from './composables/useDraftAction.js'
 import { useRunModeStore } from './composables/useRunModeStore.js'
 import { useRunStore } from './composables/useRunStore.js'
 import { useSoulLinkHandlers } from './composables/useSoulLinkHandlers.js'
+import { useSoulLinkRunManager } from './composables/useSoulLinkRunManager.js'
 import { useSoulLinkStore } from './composables/useSoulLinkStore.js'
 import { getPokemonDataForRules } from './data/pokemon.js'
 import { GENERATION_RULESETS, getAllTypesForRules } from './data/types.js'
@@ -246,6 +289,7 @@ const {
   pushState: pushSoulLinkState,
   subscribeToSessionUpdates: subscribeSoulLink,
   unsubscribeFromSession: unsubscribeSoulLink,
+  buildPersistableSnapshot: buildSoulLinkSnapshot,
 } = useSoulLinkStore()
 
 const {
@@ -260,7 +304,18 @@ const {
 const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
   useRunModeStore()
 
+const {
+  runList,
+  activeRunId,
+  loadRunIndex,
+  saveCurrentRunToIndex,
+  switchToRun,
+  registerNewRun,
+  deleteRun,
+} = useSoulLinkRunManager()
+
 const showResetDialog = ref(false)
+const deleteRunTarget = ref(null)
 const showSoulLinkDialog = ref(false)
 const deathBoxMode = ref(false)
 const playerNameInput = ref(null)
@@ -465,9 +520,13 @@ async function handleJoinSession() {
   if (!code) return
   sessionActionPending.value = true
   try {
+    if (!isSoloMode.value) {
+      await saveCurrentRunToIndex(buildSoulLinkSnapshot())
+    }
     unsubscribeSoulLink()
     await joinSoulLinkSession(code)
     setCurrentRunMode(RUN_MODES.SOUL_LINK)
+    await registerNewRun(buildSoulLinkSnapshot())
     subscribeSoulLink()
     showJoinInput.value = false
     joinCodeValue.value = ''
@@ -476,6 +535,36 @@ async function handleJoinSession() {
     console.error('Failed to join session:', error)
   } finally {
     sessionActionPending.value = false
+  }
+}
+
+async function handleSwitchRun(runId) {
+  if (runId === activeRunId.value) return
+  await clearTransientUiState()
+  unsubscribeSoulLink()
+  await switchToRun(runId, buildSoulLinkSnapshot())
+  await loadSoulLinkData()
+  setCurrentRunMode(RUN_MODES.SOUL_LINK)
+
+  if (soulLinkSessionMetadata.value?.sessionId) {
+    syncSoulLinkSession()
+      .then(() => subscribeSoulLink())
+      .catch((err) => console.error('Sync after run switch failed:', err))
+  }
+
+  showResetDialog.value = false
+}
+
+async function handleDeleteRun(runId) {
+  const { wasActive, nextRunId } = await deleteRun(runId)
+  deleteRunTarget.value = null
+
+  if (!wasActive) return
+
+  if (nextRunId) {
+    await handleSwitchRun(nextRunId)
+  } else {
+    await switchToSoloMode()
   }
 }
 
@@ -519,6 +608,11 @@ function fallbackCopy(text) {
   } finally {
     textarea.remove()
   }
+}
+
+function formatRunDate(isoString) {
+  const date = new Date(isoString)
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
 function getRulesetPokemonData(name) {
@@ -618,8 +712,12 @@ async function startNewRun(mode) {
     await startNewSoloRun()
     setCurrentRunMode(RUN_MODES.SOLO)
   } else {
+    if (!isSoloMode.value) {
+      await saveCurrentRunToIndex(buildSoulLinkSnapshot())
+    }
     startNewLocalSoulLinkRun()
     setCurrentRunMode(RUN_MODES.SOUL_LINK)
+    await registerNewRun(buildSoulLinkSnapshot())
     if (isSupabaseAvailable) {
       try {
         await createSoulLinkSession()
@@ -974,6 +1072,8 @@ function handleVisibilityChange() {
 
 onMounted(async () => {
   document.addEventListener('visibilitychange', handleVisibilityChange)
+
+  loadRunIndex().catch((err) => console.error('Failed to load run index:', err))
 
   const initialRunMode = loadCurrentRunMode()
 
@@ -1348,6 +1448,74 @@ if (import.meta.env.DEV) {
 @media (hover: hover) and (pointer: fine) {
   .session-code-display:hover {
     background: var(--color-surface-light);
+  }
+}
+
+.my-runs-header {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+}
+
+.my-run-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base);
+}
+
+.my-run-active {
+  border-color: var(--color-primary);
+}
+
+.my-run-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.my-run-name {
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.my-run-date {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+.my-run-delete {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: color var(--transition-base);
+}
+
+.my-run-delete:hover {
+  color: var(--color-danger);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .my-run-row:hover:not(.my-run-active) {
+    background: var(--color-surface-light);
+    border-color: var(--color-text-muted);
   }
 }
 

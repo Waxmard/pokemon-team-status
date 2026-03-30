@@ -4,3 +4,4 @@ dev-dist/
 *.local
 coverage/
 supabase/
+*secret*
