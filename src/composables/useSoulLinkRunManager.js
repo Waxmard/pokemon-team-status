@@ -130,16 +130,6 @@ export function useSoulLinkRunManager() {
     return { wasActive, nextRunId: nextActiveId }
   }
 
-  async function updateRunName(runId, name) {
-    if (!runIndex.value) return
-
-    const runs = runIndex.value.runs.map((r) =>
-      r.id === runId ? { ...r, name } : r,
-    )
-    runIndex.value = { ...runIndex.value, runs }
-    await repository.persistSoulLinkRunIndex(cloneIndex())
-  }
-
   return {
     runList,
     activeRunId,
@@ -148,6 +138,5 @@ export function useSoulLinkRunManager() {
     switchToRun,
     registerNewRun,
     deleteRun,
-    updateRunName,
   }
 }

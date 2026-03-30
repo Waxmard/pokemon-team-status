@@ -616,11 +616,6 @@ function fallbackCopy(text) {
   }
 }
 
-function formatRunDate(isoString) {
-  const date = new Date(isoString)
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
-
 function getRulesetPokemonData(name) {
   return getPokemonDataForRules(name, generationRules.value)
 }
