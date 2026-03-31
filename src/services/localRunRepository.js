@@ -93,11 +93,12 @@ async function loadSetting(name, defaultValue = null) {
 export function createLocalSoloRunRepository() {
   return {
     async loadSoloRunSnapshot(defaultGenerationRules) {
-      const [team, defeatedGyms, box, pinnedGym, generationRules] =
+      const [team, defeatedGyms, box, dead, pinnedGym, generationRules] =
         await Promise.all([
           loadArrayFromStore('team'),
           loadSetting('defeatedGyms', []),
           loadArrayFromStore('box'),
+          loadSetting('soloDead', []),
           loadSetting('pinnedGym', null),
           loadSetting('generationRules', defaultGenerationRules),
         ])
@@ -105,6 +106,7 @@ export function createLocalSoloRunRepository() {
       return {
         team,
         box,
+        dead,
         defeatedGyms,
         pinnedGym,
         generationRules,
@@ -129,6 +131,45 @@ export function createLocalSoloRunRepository() {
 
     persistSoloGenerationRules(generationRules) {
       return saveSetting('generationRules', generationRules)
+    },
+
+    persistSoloDead(dead) {
+      return saveSetting('soloDead', dead)
+    },
+
+    loadSoloBackupSessionId() {
+      return loadSetting('soloBackupSessionId', null)
+    },
+
+    persistSoloBackupSessionId(id) {
+      return saveSetting('soloBackupSessionId', id)
+    },
+
+    loadSoloRunIndex() {
+      return loadSetting('soloRunIndex', null)
+    },
+
+    persistSoloRunIndex(index) {
+      return saveSetting('soloRunIndex', index)
+    },
+
+    loadSoloRun(runId) {
+      return loadSetting(`soloRun:${runId}`, null)
+    },
+
+    persistSoloRun(runId, snapshot) {
+      return saveSetting(`soloRun:${runId}`, snapshot)
+    },
+
+    async deleteSoloRun(runId) {
+      const db = await openDB()
+      const tx = db.transaction('settings', 'readwrite')
+      const store = tx.objectStore('settings')
+      store.delete(`soloRun:${runId}`)
+      return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      })
     },
 
     persistSoulLinkSnapshot(snapshot) {

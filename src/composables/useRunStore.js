@@ -15,8 +15,10 @@ import {
   prefetchBerrySprites,
   prefetchTypeIcons,
 } from '../utils/spriteCache.js'
+import { useSoloBackup } from './useSoloBackup.js'
 
 const repository = createLocalSoloRunRepository()
+const { scheduleBackup } = useSoloBackup()
 
 function hasStateChanged(a, b) {
   return JSON.stringify(a) !== JSON.stringify(b)
@@ -41,9 +43,21 @@ const defeatedGyms = computed(
 const pinnedGym = computed(
   () => getSoloRunState('Accessing the pinned gym').progress.pinnedGym,
 )
+const dead = computed(() => getSoloRunState('Accessing dead').dead)
 const generationRules = computed(
   () => getSoloRunState('Accessing generation rules').rules.generation,
 )
+
+async function persistDead(newDead) {
+  const soloRunState = getSoloRunState('Persisting dead')
+
+  runState.value = {
+    ...soloRunState,
+    dead: newDead,
+  }
+  await repository.persistSoloDead(newDead)
+  scheduleBackup()
+}
 
 async function persistGenerationRules(newRules) {
   const soloRunState = getSoloRunState('Persisting generation rules')
@@ -59,9 +73,11 @@ async function persistGenerationRules(newRules) {
     repository.persistSoloGenerationRules(nextRules),
     repository.persistSoloTeam(sanitizedSnapshot.team),
     repository.persistSoloBox(sanitizedSnapshot.box),
+    repository.persistSoloDead(sanitizedSnapshot.dead),
     repository.persistSoloDefeatedGyms(sanitizedSnapshot.defeatedGyms),
     repository.persistSoloPinnedGym(sanitizedSnapshot.pinnedGym),
   ])
+  scheduleBackup()
 }
 
 export function useRunStore() {
@@ -93,6 +109,11 @@ export function useRunStore() {
       }
       if (hasStateChanged(loadedSnapshot.box, sanitizedSnapshot.box)) {
         persistOperations.push(repository.persistSoloBox(sanitizedSnapshot.box))
+      }
+      if (hasStateChanged(loadedSnapshot.dead ?? [], sanitizedSnapshot.dead)) {
+        persistOperations.push(
+          repository.persistSoloDead(sanitizedSnapshot.dead),
+        )
       }
       if (loadedSnapshot.pinnedGym !== sanitizedSnapshot.pinnedGym) {
         persistOperations.push(
@@ -128,6 +149,7 @@ export function useRunStore() {
       team: newTeam,
     }
     await repository.persistSoloTeam(newTeam)
+    scheduleBackup()
   }
 
   async function persistBox(newBox) {
@@ -138,6 +160,7 @@ export function useRunStore() {
       box: newBox,
     }
     await repository.persistSoloBox(newBox)
+    scheduleBackup()
   }
 
   async function persistDefeatedGyms(newGyms) {
@@ -151,6 +174,7 @@ export function useRunStore() {
       },
     }
     await repository.persistSoloDefeatedGyms(newGyms)
+    scheduleBackup()
   }
 
   async function persistPinnedGym(gymType) {
@@ -164,10 +188,11 @@ export function useRunStore() {
       },
     }
     await repository.persistSoloPinnedGym(gymType)
+    scheduleBackup()
   }
 
   async function resetTeamAndBox() {
-    await Promise.all([persistTeam([]), persistBox([])])
+    await Promise.all([persistTeam([]), persistBox([]), persistDead([])])
   }
 
   async function resetGyms() {
@@ -184,6 +209,7 @@ export function useRunStore() {
     await Promise.all([
       repository.persistSoloTeam(snapshot.team),
       repository.persistSoloBox(snapshot.box),
+      repository.persistSoloDead(snapshot.dead),
       repository.persistSoloDefeatedGyms(snapshot.defeatedGyms),
       repository.persistSoloPinnedGym(snapshot.pinnedGym),
       repository.persistSoloGenerationRules(snapshot.generationRules),
@@ -198,6 +224,37 @@ export function useRunStore() {
     await persistBox(box.value.filter((pokemon) => pokemon.id !== id))
   }
 
+  async function killTeamPokemon(id) {
+    const pokemon = team.value.find((p) => p.id === id)
+    if (!pokemon) return
+    await Promise.all([
+      persistTeam(team.value.filter((p) => p.id !== id)),
+      persistDead([...dead.value, pokemon]),
+    ])
+  }
+
+  async function killBoxPokemon(id) {
+    const pokemon = box.value.find((p) => p.id === id)
+    if (!pokemon) return
+    await Promise.all([
+      persistBox(box.value.filter((p) => p.id !== id)),
+      persistDead([...dead.value, pokemon]),
+    ])
+  }
+
+  async function revivePokemon(id) {
+    const pokemon = dead.value.find((p) => p.id === id)
+    if (!pokemon) return
+    await Promise.all([
+      persistDead(dead.value.filter((p) => p.id !== id)),
+      persistBox([...box.value, pokemon]),
+    ])
+  }
+
+  async function deleteDeadPokemon(id) {
+    await persistDead(dead.value.filter((p) => p.id !== id))
+  }
+
   async function defeatGym(type) {
     await persistDefeatedGyms([...defeatedGyms.value, type])
   }
@@ -210,6 +267,7 @@ export function useRunStore() {
     runState,
     team,
     box,
+    dead,
     defeatedGyms,
     pinnedGym,
     generationRules,
@@ -217,6 +275,7 @@ export function useRunStore() {
     loadData,
     persistTeam,
     persistBox,
+    persistDead,
     persistDefeatedGyms,
     persistPinnedGym,
     persistGenerationRules,
@@ -225,6 +284,10 @@ export function useRunStore() {
     resetGyms,
     deleteTeamPokemon,
     deleteBoxPokemon,
+    killTeamPokemon,
+    killBoxPokemon,
+    revivePokemon,
+    deleteDeadPokemon,
     defeatGym,
     undefeatGym,
   }

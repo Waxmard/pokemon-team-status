@@ -28,10 +28,12 @@
       </h1>
 
       <template v-if="isSoloMode">
-        <TeamSection :team="team" :box="box" @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap"
+        <TeamSection :team="team" :box="box" :dead="dead" :has-death-box="true" @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap"
           :generation-rules="generationRules"
           @deleteTeamPokemon="deleteTeamPokemon" @deleteBoxPokemon="deleteBoxPokemon" @cancelSwap="handleCancelSwap"
-          @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion" />
+          @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion"
+          @killPokemon="handleSoloKillPokemon" @revivePokemon="handleSoloRevivePokemon"
+          @deleteDeadPokemon="handleSoloDeleteDeadPokemon" @exitDeathBox="deathBoxMode = false" />
 
         <GymColumns :team="team" :box="box" :remainingGyms="remainingGyms" :defeatedGymsList="defeatedGymsList"
           :defeated-gym-types="defeatedGyms" :pinned-type="pinnedGym" :persist-pinned-gym="persistPinnedGym" :generation-rules="generationRules"
@@ -111,6 +113,32 @@
               </button>
             </template>
           </div>
+          <div v-if="isSoloMode" class="reset-option-group">
+            <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
+              New Solo Run
+            </button>
+            <template v-if="isSupabaseAvailable">
+              <button class="reset-option" @click="handleSoloRestore" :disabled="soloBackupStatus === 'restoring'">
+                {{ soloBackupStatus === 'restoring' ? 'Restoring...' : 'Restore from Cloud' }}
+              </button>
+            </template>
+            <template v-if="soloActiveRunId">
+              <button class="reset-option reset-option-danger" @click="deleteRunTarget = soloActiveRunId; showResetDialog = false">
+                Delete This Run
+              </button>
+            </template>
+          </div>
+          <div v-if="isSoloMode && inactiveSoloRuns.length > 0" class="reset-option-group">
+            <div class="my-runs-header">Switch Solo Run</div>
+            <button
+              v-for="run in inactiveSoloRuns"
+              :key="run.id"
+              class="reset-option"
+              @click="handleSwitchSoloRun(run.id)"
+            >
+              {{ run.name || `Solo Run (${run.teamCount || 0})` }}
+            </button>
+          </div>
           <div v-if="inactiveRuns.length > 0" class="reset-option-group">
             <div class="my-runs-header">Switch Soul Link Run</div>
             <button
@@ -140,7 +168,7 @@
         </p>
         <div class="reset-dialog-options">
           <button class="reset-option reset-option-danger"
-                  @click="handleDeleteRun(deleteRunTarget)">
+                  @click="isSoloDeleteTarget ? handleDeleteSoloRun(deleteRunTarget) : handleDeleteRun(deleteRunTarget)">
             Delete
           </button>
         </div>
@@ -214,11 +242,14 @@ import TeamSection from './components/TeamSection.vue'
 import { useDraftAction } from './composables/useDraftAction.js'
 import { useRunModeStore } from './composables/useRunModeStore.js'
 import { useRunStore } from './composables/useRunStore.js'
+import { useSoloBackup } from './composables/useSoloBackup.js'
+import { useSoloRunManager } from './composables/useSoloRunManager.js'
 import { useSoulLinkHandlers } from './composables/useSoulLinkHandlers.js'
 import { useSoulLinkRunManager } from './composables/useSoulLinkRunManager.js'
 import { useSoulLinkStore } from './composables/useSoulLinkStore.js'
 import { getPokemonDataForRules } from './data/pokemon.js'
 import { GENERATION_RULESETS, getAllTypesForRules } from './data/types.js'
+import { createLocalSoloRunRepository } from './services/localRunRepository.js'
 import { supabase } from './services/supabaseClient.js'
 import { themeOverrides } from './theme/colors.js'
 import {
@@ -230,7 +261,10 @@ import {
   generatePokemonId,
   pickMemberFields,
 } from './utils/pokemon.js'
-import { RUN_MODES } from './utils/runSnapshot.js'
+import {
+  mapSoloRunStateToPersistedSnapshot,
+  RUN_MODES,
+} from './utils/runSnapshot.js'
 import {
   adaptSoulLinkMemberToUiMember,
   buildSoulLinkPlayerBoard,
@@ -238,9 +272,11 @@ import {
 import { calculateBerryTiebreaker, calculateScore } from './utils/typeCalc.js'
 
 const {
+  runState: soloRunState,
   team,
   defeatedGyms,
   box,
+  dead,
   loadData,
   loadError,
   persistTeam,
@@ -253,6 +289,10 @@ const {
   pinnedGym,
   deleteTeamPokemon,
   deleteBoxPokemon,
+  killTeamPokemon,
+  killBoxPokemon,
+  revivePokemon,
+  deleteDeadPokemon,
   defeatGym,
   undefeatGym,
   persistPinnedGym,
@@ -310,6 +350,23 @@ const {
   deleteRun,
 } = useSoulLinkRunManager()
 
+const {
+  backupStatus: soloBackupStatus,
+  initBackupSession,
+  restore: restoreSoloBackup,
+} = useSoloBackup()
+
+const {
+  runList: soloRunList,
+  activeRunId: soloActiveRunId,
+  loadRunIndex: loadSoloRunIndex,
+  saveCurrentRunToIndex: saveSoloRunToIndex,
+  switchToRun: switchToSoloRun,
+  registerNewRun: registerNewSoloRun,
+  deleteRun: deleteSoloRun,
+  renameRun: renameSoloRun,
+} = useSoloRunManager()
+
 const showResetDialog = ref(false)
 const deleteRunTarget = ref(null)
 const showSoulLinkDialog = ref(false)
@@ -335,6 +392,14 @@ const activeGenerationRules = computed(() =>
 
 const inactiveRuns = computed(() =>
   runList.value.filter((r) => r.id !== activeRunId.value),
+)
+
+const inactiveSoloRuns = computed(() =>
+  soloRunList.value.filter((r) => r.id !== soloActiveRunId.value),
+)
+
+const isSoloDeleteTarget = computed(() =>
+  soloRunList.value.some((r) => r.id === deleteRunTarget.value),
 )
 
 const activeLoadError = computed(() =>
@@ -710,8 +775,13 @@ async function startNewRun(mode) {
   unsubscribeSoulLink()
 
   if (mode === RUN_MODES.SOLO) {
+    // Save current solo run before starting a new one
+    if (isSoloMode.value && soloActiveRunId.value) {
+      await saveSoloRunToIndex(buildSoloSnapshot())
+    }
     await startNewSoloRun()
     setCurrentRunMode(RUN_MODES.SOLO)
+    await registerNewSoloRun(buildSoloSnapshot())
   } else {
     if (!isSoloMode.value) {
       await saveCurrentRunToIndex(buildSoulLinkSnapshot())
@@ -1064,6 +1134,66 @@ function handleDeleteFromDraft() {
   cancel()
 }
 
+function handleSoloKillPokemon({ id, rosterKey }) {
+  if (rosterKey === 'team') killTeamPokemon(id)
+  else killBoxPokemon(id)
+  cancel()
+}
+
+function handleSoloRevivePokemon(memberId) {
+  revivePokemon(memberId)
+}
+
+function handleSoloDeleteDeadPokemon({ id }) {
+  deleteDeadPokemon(id)
+  cancel()
+}
+
+function buildSoloSnapshot() {
+  return mapSoloRunStateToPersistedSnapshot(soloRunState.value)
+}
+
+async function handleSwitchSoloRun(runId) {
+  if (runId === soloActiveRunId.value) return
+  await clearTransientUiState()
+  const snapshot = await switchToSoloRun(runId, buildSoloSnapshot())
+  if (snapshot) {
+    await loadData()
+  }
+  showResetDialog.value = false
+}
+
+async function handleDeleteSoloRun(runId) {
+  const result = await deleteSoloRun(runId)
+  deleteRunTarget.value = null
+
+  if (!result?.wasActive) return
+
+  if (result.nextRunId) {
+    await handleSwitchSoloRun(result.nextRunId)
+  } else {
+    await startNewSoloRun()
+    showResetDialog.value = false
+  }
+}
+
+async function handleSoloRestore() {
+  const snapshot = await restoreSoloBackup()
+  if (!snapshot) return
+  // Write restored snapshot to local stores and reload
+  const repo = createLocalSoloRunRepository()
+  await Promise.all([
+    repo.persistSoloTeam(snapshot.team ?? []),
+    repo.persistSoloBox(snapshot.box ?? []),
+    repo.persistSoloDead(snapshot.dead ?? []),
+    repo.persistSoloDefeatedGyms(snapshot.defeatedGyms ?? []),
+    repo.persistSoloPinnedGym(snapshot.pinnedGym ?? null),
+    repo.persistSoloGenerationRules(snapshot.generationRules ?? null),
+  ])
+  await loadData()
+  showResetDialog.value = false
+}
+
 function handleVisibilityChange() {
   if (document.hidden || isSoloMode.value || !hasRemoteSession.value) return
   syncSoulLinkSession().catch((err) =>
@@ -1074,9 +1204,20 @@ function handleVisibilityChange() {
 onMounted(async () => {
   document.addEventListener('visibilitychange', handleVisibilityChange)
 
-  loadRunIndex().catch((err) => console.error('Failed to load run index:', err))
+  loadRunIndex().catch((err) =>
+    console.error('Failed to load soul link run index:', err),
+  )
+  loadSoloRunIndex().catch((err) =>
+    console.error('Failed to load solo run index:', err),
+  )
 
   const initialRunMode = loadCurrentRunMode()
+
+  if (isSupabaseAvailable) {
+    initBackupSession(() => buildSoloSnapshot()).catch((err) =>
+      console.error('Failed to init solo backup session:', err),
+    )
+  }
 
   if (initialRunMode === RUN_MODES.SOLO) {
     loadData()

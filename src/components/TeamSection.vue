@@ -203,6 +203,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  hasDeathBox: {
+    type: Boolean,
+    default: false,
+  },
   playerId: {
     type: String,
     default: null,
@@ -397,9 +401,11 @@ const isEditingDead = computed(() => {
   return draftAction.value?.isDeadPokemon && !swapMode.value
 })
 
+const hasKillAction = computed(() => props.isSoulLinkMode || props.hasDeathBox)
+
 const deleteActionIcon = computed(() => {
   if (isEditingDead.value) return '🗑'
-  return props.isSoulLinkMode ? '💀' : '🗑'
+  return hasKillAction.value ? '💀' : '🗑'
 })
 
 function handleEditPokemon(id) {
@@ -449,7 +455,17 @@ function toggleViewMode() {
   if (showDraftPanel.value) {
     cancel()
   }
-  viewMode.value = viewMode.value === 'team' ? 'box' : 'team'
+  if (viewMode.value === 'team') {
+    viewMode.value = 'box'
+  } else if (
+    viewMode.value === 'box' &&
+    hasKillAction.value &&
+    props.dead.length > 0
+  ) {
+    viewMode.value = 'dead'
+  } else {
+    viewMode.value = 'team'
+  }
 }
 
 function handleAddClick() {
@@ -477,7 +493,7 @@ function handleDeleteClick() {
     }
     return
   }
-  if (props.isSoulLinkMode) {
+  if (hasKillAction.value) {
     const rosterKey = draftAction.value?.isBoxPokemon ? 'box' : 'team'
     const id = draftAction.value?.isBoxPokemon
       ? draftAction.value.boxPokemonId
@@ -493,7 +509,7 @@ function handleDeleteClick() {
 
 function handleDeleteTeamPokemon(id) {
   if (props.readOnly) return
-  if (props.isSoulLinkMode) {
+  if (hasKillAction.value) {
     emit('killPokemon', { id, rosterKey: 'team' })
     return
   }
@@ -502,7 +518,7 @@ function handleDeleteTeamPokemon(id) {
 
 function handleDeleteBoxPokemon(id) {
   if (props.readOnly) return
-  if (props.isSoulLinkMode) {
+  if (hasKillAction.value) {
     emit('killPokemon', { id, rosterKey: 'box' })
     return
   }

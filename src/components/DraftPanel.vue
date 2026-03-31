@@ -158,7 +158,7 @@
             @update:value="onCatchLocationInput"
             clearable
           />
-          <div class="pokemon-preview">
+          <div v-if="isSoulLinkMode" class="pokemon-preview">
             <SpriteImg
               v-if="matchedPartnerForLocation"
               :src="getPartnerPreviewSpriteUrl(matchedPartnerForLocation)"
@@ -471,10 +471,7 @@ function getSuggestionSpriteUrl(pokemonName, spriteVariant, megaSpriteId) {
 
 // Wizard state
 const wizardSteps = computed(() => {
-  if (props.isSoulLinkMode) {
-    return ['pokemon', 'catchLocation', 'moves', 'berry', 'ability']
-  }
-  return ['pokemon', 'moves', 'berry', 'ability']
+  return ['pokemon', 'catchLocation', 'moves', 'berry', 'ability']
 })
 
 const {

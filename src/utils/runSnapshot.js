@@ -34,6 +34,7 @@ export function createDefaultSoloRunState(
     mode: RUN_MODES.SOLO,
     team: [],
     box: [],
+    dead: [],
     progress: createDefaultSoloProgress(),
     rules: {
       generation: normalizeGenerationRules(generationRules),
@@ -95,6 +96,10 @@ export function sanitizePersistedSoloRunSnapshot(snapshot) {
   return {
     team: sanitizePokemonCollectionForRules(snapshot.team, generationRules),
     box: sanitizePokemonCollectionForRules(snapshot.box, generationRules),
+    dead: sanitizePokemonCollectionForRules(
+      snapshot.dead ?? [],
+      generationRules,
+    ),
     defeatedGyms: sanitizeDefeatedGymsForRules(
       snapshot.defeatedGyms,
       generationRules,
@@ -111,6 +116,7 @@ export function mapPersistedSoloSnapshotToRunState(snapshot) {
     ...createDefaultSoloRunState(sanitizedSnapshot.generationRules),
     team: sanitizedSnapshot.team,
     box: sanitizedSnapshot.box,
+    dead: sanitizedSnapshot.dead,
     progress: {
       defeatedGyms: sanitizedSnapshot.defeatedGyms,
       pinnedGym: sanitizedSnapshot.pinnedGym,
@@ -127,6 +133,7 @@ export function mapSoloRunStateToPersistedSnapshot(runState) {
   return {
     team: soloRunState.team,
     box: soloRunState.box,
+    dead: soloRunState.dead,
     defeatedGyms: soloRunState.progress.defeatedGyms,
     pinnedGym: soloRunState.progress.pinnedGym,
     generationRules: soloRunState.rules.generation,
