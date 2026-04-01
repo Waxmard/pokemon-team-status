@@ -92,6 +92,14 @@
           <button class="reset-option" @click="toggleGenerationRules">
             {{ generationRulesLabel }}
           </button>
+          <div class="reset-option-group">
+            <button class="reset-option" @click="resetPokemon">
+              Reset Team & Box
+            </button>
+            <button class="reset-option" @click="resetGyms">
+              Reset Gyms
+            </button>
+          </div>
           <div v-if="allInactiveRuns.length > 0" class="reset-option-group">
             <div class="my-runs-header">Switch Run</div>
             <button
@@ -103,6 +111,13 @@
               {{ run.label }}
             </button>
           </div>
+          <template v-if="currentActiveRunId">
+            <div class="reset-option-group">
+              <button class="reset-option reset-option-danger" @click="deleteRunTarget = currentActiveRunId; showResetDialog = false">
+                Delete This Run
+              </button>
+            </div>
+          </template>
         </div>
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
       </div>
@@ -199,19 +214,6 @@
               </button>
             </template>
           </div>
-          <div class="reset-option-group">
-            <button class="reset-option" @click="resetPokemon">
-              Reset Team & Box
-            </button>
-            <button class="reset-option" @click="resetGyms">
-              Reset Gyms
-            </button>
-          </div>
-          <div v-if="activeRunId" class="reset-option-group">
-            <button class="reset-option reset-option-danger" @click="deleteRunTarget = activeRunId; showSoulLinkDialog = false">
-              Delete This Run
-            </button>
-          </div>
         </div>
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
       </div>
@@ -231,21 +233,6 @@
           <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
             New Solo Run
           </button>
-          <div class="reset-option-group">
-            <button class="reset-option" @click="resetPokemon">
-              Reset Team & Box
-            </button>
-            <button class="reset-option" @click="resetGyms">
-              Reset Gyms
-            </button>
-          </div>
-          <template v-if="soloActiveRunId">
-            <div class="reset-option-group">
-              <button class="reset-option reset-option-danger" @click="deleteRunTarget = soloActiveRunId; showSoloDialog = false">
-                Delete This Run
-              </button>
-            </div>
-          </template>
         </div>
         <button class="reset-dialog-cancel" @click="showSoloDialog = false">✕</button>
       </div>
@@ -399,6 +386,9 @@ const showJoinInput = ref(false)
 const sessionActionPending = ref(false)
 const copyLabel = ref('tap to copy')
 const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
+const currentActiveRunId = computed(() =>
+  isSoloMode.value ? soloActiveRunId.value : activeRunId.value,
+)
 const isSupabaseAvailable = !!supabase
 const hasRemoteSession = computed(
   () => !isSoloMode.value && !!soulLinkSessionMetadata.value?.sessionId,
@@ -463,8 +453,7 @@ function resetPokemon() {
     resetPlayerRoster(viewedSoulLinkPlayerId.value)
   }
   cancel()
-  showSoloDialog.value = false
-  showSoulLinkDialog.value = false
+  showResetDialog.value = false
 }
 
 function resetGyms() {
@@ -473,8 +462,7 @@ function resetGyms() {
   } else {
     resetPlayerGymProgress(viewedSoulLinkPlayerId.value)
   }
-  showSoloDialog.value = false
-  showSoulLinkDialog.value = false
+  showResetDialog.value = false
 }
 
 function toggleGenerationRules() {
