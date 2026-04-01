@@ -1,5 +1,12 @@
 import { computed, ref } from 'vue'
+import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
 import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
+import {
+  createDefaultSoloRunState,
+  mapPersistedSoloSnapshotToRunState,
+  mapSoloRunStateToPersistedSnapshot,
+  sanitizePersistedSoloRunSnapshot,
+} from '../utils/runSnapshot.js'
 
 const repository = createLocalSoloRunRepository()
 const runIndex = ref(null)
@@ -19,6 +26,49 @@ function extractRunSummary(snapshot) {
   }
 }
 
+function createDefaultSnapshot() {
+  return mapSoloRunStateToPersistedSnapshot(
+    createDefaultSoloRunState(DEFAULT_GENERATION_RULESET),
+  )
+}
+
+function toPlainPersistedSnapshot(snapshot) {
+  const normalizedSnapshot = mapSoloRunStateToPersistedSnapshot(
+    mapPersistedSoloSnapshotToRunState(
+      sanitizePersistedSoloRunSnapshot({
+        team: snapshot?.team ?? [],
+        box: snapshot?.box ?? [],
+        dead: snapshot?.dead ?? [],
+        defeatedGyms: snapshot?.defeatedGyms ?? [],
+        pinnedGym: snapshot?.pinnedGym ?? null,
+        generationRules:
+          snapshot?.generationRules ?? DEFAULT_GENERATION_RULESET,
+      }),
+    ),
+  )
+
+  return JSON.parse(
+    JSON.stringify({
+      ...normalizedSnapshot,
+      name: snapshot?.name ?? null,
+      createdAt: snapshot?.createdAt ?? null,
+    }),
+  )
+}
+
+function hasPersistedSoloData(snapshot) {
+  if (!snapshot) return false
+
+  return (
+    (snapshot.team?.length ?? 0) > 0 ||
+    (snapshot.box?.length ?? 0) > 0 ||
+    (snapshot.dead?.length ?? 0) > 0 ||
+    (snapshot.defeatedGyms?.length ?? 0) > 0 ||
+    snapshot.pinnedGym !== null ||
+    snapshot.generationRules !== null
+  )
+}
+
 export function useSoloRunManager() {
   const runList = computed(() => {
     if (!runIndex.value) return []
@@ -28,33 +78,62 @@ export function useSoloRunManager() {
   })
 
   const activeRunId = computed(() => runIndex.value?.activeRunId ?? null)
+  const activeRunSummary = computed(
+    () =>
+      runIndex.value?.runs.find((run) => run.id === activeRunId.value) ?? null,
+  )
 
-  async function loadRunIndex() {
-    const index = await repository.loadSoloRunIndex()
-    if (index) {
-      runIndex.value = index
-      return
+  function getRunSummary(runId) {
+    return runIndex.value?.runs.find((run) => run.id === runId) ?? null
+  }
+
+  function mergeSnapshotWithRunMeta(snapshot, runSummary) {
+    return toPlainPersistedSnapshot({
+      ...snapshot,
+      name: snapshot.name ?? runSummary?.name ?? null,
+      createdAt:
+        snapshot.createdAt ?? runSummary?.createdAt ?? new Date().toISOString(),
+    })
+  }
+
+  async function persistRunSnapshot(runId, snapshot) {
+    if (!runId || !runIndex.value) return
+
+    const nextSnapshot = mergeSnapshotWithRunMeta(
+      snapshot,
+      getRunSummary(runId),
+    )
+    const summary = extractRunSummary(nextSnapshot)
+    const runs = runIndex.value.runs.map((run) =>
+      run.id === runId ? { ...run, ...summary } : run,
+    )
+
+    runIndex.value = {
+      ...runIndex.value,
+      runs,
     }
 
-    // Migrate existing solo data to first run entry
-    const existingSnapshot = await repository.loadSoloRunSnapshot(null)
-    const hasData =
-      existingSnapshot &&
-      (existingSnapshot.team?.length > 0 ||
-        existingSnapshot.box?.length > 0 ||
-        existingSnapshot.dead?.length > 0)
+    await Promise.all([
+      repository.persistSoloRun(runId, nextSnapshot),
+      repository.persistSoloRunIndex(cloneIndex()),
+    ])
+  }
 
-    if (!hasData) return
-
+  async function initializeRun(snapshot) {
     const runId = crypto.randomUUID()
-    const snapshotWithMeta = {
-      ...existingSnapshot,
-      createdAt: new Date().toISOString(),
-    }
+    const snapshotWithMeta = mergeSnapshotWithRunMeta(snapshot, null)
     const entry = { id: runId, ...extractRunSummary(snapshotWithMeta) }
     const newIndex = { activeRunId: runId, runs: [entry] }
 
     await Promise.all([
+      repository.persistSoloTeam(snapshotWithMeta.team ?? []),
+      repository.persistSoloBox(snapshotWithMeta.box ?? []),
+      repository.persistSoloDead(snapshotWithMeta.dead ?? []),
+      repository.persistSoloDefeatedGyms(snapshotWithMeta.defeatedGyms ?? []),
+      repository.persistSoloPinnedGym(snapshotWithMeta.pinnedGym ?? null),
+      repository.persistSoloGenerationRules(
+        snapshotWithMeta.generationRules ?? DEFAULT_GENERATION_RULESET,
+      ),
       repository.persistSoloRun(runId, snapshotWithMeta),
       repository.persistSoloRunIndex(newIndex),
     ])
@@ -62,21 +141,86 @@ export function useSoloRunManager() {
     runIndex.value = newIndex
   }
 
+  async function reinitializeFromLegacyOrDefault() {
+    runIndex.value = null
+    const existing = await repository.loadSoloRunSnapshot(null)
+    if (hasPersistedSoloData(existing)) {
+      await initializeRun(existing)
+    } else {
+      await initializeRun(createDefaultSnapshot())
+    }
+  }
+
+  async function findFirstValidRunId(runs) {
+    for (const run of runs) {
+      const snapshot = await repository.loadSoloRun(run.id)
+      if (snapshot) return run.id
+    }
+    return null
+  }
+
+  async function repairRunIndex() {
+    if (!runIndex.value?.runs?.length) {
+      await reinitializeFromLegacyOrDefault()
+      return
+    }
+
+    // Ensure activeRunId points to an entry in runs
+    const hasActiveEntry = runIndex.value.runs.some(
+      (r) => r.id === runIndex.value.activeRunId,
+    )
+    if (!hasActiveEntry) {
+      runIndex.value = {
+        ...runIndex.value,
+        activeRunId: runIndex.value.runs[0].id,
+      }
+    }
+
+    // Check active run snapshot, then scan others if missing
+    const validRunId = await findFirstValidRunId(
+      // Check active run first by putting it at the front
+      [...runIndex.value.runs].sort((a, b) =>
+        a.id === runIndex.value.activeRunId
+          ? -1
+          : b.id === runIndex.value.activeRunId
+            ? 1
+            : 0,
+      ),
+    )
+
+    if (!validRunId) {
+      await reinitializeFromLegacyOrDefault()
+      return
+    }
+
+    if (validRunId !== runIndex.value.activeRunId || !hasActiveEntry) {
+      runIndex.value = { ...runIndex.value, activeRunId: validRunId }
+      await repository.persistSoloRunIndex(cloneIndex())
+    }
+  }
+
+  async function loadRunIndex() {
+    const index = await repository.loadSoloRunIndex()
+    if (index) {
+      runIndex.value = index
+      await repairRunIndex()
+      return
+    }
+
+    // Migrate existing solo data to first run entry
+    const existingSnapshot = await repository.loadSoloRunSnapshot(null)
+    if (hasPersistedSoloData(existingSnapshot)) {
+      await initializeRun(existingSnapshot)
+      return
+    }
+
+    await initializeRun(createDefaultSnapshot())
+  }
+
   async function saveCurrentRunToIndex(snapshot) {
     const currentId = runIndex.value?.activeRunId
     if (!currentId || !runIndex.value) return
-
-    const summary = extractRunSummary(snapshot)
-    const runs = runIndex.value.runs.map((r) =>
-      r.id === currentId ? { ...r, ...summary } : r,
-    )
-
-    runIndex.value = { ...runIndex.value, runs }
-
-    await Promise.all([
-      repository.persistSoloRun(currentId, snapshot),
-      repository.persistSoloRunIndex(cloneIndex()),
-    ])
+    await persistRunSnapshot(currentId, snapshot)
   }
 
   async function switchToRun(targetRunId, currentSnapshot) {
@@ -119,10 +263,7 @@ export function useSoloRunManager() {
 
   async function registerNewRun(snapshot) {
     const runId = crypto.randomUUID()
-    const snapshotWithMeta = {
-      ...snapshot,
-      createdAt: snapshot.createdAt ?? new Date().toISOString(),
-    }
+    const snapshotWithMeta = mergeSnapshotWithRunMeta(snapshot, null)
     const entry = { id: runId, ...extractRunSummary(snapshotWithMeta) }
 
     const runs = [...(runIndex.value?.runs ?? []), entry]
@@ -171,11 +312,19 @@ export function useSoloRunManager() {
     }
   }
 
+  async function persistActiveRunSnapshot(snapshot) {
+    const currentId = runIndex.value?.activeRunId
+    if (!currentId || !runIndex.value) return
+    await persistRunSnapshot(currentId, snapshot)
+  }
+
   return {
     runList,
     activeRunId,
+    activeRunSummary,
     loadRunIndex,
     saveCurrentRunToIndex,
+    persistActiveRunSnapshot,
     switchToRun,
     registerNewRun,
     deleteRun,

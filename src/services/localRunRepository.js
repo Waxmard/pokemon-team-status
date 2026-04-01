@@ -33,7 +33,7 @@ async function openDB() {
 }
 
 function toPlainData(value) {
-  return structuredClone(value)
+  return JSON.parse(JSON.stringify(value))
 }
 
 async function saveArrayToStore(storeName, items) {

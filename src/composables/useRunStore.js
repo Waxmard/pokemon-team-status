@@ -16,9 +16,12 @@ import {
   prefetchTypeIcons,
 } from '../utils/spriteCache.js'
 import { useSoloBackup } from './useSoloBackup.js'
+import { useSoloRunManager } from './useSoloRunManager.js'
 
 const repository = createLocalSoloRunRepository()
 const { scheduleBackup } = useSoloBackup()
+const { persistActiveRunSnapshot } = useSoloRunManager()
+let queuedPersist = Promise.resolve()
 
 function hasStateChanged(a, b) {
   return JSON.stringify(a) !== JSON.stringify(b)
@@ -30,6 +33,55 @@ function getSoloRunState(context) {
 
 function setRunState(snapshot) {
   runState.value = mapPersistedSoloSnapshotToRunState(snapshot)
+}
+
+function enqueueSoloPersist(operation) {
+  const nextPersist = queuedPersist.catch(() => {}).then(operation)
+  queuedPersist = nextPersist
+  return nextPersist
+}
+
+async function enqueueSoloPersistWithSnapshot(operation, snapshot) {
+  return enqueueSoloPersist(async () => {
+    await operation()
+    await persistActiveRunSnapshot(snapshot)
+  })
+}
+
+function getSanitizedSnapshotPersistOperations(
+  loadedSnapshot,
+  sanitizedSnapshot,
+) {
+  const persistOperations = []
+
+  if (hasStateChanged(loadedSnapshot.team, sanitizedSnapshot.team)) {
+    persistOperations.push(repository.persistSoloTeam(sanitizedSnapshot.team))
+  }
+  if (
+    hasStateChanged(loadedSnapshot.defeatedGyms, sanitizedSnapshot.defeatedGyms)
+  ) {
+    persistOperations.push(
+      repository.persistSoloDefeatedGyms(sanitizedSnapshot.defeatedGyms),
+    )
+  }
+  if (hasStateChanged(loadedSnapshot.box, sanitizedSnapshot.box)) {
+    persistOperations.push(repository.persistSoloBox(sanitizedSnapshot.box))
+  }
+  if (hasStateChanged(loadedSnapshot.dead ?? [], sanitizedSnapshot.dead)) {
+    persistOperations.push(repository.persistSoloDead(sanitizedSnapshot.dead))
+  }
+  if (loadedSnapshot.pinnedGym !== sanitizedSnapshot.pinnedGym) {
+    persistOperations.push(
+      repository.persistSoloPinnedGym(sanitizedSnapshot.pinnedGym),
+    )
+  }
+  if (loadedSnapshot.generationRules !== sanitizedSnapshot.generationRules) {
+    persistOperations.push(
+      repository.persistSoloGenerationRules(sanitizedSnapshot.generationRules),
+    )
+  }
+
+  return persistOperations
 }
 
 const runState = ref(createDefaultRunState())
@@ -50,12 +102,17 @@ const generationRules = computed(
 
 async function persistDead(newDead) {
   const soloRunState = getSoloRunState('Persisting dead')
-
-  runState.value = {
+  const nextRunState = {
     ...soloRunState,
     dead: newDead,
   }
-  await repository.persistSoloDead(newDead)
+  const nextSnapshot = mapSoloRunStateToPersistedSnapshot(nextRunState)
+
+  runState.value = nextRunState
+  await enqueueSoloPersistWithSnapshot(
+    () => repository.persistSoloDead(newDead),
+    nextSnapshot,
+  )
   scheduleBackup()
 }
 
@@ -69,14 +126,18 @@ async function persistGenerationRules(newRules) {
 
   setRunState(sanitizedSnapshot)
 
-  await Promise.all([
-    repository.persistSoloGenerationRules(nextRules),
-    repository.persistSoloTeam(sanitizedSnapshot.team),
-    repository.persistSoloBox(sanitizedSnapshot.box),
-    repository.persistSoloDead(sanitizedSnapshot.dead),
-    repository.persistSoloDefeatedGyms(sanitizedSnapshot.defeatedGyms),
-    repository.persistSoloPinnedGym(sanitizedSnapshot.pinnedGym),
-  ])
+  await enqueueSoloPersistWithSnapshot(
+    () =>
+      Promise.all([
+        repository.persistSoloGenerationRules(nextRules),
+        repository.persistSoloTeam(sanitizedSnapshot.team),
+        repository.persistSoloBox(sanitizedSnapshot.box),
+        repository.persistSoloDead(sanitizedSnapshot.dead),
+        repository.persistSoloDefeatedGyms(sanitizedSnapshot.defeatedGyms),
+        repository.persistSoloPinnedGym(sanitizedSnapshot.pinnedGym),
+      ]),
+    sanitizedSnapshot,
+  )
   scheduleBackup()
 }
 
@@ -91,45 +152,16 @@ export function useRunStore() {
       setRunState(sanitizedSnapshot)
       loadError.value = false
 
-      const persistOperations = []
-      if (hasStateChanged(loadedSnapshot.team, sanitizedSnapshot.team)) {
-        persistOperations.push(
-          repository.persistSoloTeam(sanitizedSnapshot.team),
+      const persistOperations = getSanitizedSnapshotPersistOperations(
+        loadedSnapshot,
+        sanitizedSnapshot,
+      )
+      if (persistOperations.length > 0) {
+        await enqueueSoloPersistWithSnapshot(
+          () => Promise.all(persistOperations),
+          sanitizedSnapshot,
         )
       }
-      if (
-        hasStateChanged(
-          loadedSnapshot.defeatedGyms,
-          sanitizedSnapshot.defeatedGyms,
-        )
-      ) {
-        persistOperations.push(
-          repository.persistSoloDefeatedGyms(sanitizedSnapshot.defeatedGyms),
-        )
-      }
-      if (hasStateChanged(loadedSnapshot.box, sanitizedSnapshot.box)) {
-        persistOperations.push(repository.persistSoloBox(sanitizedSnapshot.box))
-      }
-      if (hasStateChanged(loadedSnapshot.dead ?? [], sanitizedSnapshot.dead)) {
-        persistOperations.push(
-          repository.persistSoloDead(sanitizedSnapshot.dead),
-        )
-      }
-      if (loadedSnapshot.pinnedGym !== sanitizedSnapshot.pinnedGym) {
-        persistOperations.push(
-          repository.persistSoloPinnedGym(sanitizedSnapshot.pinnedGym),
-        )
-      }
-      if (
-        loadedSnapshot.generationRules !== sanitizedSnapshot.generationRules
-      ) {
-        persistOperations.push(
-          repository.persistSoloGenerationRules(
-            sanitizedSnapshot.generationRules,
-          ),
-        )
-      }
-      await Promise.all(persistOperations)
 
       prefetchAllSprites()
       prefetchBerrySprites()
@@ -143,51 +175,71 @@ export function useRunStore() {
 
   async function persistTeam(newTeam) {
     const soloRunState = getSoloRunState('Persisting the team')
-
-    runState.value = {
+    const nextRunState = {
       ...soloRunState,
       team: newTeam,
     }
-    await repository.persistSoloTeam(newTeam)
+    const nextSnapshot = mapSoloRunStateToPersistedSnapshot(nextRunState)
+
+    runState.value = nextRunState
+    await enqueueSoloPersistWithSnapshot(
+      () => repository.persistSoloTeam(newTeam),
+      nextSnapshot,
+    )
     scheduleBackup()
   }
 
   async function persistBox(newBox) {
     const soloRunState = getSoloRunState('Persisting the box')
-
-    runState.value = {
+    const nextRunState = {
       ...soloRunState,
       box: newBox,
     }
-    await repository.persistSoloBox(newBox)
+    const nextSnapshot = mapSoloRunStateToPersistedSnapshot(nextRunState)
+
+    runState.value = nextRunState
+    await enqueueSoloPersistWithSnapshot(
+      () => repository.persistSoloBox(newBox),
+      nextSnapshot,
+    )
     scheduleBackup()
   }
 
   async function persistDefeatedGyms(newGyms) {
     const soloRunState = getSoloRunState('Persisting defeated gyms')
-
-    runState.value = {
+    const nextRunState = {
       ...soloRunState,
       progress: {
         ...soloRunState.progress,
         defeatedGyms: newGyms,
       },
     }
-    await repository.persistSoloDefeatedGyms(newGyms)
+    const nextSnapshot = mapSoloRunStateToPersistedSnapshot(nextRunState)
+
+    runState.value = nextRunState
+    await enqueueSoloPersistWithSnapshot(
+      () => repository.persistSoloDefeatedGyms(newGyms),
+      nextSnapshot,
+    )
     scheduleBackup()
   }
 
   async function persistPinnedGym(gymType) {
     const soloRunState = getSoloRunState('Persisting the pinned gym')
-
-    runState.value = {
+    const nextRunState = {
       ...soloRunState,
       progress: {
         ...soloRunState.progress,
         pinnedGym: gymType,
       },
     }
-    await repository.persistSoloPinnedGym(gymType)
+    const nextSnapshot = mapSoloRunStateToPersistedSnapshot(nextRunState)
+
+    runState.value = nextRunState
+    await enqueueSoloPersistWithSnapshot(
+      () => repository.persistSoloPinnedGym(gymType),
+      nextSnapshot,
+    )
     scheduleBackup()
   }
 
@@ -206,14 +258,18 @@ export function useRunStore() {
 
     setRunState(snapshot)
 
-    await Promise.all([
-      repository.persistSoloTeam(snapshot.team),
-      repository.persistSoloBox(snapshot.box),
-      repository.persistSoloDead(snapshot.dead),
-      repository.persistSoloDefeatedGyms(snapshot.defeatedGyms),
-      repository.persistSoloPinnedGym(snapshot.pinnedGym),
-      repository.persistSoloGenerationRules(snapshot.generationRules),
-    ])
+    await enqueueSoloPersistWithSnapshot(
+      () =>
+        Promise.all([
+          repository.persistSoloTeam(snapshot.team),
+          repository.persistSoloBox(snapshot.box),
+          repository.persistSoloDead(snapshot.dead),
+          repository.persistSoloDefeatedGyms(snapshot.defeatedGyms),
+          repository.persistSoloPinnedGym(snapshot.pinnedGym),
+          repository.persistSoloGenerationRules(snapshot.generationRules),
+        ]),
+      snapshot,
+    )
   }
 
   async function deleteTeamPokemon(id) {

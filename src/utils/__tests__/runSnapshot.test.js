@@ -20,6 +20,7 @@ describe('runSnapshot helpers', () => {
       mode: RUN_MODES.SOLO,
       team: [],
       box: [],
+      dead: [],
       progress: {
         defeatedGyms: [],
         pinnedGym: null,
@@ -55,6 +56,7 @@ describe('runSnapshot helpers', () => {
           },
         ],
         box: [],
+        dead: [],
         defeatedGyms: ['water', 'fairy'],
         pinnedGym: 'fairy',
         generationRules: GENERATION_RULESETS.PRE_GEN_6,
@@ -69,6 +71,7 @@ describe('runSnapshot helpers', () => {
         }),
       ],
       box: [],
+      dead: [],
       defeatedGyms: ['water'],
       pinnedGym: null,
       generationRules: GENERATION_RULESETS.PRE_GEN_6,
@@ -79,6 +82,7 @@ describe('runSnapshot helpers', () => {
     const runState = mapPersistedSoloSnapshotToRunState({
       team: [],
       box: [],
+      dead: [],
       defeatedGyms: ['fire'],
       pinnedGym: 'water',
       generationRules: DEFAULT_GENERATION_RULESET,
@@ -88,6 +92,7 @@ describe('runSnapshot helpers', () => {
       mode: RUN_MODES.SOLO,
       team: [],
       box: [],
+      dead: [],
       progress: {
         defeatedGyms: ['fire'],
         pinnedGym: 'water',
@@ -100,6 +105,7 @@ describe('runSnapshot helpers', () => {
     expect(mapSoloRunStateToPersistedSnapshot(runState)).toEqual({
       team: [],
       box: [],
+      dead: [],
       defeatedGyms: ['fire'],
       pinnedGym: 'water',
       generationRules: DEFAULT_GENERATION_RULESET,

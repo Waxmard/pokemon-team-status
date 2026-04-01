@@ -13,6 +13,16 @@ let _version = 0
 
 const backupStatus = ref('idle')
 
+function getCurrentSnapshot() {
+  if (!_getSnapshotFn) return null
+
+  try {
+    return _getSnapshotFn() ?? null
+  } catch {
+    return null
+  }
+}
+
 async function initSession() {
   if (!remoteRepository) return
 
@@ -31,61 +41,100 @@ async function initSession() {
   }
 
   // Create a new backup session
+  const snapshot = getCurrentSnapshot()
+  if (!snapshot) return
+
   const sessionId = crypto.randomUUID()
   const inviteCode = 'solo-b'
   await remoteRepository.createSession({
     sessionId,
     inviteCode,
-    state: null,
+    state: snapshot,
   })
   _sessionId = sessionId
   _version = 1
   await repository.persistSoloBackupSessionId(sessionId)
 }
 
+async function ensureSession(snapshot) {
+  if (_sessionId) return true
+
+  await initSession()
+  if (!_sessionId || !snapshot) return false
+
+  return true
+}
+
+async function syncBackupVersion() {
+  const session = await remoteRepository.fetchSessionById(_sessionId)
+  if (session) {
+    _version = session.version
+    return true
+  }
+
+  _sessionId = null
+  return false
+}
+
+async function pushBackupSnapshot(snapshot) {
+  const result = await remoteRepository.pushSessionState(
+    _sessionId,
+    snapshot,
+    _version,
+  )
+
+  if (result.success) {
+    _version = result.version
+    return
+  }
+
+  const freshSession = await remoteRepository.fetchSessionById(_sessionId)
+  if (!freshSession) return
+
+  _version = freshSession.version
+  const retry = await remoteRepository.pushSessionState(
+    _sessionId,
+    snapshot,
+    _version,
+  )
+  if (retry.success) {
+    _version = retry.version
+  }
+}
+
 async function pushBackup() {
-  if (!remoteRepository || !_sessionId || !_getSnapshotFn) return
+  if (!remoteRepository || !_getSnapshotFn) return
 
   backupStatus.value = 'backing-up'
   try {
-    const snapshot = _getSnapshotFn()
-
-    // Fetch current version before pushing (in case it was updated elsewhere)
-    const session = await remoteRepository.fetchSessionById(_sessionId)
-    if (session) {
-      _version = session.version
-    } else {
-      // Session was deleted, recreate
-      _sessionId = null
-      await initSession()
-      if (!_sessionId) return
+    const snapshot = getCurrentSnapshot()
+    if (!snapshot) {
+      backupStatus.value = 'idle'
+      return
     }
 
-    const result = await remoteRepository.pushSessionState(
-      _sessionId,
-      snapshot,
-      _version,
-    )
-
-    if (result.success) {
-      _version = result.version
+    const hasSession = await ensureSession(snapshot)
+    if (!hasSession) {
       backupStatus.value = 'idle'
-    } else {
-      // Version conflict — refetch and retry once
-      const freshSession = await remoteRepository.fetchSessionById(_sessionId)
-      if (freshSession) {
-        _version = freshSession.version
-        const retry = await remoteRepository.pushSessionState(
-          _sessionId,
-          snapshot,
-          _version,
-        )
-        if (retry.success) {
-          _version = retry.version
-        }
+      return
+    }
+
+    const hasFreshVersion = await syncBackupVersion()
+    if (!hasFreshVersion) {
+      const recreatedSession = await ensureSession(snapshot)
+      if (!recreatedSession) {
+        backupStatus.value = 'idle'
+        return
       }
-      backupStatus.value = 'idle'
+      const refreshedVersion = await syncBackupVersion()
+      if (!refreshedVersion) {
+        backupStatus.value = 'idle'
+        return
+      }
     }
+
+    await pushBackupSnapshot(snapshot)
+    backupStatus.value = 'idle'
   } catch (err) {
     console.error('Solo backup failed:', err)
     backupStatus.value = 'error'

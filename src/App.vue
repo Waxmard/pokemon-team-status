@@ -9,7 +9,22 @@
         <button v-if="!isSoloMode" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
       </div>
       <h1 class="app-title">
-        <span v-if="isSoloMode" class="title-accent">{{ appTitle }}</span>
+        <span v-if="isSoloMode" class="title-player-row">
+          <label class="title-player-field">
+            <input
+              ref="soloRunNameInput"
+              :value="soloRunDisplayName"
+              :size="Math.max(soloRunDisplayName.length, 1)"
+              class="title-player-input"
+              type="text"
+              maxlength="32"
+              placeholder="Weakness Calculator"
+              aria-label="Solo run name"
+              @blur="handleRenameSoloRun"
+              @focus="soloRunNameInput?.select()"
+            />
+          </label>
+        </span>
         <span v-else class="title-player-row">
           <label class="title-player-field">
             <input
@@ -128,26 +143,15 @@
               </button>
             </template>
           </div>
-          <div v-if="isSoloMode && inactiveSoloRuns.length > 0" class="reset-option-group">
-            <div class="my-runs-header">Switch Solo Run</div>
+          <div v-if="allInactiveRuns.length > 0" class="reset-option-group">
+            <div class="my-runs-header">Switch Run</div>
             <button
-              v-for="run in inactiveSoloRuns"
+              v-for="run in allInactiveRuns"
               :key="run.id"
               class="reset-option"
-              @click="handleSwitchSoloRun(run.id)"
+              @click="run.type === 'solo' ? handleSwitchSoloRun(run.id) : handleSwitchRun(run.id)"
             >
-              {{ run.name || `Solo Run (${run.teamCount || 0})` }}
-            </button>
-          </div>
-          <div v-if="inactiveRuns.length > 0" class="reset-option-group">
-            <div class="my-runs-header">Switch Soul Link Run</div>
-            <button
-              v-for="run in inactiveRuns"
-              :key="run.id"
-              class="reset-option"
-              @click="handleSwitchRun(run.id)"
-            >
-              {{ run.name || run.playerNames?.join(' & ') || 'Soul Link Run' }}
+              {{ run.label }}
             </button>
           </div>
         </div>
@@ -265,6 +269,7 @@ import {
   mapSoloRunStateToPersistedSnapshot,
   RUN_MODES,
 } from './utils/runSnapshot.js'
+import { resolveMostRecentRunMode } from './utils/runStartup.js'
 import {
   adaptSoulLinkMemberToUiMember,
   buildSoulLinkPlayerBoard,
@@ -343,6 +348,7 @@ const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
 const {
   runList,
   activeRunId,
+  activeRunSummary,
   loadRunIndex,
   saveCurrentRunToIndex,
   switchToRun,
@@ -359,6 +365,7 @@ const {
 const {
   runList: soloRunList,
   activeRunId: soloActiveRunId,
+  activeRunSummary: soloActiveRunSummary,
   loadRunIndex: loadSoloRunIndex,
   saveCurrentRunToIndex: saveSoloRunToIndex,
   switchToRun: switchToSoloRun,
@@ -372,6 +379,7 @@ const deleteRunTarget = ref(null)
 const showSoulLinkDialog = ref(false)
 const deathBoxMode = ref(false)
 const playerNameInput = ref(null)
+const soloRunNameInput = ref(null)
 const joinCodeInput = ref(null)
 const joinCodeValue = ref('')
 const showJoinInput = ref(false)
@@ -386,6 +394,13 @@ const appTitle = computed(() =>
   isSoloMode.value ? 'Weakness Calculator' : viewedSoulLinkPlayerName.value,
 )
 
+const soloRunDisplayName = computed(() => {
+  const activeRun = soloRunList.value.find(
+    (r) => r.id === soloActiveRunId.value,
+  )
+  return activeRun?.name || 'Weakness Calculator'
+})
+
 const activeGenerationRules = computed(() =>
   isSoloMode.value ? generationRules.value : soulLinkGenerationRules.value,
 )
@@ -397,6 +412,20 @@ const inactiveRuns = computed(() =>
 const inactiveSoloRuns = computed(() =>
   soloRunList.value.filter((r) => r.id !== soloActiveRunId.value),
 )
+
+const allInactiveRuns = computed(() => {
+  const solo = inactiveSoloRuns.value.map((r) => ({
+    ...r,
+    type: 'solo',
+    label: r.name || `Solo Run (${r.teamCount || 0})`,
+  }))
+  const soulLink = inactiveRuns.value.map((r) => ({
+    ...r,
+    type: 'soul-link',
+    label: r.name || r.playerNames?.join(' & ') || 'Soul Link Run',
+  }))
+  return [...solo, ...soulLink]
+})
 
 const isSoloDeleteTarget = computed(() =>
   soloRunList.value.some((r) => r.id === deleteRunTarget.value),
@@ -574,6 +603,19 @@ function handleRenameViewedSoulLinkPlayerInput(event) {
   handleRenameViewedSoulLinkPlayer(event.target.value)
 }
 
+function handleRenameSoloRun(event) {
+  const trimmed = event.target.value.trim()
+  if (!soloActiveRunId.value) return
+  const currentName = soloRunDisplayName.value
+  // If cleared or set to default, store null (shows placeholder)
+  const nextName =
+    !trimmed || trimmed === 'Weakness Calculator' ? null : trimmed
+  const currentStored =
+    currentName === 'Weakness Calculator' ? null : currentName
+  if (nextName === currentStored) return
+  renameSoloRun(soloActiveRunId.value, nextName)
+}
+
 function selectPlayerNameInput() {
   playerNameInput.value?.select()
 }
@@ -604,10 +646,10 @@ async function handleJoinSession() {
 }
 
 async function handleSwitchRun(runId) {
-  if (runId === activeRunId.value) return
+  if (runId === activeRunId.value && !isSoloMode.value) return
   await clearTransientUiState()
   unsubscribeSoulLink()
-  await switchToRun(runId, buildSoulLinkSnapshot())
+  await switchToRun(runId, isSoloMode.value ? null : buildSoulLinkSnapshot())
   await loadSoulLinkData()
   setCurrentRunMode(RUN_MODES.SOUL_LINK)
 
@@ -1154,13 +1196,20 @@ function buildSoloSnapshot() {
 }
 
 async function handleSwitchSoloRun(runId) {
-  if (runId === soloActiveRunId.value) return
+  if (runId === soloActiveRunId.value && isSoloMode.value) return
   await clearTransientUiState()
-  const snapshot = await switchToSoloRun(runId, buildSoloSnapshot())
+  unsubscribeSoulLink()
+  const snapshot = await switchToSoloRun(
+    runId,
+    isSoloMode.value ? buildSoloSnapshot() : null,
+  )
   if (snapshot) {
     await loadData()
   }
+  setCurrentRunMode(RUN_MODES.SOLO)
+  deathBoxMode.value = false
   showResetDialog.value = false
+  showSoulLinkDialog.value = false
 }
 
 async function handleDeleteSoloRun(runId) {
@@ -1201,15 +1250,33 @@ function handleVisibilityChange() {
   )
 }
 
+async function restoreMostRecentRun(preferredMode) {
+  await Promise.all([loadRunIndex(), loadSoloRunIndex()])
+
+  const startupMode = resolveMostRecentRunMode({
+    preferredMode,
+    soloRun: soloActiveRunSummary.value,
+    soulLinkRun: activeRunSummary.value,
+  })
+
+  if (startupMode === RUN_MODES.SOUL_LINK && activeRunId.value) {
+    await switchToRun(activeRunId.value, null)
+    setCurrentRunMode(RUN_MODES.SOUL_LINK)
+    await loadSoulLinkData()
+    return RUN_MODES.SOUL_LINK
+  }
+
+  if (soloActiveRunId.value) {
+    await switchToSoloRun(soloActiveRunId.value, null)
+  }
+
+  setCurrentRunMode(RUN_MODES.SOLO)
+  await loadData()
+  return RUN_MODES.SOLO
+}
+
 onMounted(async () => {
   document.addEventListener('visibilitychange', handleVisibilityChange)
-
-  loadRunIndex().catch((err) =>
-    console.error('Failed to load soul link run index:', err),
-  )
-  loadSoloRunIndex().catch((err) =>
-    console.error('Failed to load solo run index:', err),
-  )
 
   const initialRunMode = loadCurrentRunMode()
 
@@ -1219,14 +1286,12 @@ onMounted(async () => {
     )
   }
 
-  if (initialRunMode === RUN_MODES.SOLO) {
-    loadData()
-    return
-  }
+  const startupMode = await restoreMostRecentRun(initialRunMode)
 
-  await loadSoulLinkData()
-
-  if (soulLinkSessionMetadata.value?.sessionId) {
+  if (
+    startupMode === RUN_MODES.SOUL_LINK &&
+    soulLinkSessionMetadata.value?.sessionId
+  ) {
     syncSoulLinkSession()
       .then(() => subscribeSoulLink())
       .catch((err) => console.error('Auto-sync on mount failed:', err))

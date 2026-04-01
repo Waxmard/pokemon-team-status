@@ -30,6 +30,10 @@ export function useSoulLinkRunManager() {
   })
 
   const activeRunId = computed(() => runIndex.value?.activeRunId ?? null)
+  const activeRunSummary = computed(
+    () =>
+      runIndex.value?.runs.find((run) => run.id === activeRunId.value) ?? null,
+  )
 
   async function loadRunIndex() {
     const index = await repository.loadSoulLinkRunIndex()
@@ -133,6 +137,7 @@ export function useSoulLinkRunManager() {
   return {
     runList,
     activeRunId,
+    activeRunSummary,
     loadRunIndex,
     saveCurrentRunToIndex,
     switchToRun,
