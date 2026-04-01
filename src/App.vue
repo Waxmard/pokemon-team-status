@@ -6,7 +6,8 @@
       </div>
       <div class="header-btns">
         <button class="header-btn" @click="showResetDialog = true" aria-label="Options">✦</button>
-        <button v-if="!isSoloMode" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
+        <button class="header-btn" @click="showSoloDialog = true" aria-label="Solo Run">⚔</button>
+        <button class="header-btn" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
       </div>
       <h1 class="app-title">
         <span v-if="isSoloMode" class="title-player-row">
@@ -43,8 +44,8 @@
       </h1>
 
       <template v-if="isSoloMode">
-        <TeamSection :team="team" :box="box" :dead="dead" :has-death-box="true" @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap"
-          :generation-rules="generationRules"
+        <TeamSection :team="team" :box="box" :dead="dead" :has-death-box="true" :death-box-mode="deathBoxMode"
+          @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap" :generation-rules="generationRules"
           @deleteTeamPokemon="deleteTeamPokemon" @deleteBoxPokemon="deleteBoxPokemon" @cancelSwap="handleCancelSwap"
           @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion"
           @killPokemon="handleSoloKillPokemon" @revivePokemon="handleSoloRevivePokemon"
@@ -92,16 +93,11 @@
             {{ generationRulesLabel }}
           </button>
           <div class="reset-option-group">
-            <button class="reset-option" @click="resetPokemon">
-              Reset Team & Box
-            </button>
-            <button class="reset-option" @click="resetGyms">
-              Reset Gyms
-            </button>
-          </div>
-          <div class="reset-option-group">
             <button class="reset-option" @click="switchToSoloMode">
               Solo Mode
+            </button>
+            <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
+              New Solo Run
             </button>
             <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
               New Soul Link Run
@@ -125,21 +121,6 @@
               </template>
               <button v-else class="reset-option" @click="showJoinInput = true">
                 Join Soul Link Run
-              </button>
-            </template>
-          </div>
-          <div v-if="isSoloMode" class="reset-option-group">
-            <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
-              New Solo Run
-            </button>
-            <template v-if="isSupabaseAvailable">
-              <button class="reset-option" @click="handleSoloRestore" :disabled="soloBackupStatus === 'restoring'">
-                {{ soloBackupStatus === 'restoring' ? 'Restoring...' : 'Restore from Cloud' }}
-              </button>
-            </template>
-            <template v-if="soloActiveRunId">
-              <button class="reset-option reset-option-danger" @click="deleteRunTarget = soloActiveRunId; showResetDialog = false">
-                Delete This Run
               </button>
             </template>
           </div>
@@ -224,6 +205,14 @@
           <button class="reset-option" @click="handleViewDeathBox">
             {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
           </button>
+          <div class="reset-option-group">
+            <button class="reset-option" @click="resetPokemon">
+              Reset Team & Box
+            </button>
+            <button class="reset-option" @click="resetGyms">
+              Reset Gyms
+            </button>
+          </div>
           <div v-if="activeRunId" class="reset-option-group">
             <button class="reset-option reset-option-danger" @click="deleteRunTarget = activeRunId; showSoulLinkDialog = false">
               Delete This Run
@@ -231,6 +220,37 @@
           </div>
         </div>
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
+      </div>
+    </div>
+    </Transition>
+  </Teleport>
+
+  <Teleport to="body">
+    <Transition name="dialog">
+    <div v-if="showSoloDialog" class="reset-overlay" @click.self="showSoloDialog = false">
+      <div class="reset-dialog">
+        <h3 class="reset-dialog-title">Solo Run</h3>
+        <div class="reset-dialog-options">
+          <button class="reset-option" @click="handleSoloViewDeathBox">
+            {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
+          </button>
+          <div class="reset-option-group">
+            <button class="reset-option" @click="resetPokemon">
+              Reset Team & Box
+            </button>
+            <button class="reset-option" @click="resetGyms">
+              Reset Gyms
+            </button>
+          </div>
+          <template v-if="soloActiveRunId">
+            <div class="reset-option-group">
+              <button class="reset-option reset-option-danger" @click="deleteRunTarget = soloActiveRunId; showSoloDialog = false">
+                Delete This Run
+              </button>
+            </div>
+          </template>
+        </div>
+        <button class="reset-dialog-cancel" @click="showSoloDialog = false">✕</button>
       </div>
     </div>
     </Transition>
@@ -253,7 +273,6 @@ import { useSoulLinkRunManager } from './composables/useSoulLinkRunManager.js'
 import { useSoulLinkStore } from './composables/useSoulLinkStore.js'
 import { getPokemonDataForRules } from './data/pokemon.js'
 import { GENERATION_RULESETS, getAllTypesForRules } from './data/types.js'
-import { createLocalSoloRunRepository } from './services/localRunRepository.js'
 import { supabase } from './services/supabaseClient.js'
 import { themeOverrides } from './theme/colors.js'
 import {
@@ -356,11 +375,7 @@ const {
   deleteRun,
 } = useSoulLinkRunManager()
 
-const {
-  backupStatus: soloBackupStatus,
-  initBackupSession,
-  restore: restoreSoloBackup,
-} = useSoloBackup()
+const { initBackupSession } = useSoloBackup()
 
 const {
   runList: soloRunList,
@@ -375,6 +390,7 @@ const {
 } = useSoloRunManager()
 
 const showResetDialog = ref(false)
+const showSoloDialog = ref(false)
 const deleteRunTarget = ref(null)
 const showSoulLinkDialog = ref(false)
 const deathBoxMode = ref(false)
@@ -446,12 +462,12 @@ function retryLoad() {
 function resetPokemon() {
   if (isSoloMode.value) {
     resetTeamAndBox()
-    cancel()
   } else {
     resetPlayerRoster(viewedSoulLinkPlayerId.value)
-    cancel()
   }
-  showResetDialog.value = false
+  cancel()
+  showSoloDialog.value = false
+  showSoulLinkDialog.value = false
 }
 
 function resetGyms() {
@@ -460,7 +476,8 @@ function resetGyms() {
   } else {
     resetPlayerGymProgress(viewedSoulLinkPlayerId.value)
   }
-  showResetDialog.value = false
+  showSoloDialog.value = false
+  showSoulLinkDialog.value = false
 }
 
 function toggleGenerationRules() {
@@ -576,6 +593,11 @@ function handleSoulLinkConfirmDraft() {
 function handleViewDeathBox() {
   deathBoxMode.value = !deathBoxMode.value
   showSoulLinkDialog.value = false
+}
+
+function handleSoloViewDeathBox() {
+  deathBoxMode.value = !deathBoxMode.value
+  showSoloDialog.value = false
 }
 
 function handleViewOtherSoulLinkPlayer() {
@@ -1226,23 +1248,6 @@ async function handleDeleteSoloRun(runId) {
   }
 }
 
-async function handleSoloRestore() {
-  const snapshot = await restoreSoloBackup()
-  if (!snapshot) return
-  // Write restored snapshot to local stores and reload
-  const repo = createLocalSoloRunRepository()
-  await Promise.all([
-    repo.persistSoloTeam(snapshot.team ?? []),
-    repo.persistSoloBox(snapshot.box ?? []),
-    repo.persistSoloDead(snapshot.dead ?? []),
-    repo.persistSoloDefeatedGyms(snapshot.defeatedGyms ?? []),
-    repo.persistSoloPinnedGym(snapshot.pinnedGym ?? null),
-    repo.persistSoloGenerationRules(snapshot.generationRules ?? null),
-  ])
-  await loadData()
-  showResetDialog.value = false
-}
-
 function handleVisibilityChange() {
   if (document.hidden || isSoloMode.value || !hasRemoteSession.value) return
   syncSoulLinkSession().catch((err) =>
@@ -1406,17 +1411,6 @@ if (import.meta.env.DEV) {
   color: rgba(139, 92, 246, 1);
 }
 
-.header-btn-link {
-  font-size: 0.6rem;
-  filter: grayscale(1);
-  opacity: 0.5;
-}
-
-.header-btn-link:hover,
-.header-btn-link:active {
-  filter: grayscale(0);
-  opacity: 1;
-}
 
 @media (orientation: landscape) and (max-height: 500px) {
   .app-container {
