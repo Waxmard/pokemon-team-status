@@ -5,8 +5,8 @@
         Failed to load saved data. Tap to retry.
       </div>
       <div class="header-btns">
-        <button class="header-btn" @click="showResetDialog = true" aria-label="Options">✦</button>
-        <button class="header-btn" @click="showSoloDialog = true" aria-label="Solo Run">⚔</button>
+        <button class="header-btn" @click="showResetDialog = true" aria-label="Options">⚙️</button>
+        <button class="header-btn" @click="showSoloDialog = true" aria-label="Solo Run">⚔️</button>
         <button class="header-btn" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
       </div>
       <h1 class="app-title">
@@ -92,38 +92,6 @@
           <button class="reset-option" @click="toggleGenerationRules">
             {{ generationRulesLabel }}
           </button>
-          <div class="reset-option-group">
-            <button class="reset-option" @click="switchToSoloMode">
-              Solo Mode
-            </button>
-            <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
-              New Solo Run
-            </button>
-            <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
-              New Soul Link Run
-            </button>
-            <template v-if="isSupabaseAvailable">
-              <template v-if="showJoinInput">
-                <div class="session-input-row">
-                  <input
-                    ref="joinCodeInput"
-                    v-model="joinCodeValue"
-                    class="session-code-input"
-                    type="text"
-                    maxlength="6"
-                    placeholder="Invite code"
-                    @keydown.enter="handleJoinSession"
-                  />
-                  <button class="reset-option session-confirm-btn" @click="handleJoinSession" :disabled="sessionActionPending">
-                    Join
-                  </button>
-                </div>
-              </template>
-              <button v-else class="reset-option" @click="showJoinInput = true">
-                Join Soul Link Run
-              </button>
-            </template>
-          </div>
           <div v-if="allInactiveRuns.length > 0" class="reset-option-group">
             <div class="my-runs-header">Switch Run</div>
             <button
@@ -206,6 +174,32 @@
             {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
           </button>
           <div class="reset-option-group">
+            <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
+              New Soul Link Run
+            </button>
+            <template v-if="isSupabaseAvailable">
+              <template v-if="showJoinInput">
+                <div class="session-input-row">
+                  <input
+                    ref="joinCodeInput"
+                    v-model="joinCodeValue"
+                    class="session-code-input"
+                    type="text"
+                    maxlength="6"
+                    placeholder="Invite code"
+                    @keydown.enter="handleJoinSession"
+                  />
+                  <button class="reset-option session-confirm-btn" @click="handleJoinSession" :disabled="sessionActionPending">
+                    Join
+                  </button>
+                </div>
+              </template>
+              <button v-else class="reset-option" @click="showJoinInput = true">
+                Join Soul Link Run
+              </button>
+            </template>
+          </div>
+          <div class="reset-option-group">
             <button class="reset-option" @click="resetPokemon">
               Reset Team & Box
             </button>
@@ -233,6 +227,9 @@
         <div class="reset-dialog-options">
           <button class="reset-option" @click="handleSoloViewDeathBox">
             {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
+          </button>
+          <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
+            New Solo Run
           </button>
           <div class="reset-option-group">
             <button class="reset-option" @click="resetPokemon">
@@ -659,7 +656,7 @@ async function handleJoinSession() {
     subscribeSoulLink()
     showJoinInput.value = false
     joinCodeValue.value = ''
-    showResetDialog.value = false
+    showSoulLinkDialog.value = false
   } catch (error) {
     console.error('Failed to join session:', error)
   } finally {
@@ -864,6 +861,7 @@ async function startNewRun(mode) {
   }
 
   showResetDialog.value = false
+  showSoloDialog.value = false
   showSoulLinkDialog.value = false
 }
 
