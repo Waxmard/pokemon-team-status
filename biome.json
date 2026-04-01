@@ -27,6 +27,14 @@
         "noExcessiveCognitiveComplexity": "warn"
       },
       "style": {
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "structuredClone": "structuredClone fails on Vue reactive objects. Use cloneValue() from src/utils/clone.js instead."
+            }
+          }
+        },
         "useNumberNamespace": "warn",
         "useNodejsImportProtocol": "warn",
         "noNegationElse": "warn"
