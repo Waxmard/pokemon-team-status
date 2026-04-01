@@ -28,10 +28,10 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=pokemon-team-status --branch=${{ github.head_ref }}
+          command: pages deploy dist --project-name=pokemon-team-status --branch=preview
       - name: Comment preview URL
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: deploy-preview
           message: |
-            Preview deployed: https://${{ github.head_ref }}.pokemon-team-status.pages.dev
+            Preview deployed: https://preview.pokemon-team-status.pages.dev
