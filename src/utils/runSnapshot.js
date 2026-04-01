@@ -18,6 +18,7 @@ function createDefaultSoloProgress() {
   return {
     defeatedGyms: [],
     pinnedGym: null,
+    updatedAt: null,
   }
 }
 
@@ -35,6 +36,7 @@ export function createDefaultSoloRunState(
     team: [],
     box: [],
     dead: [],
+    _tombstones: [],
     progress: createDefaultSoloProgress(),
     rules: {
       generation: normalizeGenerationRules(generationRules),
@@ -100,12 +102,15 @@ export function sanitizePersistedSoloRunSnapshot(snapshot) {
       snapshot.dead ?? [],
       generationRules,
     ),
+    _tombstones: snapshot._tombstones ?? [],
     defeatedGyms: sanitizeDefeatedGymsForRules(
       snapshot.defeatedGyms,
       generationRules,
     ),
     pinnedGym: sanitizePinnedGymForRules(snapshot.pinnedGym, generationRules),
+    progressUpdatedAt: snapshot.progressUpdatedAt ?? null,
     generationRules,
+    generationRulesUpdatedAt: snapshot.generationRulesUpdatedAt ?? null,
   }
 }
 
@@ -117,9 +122,11 @@ export function mapPersistedSoloSnapshotToRunState(snapshot) {
     team: sanitizedSnapshot.team,
     box: sanitizedSnapshot.box,
     dead: sanitizedSnapshot.dead,
+    _tombstones: sanitizedSnapshot._tombstones,
     progress: {
       defeatedGyms: sanitizedSnapshot.defeatedGyms,
       pinnedGym: sanitizedSnapshot.pinnedGym,
+      updatedAt: sanitizedSnapshot.progressUpdatedAt,
     },
   }
 }
@@ -134,8 +141,11 @@ export function mapSoloRunStateToPersistedSnapshot(runState) {
     team: soloRunState.team,
     box: soloRunState.box,
     dead: soloRunState.dead,
+    _tombstones: soloRunState._tombstones ?? [],
     defeatedGyms: soloRunState.progress.defeatedGyms,
     pinnedGym: soloRunState.progress.pinnedGym,
+    progressUpdatedAt: soloRunState.progress.updatedAt ?? null,
     generationRules: soloRunState.rules.generation,
+    generationRulesUpdatedAt: soloRunState.rules.generationUpdatedAt ?? null,
   }
 }

@@ -10,18 +10,27 @@ import {
   normalizeGenerationRules,
   sanitizePersistedSoloRunSnapshot,
 } from '../utils/runSnapshot.js'
+import { migrateLegacySoloSnapshot } from '../utils/soloMergeModel.js'
 import {
   prefetchAllSprites,
   prefetchBerrySprites,
   prefetchTypeIcons,
 } from '../utils/spriteCache.js'
-import { useSoloBackup } from './useSoloBackup.js'
 import { useSoloRunManager } from './useSoloRunManager.js'
 
 const repository = createLocalSoloRunRepository()
-const { scheduleBackup } = useSoloBackup()
 const { persistActiveRunSnapshot } = useSoloRunManager()
 let queuedPersist = Promise.resolve()
+
+let _scheduleSync = null
+
+export function registerSoloSyncScheduler(scheduleFn) {
+  _scheduleSync = scheduleFn
+}
+
+function scheduleSync() {
+  _scheduleSync?.()
+}
 
 function hasStateChanged(a, b) {
   return JSON.stringify(a) !== JSON.stringify(b)
@@ -32,7 +41,8 @@ function getSoloRunState(context) {
 }
 
 function setRunState(snapshot) {
-  runState.value = mapPersistedSoloSnapshotToRunState(snapshot)
+  const migrated = migrateLegacySoloSnapshot(snapshot)
+  runState.value = mapPersistedSoloSnapshotToRunState(migrated)
 }
 
 function enqueueSoloPersist(operation) {
@@ -96,6 +106,9 @@ const pinnedGym = computed(
   () => getSoloRunState('Accessing the pinned gym').progress.pinnedGym,
 )
 const dead = computed(() => getSoloRunState('Accessing dead').dead)
+const tombstones = computed(
+  () => getSoloRunState('Accessing tombstones')._tombstones ?? [],
+)
 const generationRules = computed(
   () => getSoloRunState('Accessing generation rules').rules.generation,
 )
@@ -113,7 +126,7 @@ async function persistDead(newDead) {
     () => repository.persistSoloDead(newDead),
     nextSnapshot,
   )
-  scheduleBackup()
+  scheduleSync()
 }
 
 async function persistGenerationRules(newRules) {
@@ -122,6 +135,7 @@ async function persistGenerationRules(newRules) {
   const sanitizedSnapshot = sanitizePersistedSoloRunSnapshot({
     ...mapSoloRunStateToPersistedSnapshot(soloRunState),
     generationRules: nextRules,
+    generationRulesUpdatedAt: Date.now(),
   })
 
   setRunState(sanitizedSnapshot)
@@ -138,7 +152,7 @@ async function persistGenerationRules(newRules) {
       ]),
     sanitizedSnapshot,
   )
-  scheduleBackup()
+  scheduleSync()
 }
 
 export function useRunStore() {
@@ -186,7 +200,7 @@ export function useRunStore() {
       () => repository.persistSoloTeam(newTeam),
       nextSnapshot,
     )
-    scheduleBackup()
+    scheduleSync()
   }
 
   async function persistBox(newBox) {
@@ -202,7 +216,7 @@ export function useRunStore() {
       () => repository.persistSoloBox(newBox),
       nextSnapshot,
     )
-    scheduleBackup()
+    scheduleSync()
   }
 
   async function persistDefeatedGyms(newGyms) {
@@ -212,6 +226,7 @@ export function useRunStore() {
       progress: {
         ...soloRunState.progress,
         defeatedGyms: newGyms,
+        updatedAt: Date.now(),
       },
     }
     const nextSnapshot = mapSoloRunStateToPersistedSnapshot(nextRunState)
@@ -221,7 +236,7 @@ export function useRunStore() {
       () => repository.persistSoloDefeatedGyms(newGyms),
       nextSnapshot,
     )
-    scheduleBackup()
+    scheduleSync()
   }
 
   async function persistPinnedGym(gymType) {
@@ -231,6 +246,7 @@ export function useRunStore() {
       progress: {
         ...soloRunState.progress,
         pinnedGym: gymType,
+        updatedAt: Date.now(),
       },
     }
     const nextSnapshot = mapSoloRunStateToPersistedSnapshot(nextRunState)
@@ -240,7 +256,7 @@ export function useRunStore() {
       () => repository.persistSoloPinnedGym(gymType),
       nextSnapshot,
     )
-    scheduleBackup()
+    scheduleSync()
   }
 
   async function resetTeamAndBox() {
@@ -270,42 +286,57 @@ export function useRunStore() {
     )
   }
 
+  function addTombstone(memberId) {
+    const soloRunState = getSoloRunState('Adding tombstone')
+    const nextTombstones = [
+      ...(soloRunState._tombstones ?? []),
+      { memberId, deletedAt: Date.now() },
+    ]
+    runState.value = { ...soloRunState, _tombstones: nextTombstones }
+  }
+
   async function deleteTeamPokemon(id) {
+    addTombstone(id)
     await persistTeam(team.value.filter((pokemon) => pokemon.id !== id))
   }
 
   async function deleteBoxPokemon(id) {
+    addTombstone(id)
     await persistBox(box.value.filter((pokemon) => pokemon.id !== id))
   }
 
   async function killTeamPokemon(id) {
     const pokemon = team.value.find((p) => p.id === id)
     if (!pokemon) return
+    const stamped = { ...pokemon, updatedAt: Date.now() }
     await Promise.all([
       persistTeam(team.value.filter((p) => p.id !== id)),
-      persistDead([...dead.value, pokemon]),
+      persistDead([...dead.value, stamped]),
     ])
   }
 
   async function killBoxPokemon(id) {
     const pokemon = box.value.find((p) => p.id === id)
     if (!pokemon) return
+    const stamped = { ...pokemon, updatedAt: Date.now() }
     await Promise.all([
       persistBox(box.value.filter((p) => p.id !== id)),
-      persistDead([...dead.value, pokemon]),
+      persistDead([...dead.value, stamped]),
     ])
   }
 
   async function revivePokemon(id) {
     const pokemon = dead.value.find((p) => p.id === id)
     if (!pokemon) return
+    const stamped = { ...pokemon, updatedAt: Date.now() }
     await Promise.all([
       persistDead(dead.value.filter((p) => p.id !== id)),
-      persistBox([...box.value, pokemon]),
+      persistBox([...box.value, stamped]),
     ])
   }
 
   async function deleteDeadPokemon(id) {
+    addTombstone(id)
     await persistDead(dead.value.filter((p) => p.id !== id))
   }
 
@@ -315,6 +346,23 @@ export function useRunStore() {
 
   async function undefeatGym(type) {
     await persistDefeatedGyms(defeatedGyms.value.filter((gym) => gym !== type))
+  }
+
+  function applyRemoteSnapshot(snapshot) {
+    const migrated = migrateLegacySoloSnapshot(snapshot)
+    const sanitized = sanitizePersistedSoloRunSnapshot(migrated)
+    runState.value = mapPersistedSoloSnapshotToRunState(sanitized)
+
+    enqueueSoloPersist(() =>
+      Promise.all([
+        repository.persistSoloTeam(sanitized.team),
+        repository.persistSoloBox(sanitized.box),
+        repository.persistSoloDead(sanitized.dead),
+        repository.persistSoloDefeatedGyms(sanitized.defeatedGyms),
+        repository.persistSoloPinnedGym(sanitized.pinnedGym),
+        repository.persistSoloGenerationRules(sanitized.generationRules),
+      ]),
+    ).catch(() => {})
   }
 
   return {
@@ -344,5 +392,6 @@ export function useRunStore() {
     deleteDeadPokemon,
     defeatGym,
     undefeatGym,
+    applyRemoteSnapshot,
   }
 }

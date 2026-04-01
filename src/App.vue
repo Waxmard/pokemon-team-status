@@ -244,15 +244,46 @@
       <div class="reset-dialog">
         <h3 class="reset-dialog-title">Solo Run</h3>
         <div class="reset-dialog-options">
+          <DialogActionSection v-if="hasSoloRemoteSession && isSoloSyncAvailable">
+            <div class="reset-option-group">
+              <div class="session-code-display" @click="copySoloInviteCode">
+                {{ soloInviteCode }}
+                <span class="session-code-hint">{{ soloCopyLabel }}</span>
+              </div>
+            </div>
+          </DialogActionSection>
           <DialogActionSection>
             <button class="reset-option" @click="handleSoloViewDeathBox">
               {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
             </button>
           </DialogActionSection>
           <DialogActionSection>
-            <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
-              New Solo Run
-            </button>
+            <div class="reset-option-group">
+              <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
+                New Solo Run
+              </button>
+              <template v-if="isSoloSyncAvailable">
+                <template v-if="showSoloJoinInput">
+                  <div class="session-input-row">
+                    <input
+                      ref="soloJoinCodeInput"
+                      v-model="soloJoinCodeValue"
+                      class="session-code-input"
+                      type="text"
+                      maxlength="6"
+                      placeholder="Invite code"
+                      @keydown.enter="handleSoloJoinSession"
+                    />
+                    <button class="reset-option session-confirm-btn" @click="handleSoloJoinSession" :disabled="sessionActionPending">
+                      Join
+                    </button>
+                  </div>
+                </template>
+                <button v-else class="reset-option" @click="showSoloJoinInput = true">
+                  Join Solo Run
+                </button>
+              </template>
+            </div>
           </DialogActionSection>
         </div>
         <button class="reset-dialog-cancel" @click="showSoloDialog = false">✕</button>
@@ -271,9 +302,12 @@ import SoulLinkShell from './components/SoulLinkShell.vue'
 import TeamSection from './components/TeamSection.vue'
 import { useDraftAction } from './composables/useDraftAction.js'
 import { useRunModeStore } from './composables/useRunModeStore.js'
-import { useRunStore } from './composables/useRunStore.js'
-import { useSoloBackup } from './composables/useSoloBackup.js'
+import {
+  registerSoloSyncScheduler,
+  useRunStore,
+} from './composables/useRunStore.js'
 import { useSoloRunManager } from './composables/useSoloRunManager.js'
+import { useSoloSync } from './composables/useSoloSync.js'
 import { useSoulLinkHandlers } from './composables/useSoulLinkHandlers.js'
 import { useSoulLinkRunManager } from './composables/useSoulLinkRunManager.js'
 import { useSoulLinkStore } from './composables/useSoulLinkStore.js'
@@ -326,6 +360,7 @@ const {
   defeatGym,
   undefeatGym,
   persistPinnedGym,
+  applyRemoteSnapshot: applySoloRemoteSnapshot,
 } = useRunStore()
 
 const {
@@ -381,7 +416,21 @@ const {
   deleteRun,
 } = useSoulLinkRunManager()
 
-const { initBackupSession } = useSoloBackup()
+const {
+  initSyncSession: initSoloSyncSession,
+  syncSession: syncSoloSession,
+  subscribeToSession: subscribeSolo,
+  unsubscribeFromSession: unsubscribeSolo,
+  scheduleAutoSync: scheduleSoloAutoSync,
+  inviteCode: soloInviteCode,
+  sessionId: soloSessionId,
+  isAvailable: isSoloSyncAvailable,
+  createSession: createSoloSession,
+  joinSession: joinSoloSession,
+  deleteRemoteSession: deleteSoloRemoteSession,
+} = useSoloSync()
+
+registerSoloSyncScheduler(scheduleSoloAutoSync)
 
 const {
   runList: soloRunList,
@@ -405,8 +454,12 @@ const soloRunNameInput = ref(null)
 const joinCodeInput = ref(null)
 const joinCodeValue = ref('')
 const showJoinInput = ref(false)
+const soloJoinCodeInput = ref(null)
+const soloJoinCodeValue = ref('')
+const showSoloJoinInput = ref(false)
 const sessionActionPending = ref(false)
 const copyLabel = ref('tap to copy')
+const soloCopyLabel = ref('tap to copy')
 const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
 const currentActiveRunId = computed(() =>
   isSoloMode.value ? soloActiveRunId.value : activeRunId.value,
@@ -415,6 +468,7 @@ const isSupabaseAvailable = !!supabase
 const hasRemoteSession = computed(
   () => !isSoloMode.value && !!soulLinkSessionMetadata.value?.sessionId,
 )
+const hasSoloRemoteSession = computed(() => !!soloSessionId.value)
 const appTitle = computed(() =>
   isSoloMode.value ? 'Weakness Calculator' : viewedSoulLinkPlayerName.value,
 )
@@ -736,6 +790,54 @@ function copyInviteCode() {
   }
 }
 
+function onSoloCopySuccess() {
+  soloCopyLabel.value = 'copied!'
+  setTimeout(() => {
+    soloCopyLabel.value = 'tap to copy'
+  }, 2000)
+}
+
+function copySoloInviteCode() {
+  const code = soloInviteCode.value
+  if (!code) return
+
+  function tryFallback() {
+    if (fallbackCopy(code)) {
+      onSoloCopySuccess()
+    } else {
+      soloCopyLabel.value = 'copy failed'
+    }
+  }
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard
+      .writeText(code)
+      .then(onSoloCopySuccess)
+      .catch(tryFallback)
+  } else {
+    tryFallback()
+  }
+}
+
+async function handleSoloJoinSession() {
+  const code = soloJoinCodeValue.value.trim()
+  if (!code) return
+  sessionActionPending.value = true
+  try {
+    unsubscribeSolo()
+    await joinSoloSession(code)
+    await loadData()
+    subscribeSolo()
+    showSoloJoinInput.value = false
+    soloJoinCodeValue.value = ''
+    showSoloDialog.value = false
+  } catch (error) {
+    console.error('Failed to join solo session:', error)
+  } finally {
+    sessionActionPending.value = false
+  }
+}
+
 function fallbackCopy(text) {
   const textarea = document.createElement('textarea')
   textarea.value = text
@@ -844,6 +946,7 @@ async function switchToSoloMode() {
 async function startNewRun(mode) {
   await clearTransientUiState()
   unsubscribeSoulLink()
+  unsubscribeSolo()
 
   if (mode === RUN_MODES.SOLO) {
     // Save current solo run before starting a new one
@@ -853,6 +956,16 @@ async function startNewRun(mode) {
     await startNewSoloRun()
     setCurrentRunMode(RUN_MODES.SOLO)
     await registerNewSoloRun(buildSoloSnapshot())
+    if (isSoloSyncAvailable) {
+      initSoloSyncSession(
+        () => buildSoloSnapshot(),
+        (s) => applySoloRemoteSnapshot(s),
+      )
+        .then(() => subscribeSolo())
+        .catch((err) =>
+          console.error('Failed to create solo sync session:', err),
+        )
+    }
   } else {
     if (!isSoloMode.value) {
       await saveCurrentRunToIndex(buildSoulLinkSnapshot())
@@ -1229,6 +1342,7 @@ async function handleSwitchSoloRun(runId) {
   if (runId === soloActiveRunId.value && isSoloMode.value) return
   await clearTransientUiState()
   unsubscribeSoulLink()
+  unsubscribeSolo()
   const snapshot = await switchToSoloRun(
     runId,
     isSoloMode.value ? buildSoloSnapshot() : null,
@@ -1240,6 +1354,14 @@ async function handleSwitchSoloRun(runId) {
   deathBoxMode.value = false
   showResetDialog.value = false
   showSoulLinkDialog.value = false
+  if (isSoloSyncAvailable) {
+    initSoloSyncSession(
+      () => buildSoloSnapshot(),
+      (s) => applySoloRemoteSnapshot(s),
+    )
+      .then(() => subscribeSolo())
+      .catch((err) => console.error('Solo sync after run switch failed:', err))
+  }
 }
 
 async function handleDeleteSoloRun(runId) {
@@ -1257,10 +1379,18 @@ async function handleDeleteSoloRun(runId) {
 }
 
 function handleVisibilityChange() {
-  if (document.hidden || isSoloMode.value || !hasRemoteSession.value) return
-  syncSoulLinkSession().catch((err) =>
-    console.error('Foreground re-sync failed:', err),
-  )
+  if (document.hidden) return
+  if (isSoloMode.value) {
+    if (hasSoloRemoteSession.value) {
+      syncSoloSession().catch((err) =>
+        console.error('Solo foreground re-sync failed:', err),
+      )
+    }
+  } else if (hasRemoteSession.value) {
+    syncSoulLinkSession().catch((err) =>
+      console.error('Foreground re-sync failed:', err),
+    )
+  }
 }
 
 async function restoreMostRecentRun(preferredMode) {
@@ -1293,18 +1423,22 @@ onMounted(async () => {
 
   const initialRunMode = loadCurrentRunMode()
 
-  if (isSupabaseAvailable) {
-    initBackupSession(() => buildSoloSnapshot()).catch((err) =>
-      console.error('Failed to init solo backup session:', err),
-    )
+  if (isSoloSyncAvailable) {
+    initSoloSyncSession(
+      () => buildSoloSnapshot(),
+      (snapshot) => applySoloRemoteSnapshot(snapshot),
+    ).catch((err) => console.error('Failed to init solo sync session:', err))
   }
 
   const startupMode = await restoreMostRecentRun(initialRunMode)
 
-  if (
-    startupMode === RUN_MODES.SOUL_LINK &&
-    soulLinkSessionMetadata.value?.sessionId
-  ) {
+  if (startupMode === RUN_MODES.SOLO) {
+    if (hasSoloRemoteSession.value) {
+      syncSoloSession()
+        .then(() => subscribeSolo())
+        .catch((err) => console.error('Solo auto-sync on mount failed:', err))
+    }
+  } else if (soulLinkSessionMetadata.value?.sessionId) {
     syncSoulLinkSession()
       .then(() => subscribeSoulLink())
       .catch((err) => console.error('Auto-sync on mount failed:', err))
@@ -1313,6 +1447,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange)
+  unsubscribeSolo()
 })
 
 if (import.meta.env.DEV) {

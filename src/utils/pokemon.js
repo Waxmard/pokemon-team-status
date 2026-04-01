@@ -74,6 +74,7 @@ const MEMBER_FIELD_DEFAULTS = {
   nickname: null,
   catchLocation: null,
   pairId: null,
+  updatedAt: null,
 }
 
 export function pickMemberFields(source) {
@@ -97,5 +98,6 @@ export function buildPokemonMember(source, options = {}) {
     types: isDraft ? source.pokemon.types : source.types,
     ...pickMemberFields(source),
     ...(isDraft && { moves: (source.moves ?? []).filter(Boolean) }),
+    updatedAt: Date.now(),
   }
 }

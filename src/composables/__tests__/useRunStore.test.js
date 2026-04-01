@@ -158,9 +158,12 @@ describe('useRunStore', () => {
       team: [{ id: 'team-2', name: 'Treecko' }],
       box: [],
       dead: [],
+      _tombstones: [],
       defeatedGyms: [],
       pinnedGym: null,
+      progressUpdatedAt: null,
       generationRules: DEFAULT_GENERATION_RULESET,
+      generationRulesUpdatedAt: null,
     })
   })
 
@@ -173,9 +176,12 @@ describe('useRunStore', () => {
       team: [{ id: 'team-3', name: 'Torchic' }],
       box: [],
       dead: [],
+      _tombstones: [],
       defeatedGyms: [],
       pinnedGym: null,
+      progressUpdatedAt: null,
       generationRules: DEFAULT_GENERATION_RULESET,
+      generationRulesUpdatedAt: null,
     })
   })
 })
