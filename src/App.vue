@@ -89,35 +89,41 @@
       <div class="reset-dialog">
         <h3 class="reset-dialog-title">Options</h3>
         <div class="reset-dialog-options">
-          <button class="reset-option" @click="toggleGenerationRules">
-            {{ generationRulesLabel }}
-          </button>
-          <div class="reset-option-group">
-            <button class="reset-option" @click="resetPokemon">
-              Reset Team & Box
+          <DialogActionSection>
+            <button class="reset-option" @click="toggleGenerationRules">
+              {{ generationRulesLabel }}
             </button>
-            <button class="reset-option" @click="resetGyms">
-              Reset Gyms
-            </button>
-          </div>
-          <div v-if="allInactiveRuns.length > 0" class="reset-option-group">
-            <div class="my-runs-header">Switch Run</div>
-            <button
-              v-for="run in allInactiveRuns"
-              :key="run.id"
-              class="reset-option"
-              @click="run.type === 'solo' ? handleSwitchSoloRun(run.id) : handleSwitchRun(run.id)"
-            >
-              {{ run.label }}
-            </button>
-          </div>
-          <template v-if="currentActiveRunId">
+          </DialogActionSection>
+          <DialogActionSection v-if="allInactiveRuns.length > 0">
+            <div class="reset-option-group">
+              <div class="my-runs-header">Switch Run</div>
+              <button
+                v-for="run in allInactiveRuns"
+                :key="run.id"
+                class="reset-option"
+                @click="run.type === 'solo' ? handleSwitchSoloRun(run.id) : handleSwitchRun(run.id)"
+              >
+                {{ run.label }}
+              </button>
+            </div>
+          </DialogActionSection>
+          <DialogActionSection>
+            <div class="reset-option-group">
+              <button class="reset-option" @click="resetPokemon">
+                Reset Team & Box
+              </button>
+              <button class="reset-option" @click="resetGyms">
+                Reset Gyms
+              </button>
+            </div>
+          </DialogActionSection>
+          <DialogActionSection v-if="currentActiveRunId">
             <div class="reset-option-group">
               <button class="reset-option reset-option-danger" @click="deleteRunTarget = currentActiveRunId; showResetDialog = false">
                 Delete This Run
               </button>
             </div>
-          </template>
+          </DialogActionSection>
         </div>
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
       </div>
@@ -135,10 +141,12 @@
           This run and all its data will be permanently deleted.
         </p>
         <div class="reset-dialog-options">
-          <button class="reset-option reset-option-danger"
-                  @click="isSoloDeleteTarget ? handleDeleteSoloRun(deleteRunTarget) : handleDeleteRun(deleteRunTarget)">
-            Delete
-          </button>
+          <DialogActionSection>
+            <button class="reset-option reset-option-danger"
+                    @click="isSoloDeleteTarget ? handleDeleteSoloRun(deleteRunTarget) : handleDeleteRun(deleteRunTarget)">
+              Delete
+            </button>
+          </DialogActionSection>
         </div>
         <button class="reset-dialog-cancel"
                 @click="deleteRunTarget = null">✕</button>
@@ -157,10 +165,12 @@
           This linked Pokemon and its partner will both be deleted.
         </p>
         <div class="reset-dialog-options">
-          <button class="reset-option reset-option-danger"
-                  @click="confirmLinkedDelete">
-            Delete Both
-          </button>
+          <DialogActionSection>
+            <button class="reset-option reset-option-danger"
+                    @click="confirmLinkedDelete">
+              Delete Both
+            </button>
+          </DialogActionSection>
         </div>
         <button class="reset-dialog-cancel"
                 @click="linkedDeleteTarget = null">✕</button>
@@ -174,46 +184,53 @@
     <div v-if="showSoulLinkDialog" class="reset-overlay" @click.self="showSoulLinkDialog = false">
       <div class="reset-dialog">
         <h3 class="reset-dialog-title">Soul Link</h3>
-        <div class="reset-dialog-options soul-link-dialog-options">
-          <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
-            View {{ otherSoulLinkPlayerName }}
-          </button>
-          <div v-if="hasRemoteSession && isSupabaseAvailable" class="reset-option-group">
-            <div class="session-code-display" @click="copyInviteCode">
-              {{ soulLinkSessionMetadata.inviteCode }}
-              <span class="session-code-hint">{{ copyLabel }}</span>
+        <div class="reset-dialog-options">
+          <DialogActionSection v-if="hasRemoteSession && isSupabaseAvailable">
+            <div class="reset-option-group">
+              <div class="session-code-display" @click="copyInviteCode">
+                {{ soulLinkSessionMetadata.inviteCode }}
+                <span class="session-code-hint">{{ copyLabel }}</span>
+              </div>
             </div>
-          </div>
-          <hr class="dialog-divider" />
-          <button class="reset-option" @click="handleViewDeathBox">
-            {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
-          </button>
-          <div class="reset-option-group">
-            <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
-              New Soul Link Run
+          </DialogActionSection>
+          <DialogActionSection>
+            <button class="reset-option" @click="handleViewDeathBox">
+              {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
             </button>
-            <template v-if="isSupabaseAvailable">
-              <template v-if="showJoinInput">
-                <div class="session-input-row">
-                  <input
-                    ref="joinCodeInput"
-                    v-model="joinCodeValue"
-                    class="session-code-input"
-                    type="text"
-                    maxlength="6"
-                    placeholder="Invite code"
-                    @keydown.enter="handleJoinSession"
-                  />
-                  <button class="reset-option session-confirm-btn" @click="handleJoinSession" :disabled="sessionActionPending">
-                    Join
-                  </button>
-                </div>
-              </template>
-              <button v-else class="reset-option" @click="showJoinInput = true">
-                Join Soul Link Run
+          </DialogActionSection>
+          <DialogActionSection>
+            <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
+              View {{ otherSoulLinkPlayerName }}
+            </button>
+          </DialogActionSection>
+          <DialogActionSection>
+            <div class="reset-option-group">
+              <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
+                New Soul Link Run
               </button>
-            </template>
-          </div>
+              <template v-if="isSupabaseAvailable">
+                <template v-if="showJoinInput">
+                  <div class="session-input-row">
+                    <input
+                      ref="joinCodeInput"
+                      v-model="joinCodeValue"
+                      class="session-code-input"
+                      type="text"
+                      maxlength="6"
+                      placeholder="Invite code"
+                      @keydown.enter="handleJoinSession"
+                    />
+                    <button class="reset-option session-confirm-btn" @click="handleJoinSession" :disabled="sessionActionPending">
+                      Join
+                    </button>
+                  </div>
+                </template>
+                <button v-else class="reset-option" @click="showJoinInput = true">
+                  Join Soul Link Run
+                </button>
+              </template>
+            </div>
+          </DialogActionSection>
         </div>
         <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
       </div>
@@ -227,12 +244,16 @@
       <div class="reset-dialog">
         <h3 class="reset-dialog-title">Solo Run</h3>
         <div class="reset-dialog-options">
-          <button class="reset-option" @click="handleSoloViewDeathBox">
-            {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
-          </button>
-          <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
-            New Solo Run
-          </button>
+          <DialogActionSection>
+            <button class="reset-option" @click="handleSoloViewDeathBox">
+              {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
+            </button>
+          </DialogActionSection>
+          <DialogActionSection>
+            <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
+              New Solo Run
+            </button>
+          </DialogActionSection>
         </div>
         <button class="reset-dialog-cancel" @click="showSoloDialog = false">✕</button>
       </div>
@@ -244,6 +265,7 @@
 <script setup>
 import { NConfigProvider } from 'naive-ui'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import DialogActionSection from './components/DialogActionSection.vue'
 import GymColumns from './components/GymColumns.vue'
 import SoulLinkShell from './components/SoulLinkShell.vue'
 import TeamSection from './components/TeamSection.vue'
@@ -1490,13 +1512,6 @@ if (import.meta.env.DEV) {
 .reset-dialog-options {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-}
-
-.dialog-divider {
-  border: none;
-  border-top: 1px solid var(--color-border);
-  margin: 0;
 }
 
 .reset-option {
@@ -1529,18 +1544,6 @@ if (import.meta.env.DEV) {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-top: var(--space-4);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border);
-}
-
-.soul-link-dialog-options .reset-option-group {
-  margin-top: var(--space-1);
-  padding-top: var(--space-3);
-}
-
-.soul-link-dialog-options .dialog-divider {
-  margin: var(--space-2) 0;
 }
 
 
