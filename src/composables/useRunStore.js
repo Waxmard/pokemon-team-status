@@ -258,17 +258,15 @@ export function useRunStore() {
 
     setRunState(snapshot)
 
-    await enqueueSoloPersistWithSnapshot(
-      () =>
-        Promise.all([
-          repository.persistSoloTeam(snapshot.team),
-          repository.persistSoloBox(snapshot.box),
-          repository.persistSoloDead(snapshot.dead),
-          repository.persistSoloDefeatedGyms(snapshot.defeatedGyms),
-          repository.persistSoloPinnedGym(snapshot.pinnedGym),
-          repository.persistSoloGenerationRules(snapshot.generationRules),
-        ]),
-      snapshot,
+    await enqueueSoloPersist(() =>
+      Promise.all([
+        repository.persistSoloTeam(snapshot.team),
+        repository.persistSoloBox(snapshot.box),
+        repository.persistSoloDead(snapshot.dead),
+        repository.persistSoloDefeatedGyms(snapshot.defeatedGyms),
+        repository.persistSoloPinnedGym(snapshot.pinnedGym),
+        repository.persistSoloGenerationRules(snapshot.generationRules),
+      ]),
     )
   }
 

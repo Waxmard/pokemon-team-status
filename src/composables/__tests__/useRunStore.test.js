@@ -117,14 +117,7 @@ describe('useRunStore', () => {
     expect(repository.persistSoloGenerationRules).toHaveBeenCalledWith(
       GENERATION_RULESETS.PRE_GEN_6,
     )
-    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledWith({
-      team: [],
-      box: [],
-      dead: [],
-      defeatedGyms: [],
-      pinnedGym: null,
-      generationRules: GENERATION_RULESETS.PRE_GEN_6,
-    })
+    expect(soloRunManager.persistActiveRunSnapshot).not.toHaveBeenCalled()
   })
 
   it('serializes solo writes so a reset cannot be overwritten by an older team save', async () => {
@@ -160,16 +153,9 @@ describe('useRunStore', () => {
     ])
     expect(repository.persistSoloTeam).toHaveBeenNthCalledWith(2, [])
     expect(store.team.value).toEqual([])
-    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenNthCalledWith(1, {
+    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledTimes(1)
+    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledWith({
       team: [{ id: 'team-2', name: 'Treecko' }],
-      box: [],
-      dead: [],
-      defeatedGyms: [],
-      pinnedGym: null,
-      generationRules: DEFAULT_GENERATION_RULESET,
-    })
-    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenNthCalledWith(2, {
-      team: [],
       box: [],
       dead: [],
       defeatedGyms: [],
