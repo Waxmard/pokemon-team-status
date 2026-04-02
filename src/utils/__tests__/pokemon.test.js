@@ -53,7 +53,7 @@ describe('getSpriteUrl', () => {
 describe('getSmallSpriteUrl', () => {
   it('returns small sprite URL for default variant', () => {
     const url = getSmallSpriteUrl('Bulbasaur')
-    expect(url).toBe(`${BASE_URL}/1.png`)
+    expect(url).toBe('/sprites/1.png')
   })
 
   it('handles shiny variant', () => {
@@ -77,7 +77,7 @@ describe('getSmallSpriteUrl', () => {
 
   it('uses spriteId when present', () => {
     const url = getSmallSpriteUrl('Rotom-Heat')
-    expect(url).toBe(`${BASE_URL}/10008.png`)
+    expect(url).toBe('/sprites/10008.png')
   })
 })
 
@@ -123,7 +123,7 @@ describe('resolveSpriteUrl', () => {
 
   it('returns small sprite URL when small is true', () => {
     const url = resolveSpriteUrl('Bulbasaur', { small: true })
-    expect(url).toBe(`${BASE_URL}/1.png`)
+    expect(url).toBe('/sprites/1.png')
   })
 
   it('returns full sprite URL by default', () => {
