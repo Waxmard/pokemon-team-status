@@ -1371,7 +1371,29 @@ async function handleDeleteSoloRun(runId) {
   if (!result?.wasActive) return
 
   if (result.nextRunId) {
-    await handleSwitchSoloRun(result.nextRunId)
+    // Cannot use handleSwitchSoloRun here — deleteSoloRun already sets
+    // soloActiveRunId to nextRunId, so the early-return guard would skip it.
+    await clearTransientUiState()
+    unsubscribeSoulLink()
+    unsubscribeSolo()
+    const snapshot = await switchToSoloRun(result.nextRunId, null)
+    if (snapshot) {
+      await loadData()
+    }
+    setCurrentRunMode(RUN_MODES.SOLO)
+    deathBoxMode.value = false
+    showResetDialog.value = false
+    showSoulLinkDialog.value = false
+    if (isSoloSyncAvailable) {
+      initSoloSyncSession(
+        () => buildSoloSnapshot(),
+        (s) => applySoloRemoteSnapshot(s),
+      )
+        .then(() => subscribeSolo())
+        .catch((err) =>
+          console.error('Solo sync after delete+switch failed:', err),
+        )
+    }
   } else {
     await startNewSoloRun()
     showResetDialog.value = false
