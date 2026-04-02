@@ -200,7 +200,7 @@
               {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
             </button>
           </DialogActionSection>
-          <DialogActionSection>
+          <DialogActionSection v-if="!isSoloMode">
             <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
               View {{ otherSoulLinkPlayerName }}
             </button>
@@ -494,26 +494,19 @@ const inactiveSoloRuns = computed(() =>
 )
 
 const allInactiveRuns = computed(() => {
-  // Show all runs from the other mode, and only filter the active run
-  // from the current mode.
   const soloSource = isSoloMode.value
     ? inactiveSoloRuns.value
     : soloRunList.value
   const soulLinkSource = isSoloMode.value ? runList.value : inactiveRuns.value
-  const hasBothTypes = soloSource.length > 0 && soulLinkSource.length > 0
   const solo = soloSource.map((r) => ({
     ...r,
     type: 'solo',
-    label: hasBothTypes
-      ? `${r.name || `Solo Run (${r.teamCount || 0})`} [Solo]`
-      : r.name || `Solo Run (${r.teamCount || 0})`,
+    label: r.name || 'Weakness Calculator',
   }))
   const soulLink = soulLinkSource.map((r) => ({
     ...r,
     type: 'soul-link',
-    label: hasBothTypes
-      ? `${r.name || r.playerNames?.join(' & ') || 'Soul Link Run'} [Soul Link]`
-      : r.name || r.playerNames?.join(' & ') || 'Soul Link Run',
+    label: r.name || r.playerNames?.join(' & ') || 'Soul Link',
   }))
   return [...solo, ...soulLink]
 })
