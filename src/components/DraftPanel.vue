@@ -4,7 +4,7 @@
         <!-- Shared header with dynamic title -->
         <div class="wizard-header">
           <label v-if="wizardStep === 'pokemon' && draftAction.pokemon" class="wizard-title-field">
-            <span v-if="!displayName" class="wizard-title-placeholder">Pokemon Name</span>
+            <span v-if="!displayName" class="wizard-title-placeholder">{{ draftAction.pokemon?.name || 'Pokemon Name' }}</span>
             <input
               :value="displayName"
               :size="Math.max((displayName.length || 12) + 2, 3)"
