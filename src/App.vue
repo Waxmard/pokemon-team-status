@@ -835,9 +835,14 @@ async function handleSoloJoinSession() {
   if (!code) return
   sessionActionPending.value = true
   try {
+    // Save current solo run before joining a new one
+    if (isSoloMode.value && soloActiveRunId.value) {
+      await saveSoloRunToIndex(buildSoloSnapshot())
+    }
     unsubscribeSolo()
     await joinSoloSession(code)
-    await loadData()
+    setCurrentRunMode(RUN_MODES.SOLO)
+    await registerNewSoloRun(buildSoloSnapshot())
     subscribeSolo()
     showSoloJoinInput.value = false
     soloJoinCodeValue.value = ''
