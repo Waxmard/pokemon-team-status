@@ -493,15 +493,21 @@ const inactiveSoloRuns = computed(() =>
 )
 
 const allInactiveRuns = computed(() => {
+  const hasBothTypes =
+    inactiveSoloRuns.value.length > 0 && inactiveRuns.value.length > 0
   const solo = inactiveSoloRuns.value.map((r) => ({
     ...r,
     type: 'solo',
-    label: r.name || `Solo Run (${r.teamCount || 0})`,
+    label: hasBothTypes
+      ? `${r.name || `Solo Run (${r.teamCount || 0})`} [Solo]`
+      : r.name || `Solo Run (${r.teamCount || 0})`,
   }))
   const soulLink = inactiveRuns.value.map((r) => ({
     ...r,
     type: 'soul-link',
-    label: r.name || r.playerNames?.join(' & ') || 'Soul Link Run',
+    label: hasBothTypes
+      ? `${r.name || r.playerNames?.join(' & ') || 'Soul Link Run'} [Soul Link]`
+      : r.name || r.playerNames?.join(' & ') || 'Soul Link Run',
   }))
   return [...solo, ...soulLink]
 })
@@ -1394,9 +1400,30 @@ async function handleDeleteSoloRun(runId) {
           console.error('Solo sync after delete+switch failed:', err),
         )
     }
-  } else {
-    await startNewSoloRun()
+  } else if (activeRunId.value) {
+    // No more solo runs — switch to the active soul link run
+    await clearTransientUiState()
+    unsubscribeSolo()
+    await switchToRun(activeRunId.value, null)
+    setCurrentRunMode(RUN_MODES.SOUL_LINK)
+    await loadSoulLinkData()
+    deathBoxMode.value = false
     showResetDialog.value = false
+    showSoloDialog.value = false
+    if (soulLinkSessionMetadata.value?.sessionId) {
+      syncSoulLinkSession()
+        .then(() => subscribeSoulLink())
+        .catch((err) =>
+          console.error('Sync after last solo delete failed:', err),
+        )
+    }
+  } else {
+    // No runs of any kind — create a fresh solo run
+    await startNewSoloRun()
+    setCurrentRunMode(RUN_MODES.SOLO)
+    await registerNewSoloRun(buildSoloSnapshot())
+    showResetDialog.value = false
+    showSoloDialog.value = false
   }
 }
 
