@@ -284,6 +284,7 @@ function handleModeClick() {
   }
   // If in death box, clicking skull exits it
   if (viewMode.value === 'dead') {
+    viewMode.value = 'team'
     emit('exitDeathBox')
     return
   }
