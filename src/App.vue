@@ -493,16 +493,21 @@ const inactiveSoloRuns = computed(() =>
 )
 
 const allInactiveRuns = computed(() => {
-  const hasBothTypes =
-    inactiveSoloRuns.value.length > 0 && inactiveRuns.value.length > 0
-  const solo = inactiveSoloRuns.value.map((r) => ({
+  // Show all runs from the other mode, and only filter the active run
+  // from the current mode.
+  const soloSource = isSoloMode.value
+    ? inactiveSoloRuns.value
+    : soloRunList.value
+  const soulLinkSource = isSoloMode.value ? runList.value : inactiveRuns.value
+  const hasBothTypes = soloSource.length > 0 && soulLinkSource.length > 0
+  const solo = soloSource.map((r) => ({
     ...r,
     type: 'solo',
     label: hasBothTypes
       ? `${r.name || `Solo Run (${r.teamCount || 0})`} [Solo]`
       : r.name || `Solo Run (${r.teamCount || 0})`,
   }))
-  const soulLink = inactiveRuns.value.map((r) => ({
+  const soulLink = soulLinkSource.map((r) => ({
     ...r,
     type: 'soul-link',
     label: hasBothTypes
