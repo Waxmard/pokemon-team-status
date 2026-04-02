@@ -976,6 +976,7 @@ async function startNewRun(mode) {
     setCurrentRunMode(RUN_MODES.SOLO)
     await registerNewSoloRun(buildSoloSnapshot())
     if (isSoloSyncAvailable) {
+      await deleteSoloRemoteSession()
       initSoloSyncSession(
         () => buildSoloSnapshot(),
         (s) => applySoloRemoteSnapshot(s),

@@ -129,12 +129,8 @@ export function useSoloSync() {
     inviteCode.value = session.inviteCode
     await repository.persistSoloBackupSessionId(session.id)
 
-    // Merge remote state into local
-    const localSnapshot = getCurrentSnapshot()
-    if (localSnapshot && session.state) {
-      const merged = mergeSoloRemoteState(localSnapshot, session.state)
-      applySnapshot(merged)
-    } else if (session.state) {
+    // Replace local state with remote — joining adopts the remote run's data
+    if (session.state) {
       applySnapshot(session.state)
     }
 
