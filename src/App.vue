@@ -1611,6 +1611,15 @@ if (import.meta.env.DEV) {
     max-width: 100%;
   }
 
+  .app-container :deep(.app-header) {
+    flex: 0 0 100%;
+    margin-bottom: var(--space-2);
+  }
+
+  .app-container :deep(.app-header .header-actions) {
+    justify-self: center;
+  }
+
   .load-error-banner {
     background: var(--color-danger);
     color: white;
