@@ -17,26 +17,23 @@
   align-items: center;
   padding: var(--space-2) var(--space-3);
   margin-bottom: var(--space-4);
-  background: var(--color-surface);
-  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-  box-shadow: var(--shadow-sm);
 }
 
 .header-actions {
   justify-self: start;
   display: flex;
-  gap: var(--space-1);
+  gap: 2px;
 }
 
 .header-actions :slotted(button) {
   background: transparent;
   border: none;
   color: var(--color-text-muted);
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   cursor: pointer;
   padding: 0;
-  min-height: 32px;
-  min-width: 32px;
+  min-height: 24px;
+  min-width: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -53,10 +50,6 @@
 
 .header-title :slotted(*) {
   font-size: 1.15rem;
-}
-
-.header-spacer {
-  justify-self: end;
 }
 
 @media (hover: hover) and (pointer: fine) {
