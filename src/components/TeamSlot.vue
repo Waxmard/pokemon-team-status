@@ -24,9 +24,6 @@
                 {{ pokemon.ability }}
               </span>
             </div>
-            <span v-if="pokemon.catchLocation" class="catch-location-label">
-              {{ pokemon.catchLocation }}
-            </span>
           </div>
         </div>
         <SpriteImg v-if="pokemon.pairedPartner" :src="partnerSpriteUrl" :alt="pokemon.pairedPartner.name" :width="32"
@@ -277,17 +274,6 @@ const cardBackgroundStyle = computed(() => {
   right: var(--space-1);
   opacity: 0.85;
   filter: var(--drop-shadow-icon);
-}
-
-.catch-location-label {
-  font-size: 0.65rem;
-  color: var(--color-text-muted);
-  opacity: 0.7;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  text-align: right;
 }
 
 .special-move-badge,
