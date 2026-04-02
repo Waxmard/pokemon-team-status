@@ -322,11 +322,7 @@ import {
   sanitizeDraftActionForRules,
   sanitizePokemonCollectionForRules,
 } from './utils/generationRules.js'
-import {
-  buildPokemonMember,
-  generatePokemonId,
-  pickMemberFields,
-} from './utils/pokemon.js'
+import { buildPokemonMember, pickMemberFields } from './utils/pokemon.js'
 import {
   mapSoloRunStateToPersistedSnapshot,
   RUN_MODES,
@@ -1098,6 +1094,7 @@ function handleBoxToTeamSwap(targetId, inHandPokemon) {
     if (team.value.length >= 6) return
     const newTeamMember = buildPokemonMember(draftAction.value, {
       source: 'team',
+      id: boxPokemonId,
     })
     persistTeam([...team.value, newTeamMember])
     persistBox(box.value.filter((p) => p.id !== boxPokemonId))
@@ -1109,11 +1106,14 @@ function handleBoxToTeamSwap(targetId, inHandPokemon) {
   if (!targetPokemon) return
 
   const newTeam = team.value.map((p) =>
-    p.id === targetId ? { ...inHandPokemon, id: generatePokemonId('team') } : p,
+    p.id === targetId ? { ...inHandPokemon, id: boxPokemonId } : p,
   )
   persistTeam(newTeam)
 
-  const newBoxMember = buildPokemonMember(targetPokemon, { source: 'box' })
+  const newBoxMember = buildPokemonMember(targetPokemon, {
+    source: 'box',
+    id: targetId,
+  })
   persistBox([...box.value.filter((p) => p.id !== boxPokemonId), newBoxMember])
 
   swapInHandToTarget(targetPokemon)
@@ -1126,6 +1126,7 @@ function handleTeamToBoxSwap(targetId, inHandPokemon) {
   if (targetId === null) {
     const newBoxMember = buildPokemonMember(draftAction.value, {
       source: 'box',
+      id: teamPokemonId,
     })
     persistBox([...box.value, newBoxMember])
     persistTeam(team.value.filter((p) => p.id !== teamPokemonId))
@@ -1137,12 +1138,13 @@ function handleTeamToBoxSwap(targetId, inHandPokemon) {
   if (!targetPokemon) return
 
   const newBox = box.value.map((p) =>
-    p.id === targetId ? { ...inHandPokemon, id: generatePokemonId('box') } : p,
+    p.id === targetId ? { ...inHandPokemon, id: teamPokemonId } : p,
   )
   persistBox(newBox)
 
   const newTeamMember = buildPokemonMember(targetPokemon, {
     source: 'team',
+    id: targetId,
   })
   persistTeam(
     team.value.map((p) => (p.id === teamPokemonId ? newTeamMember : p)),
@@ -1178,11 +1180,17 @@ function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
     if (!teamPokemon || !boxPokemon) return
 
     // B goes to team where A was
-    const newTeamMember = buildPokemonMember(boxPokemon, { source: 'team' })
+    const newTeamMember = buildPokemonMember(boxPokemon, {
+      source: 'team',
+      id: candidateId,
+    })
     persistTeam(team.value.map((p) => (p.id === currentId ? newTeamMember : p)))
 
     // A goes to box where B was
-    const newBoxMember = buildPokemonMember(teamPokemon, { source: 'box' })
+    const newBoxMember = buildPokemonMember(teamPokemon, {
+      source: 'box',
+      id: currentId,
+    })
     persistBox(box.value.map((p) => (p.id === candidateId ? newBoxMember : p)))
 
     // Set A as "in hand" box Pokemon for chain swapping
