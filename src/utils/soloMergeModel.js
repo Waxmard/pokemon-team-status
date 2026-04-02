@@ -54,6 +54,7 @@ export function mergeSoloProgress(localProgress, remoteProgress) {
 }
 
 export function mergeSoloRemoteState(localSnapshot, remoteSnapshot) {
+  if (!remoteSnapshot) return localSnapshot
   const local = migrateLegacySoloSnapshot(localSnapshot)
   const remote = migrateLegacySoloSnapshot(remoteSnapshot)
 

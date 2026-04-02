@@ -30,6 +30,7 @@ import {
   sanitizeSoulLinkProgressForRules,
   sanitizeSoulLinkRostersForRules,
 } from '../utils/soulLinkNormalization.js'
+import { generateUUID } from '../utils/uuid.js'
 import { createSessionSync } from './useSessionSync.js'
 
 const repository = createLocalSoloRunRepository()
@@ -590,7 +591,7 @@ export function useSoulLinkStore() {
 
   async function createSession() {
     const repo = getSupabaseRepository()
-    const sessionId = crypto.randomUUID()
+    const sessionId = generateUUID()
     const soulLinkState = getSoulLinkState('Creating a session')
     const currentRunState = getSoulLinkRunState('Creating a session')
     const remoteState = buildRemoteState(

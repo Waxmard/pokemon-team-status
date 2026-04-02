@@ -7,6 +7,7 @@ import {
   mapSoloRunStateToPersistedSnapshot,
   sanitizePersistedSoloRunSnapshot,
 } from '../utils/runSnapshot.js'
+import { generateUUID } from '../utils/uuid.js'
 
 const repository = createLocalSoloRunRepository()
 const runIndex = ref(null)
@@ -120,7 +121,7 @@ export function useSoloRunManager() {
   }
 
   async function initializeRun(snapshot) {
-    const runId = crypto.randomUUID()
+    const runId = generateUUID()
     const snapshotWithMeta = mergeSnapshotWithRunMeta(snapshot, null)
     const entry = { id: runId, ...extractRunSummary(snapshotWithMeta) }
     const newIndex = { activeRunId: runId, runs: [entry] }
@@ -262,7 +263,7 @@ export function useSoloRunManager() {
   }
 
   async function registerNewRun(snapshot) {
-    const runId = crypto.randomUUID()
+    const runId = generateUUID()
     const snapshotWithMeta = mergeSnapshotWithRunMeta(snapshot, null)
     const entry = { id: runId, ...extractRunSummary(snapshotWithMeta) }
 

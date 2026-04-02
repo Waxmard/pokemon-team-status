@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
+import { generateUUID } from '../utils/uuid.js'
 
 const repository = createLocalSoloRunRepository()
 const runIndex = ref(null)
@@ -45,7 +46,7 @@ export function useSoulLinkRunManager() {
     const existingSnapshot = await repository.loadSoulLinkSnapshot()
     if (!existingSnapshot) return
 
-    const runId = crypto.randomUUID()
+    const runId = generateUUID()
     const entry = { id: runId, ...extractRunSummary(existingSnapshot) }
     const newIndex = { activeRunId: runId, runs: [entry] }
 
@@ -101,7 +102,7 @@ export function useSoulLinkRunManager() {
   }
 
   async function registerNewRun(snapshot) {
-    const runId = crypto.randomUUID()
+    const runId = generateUUID()
     const entry = { id: runId, ...extractRunSummary(snapshot) }
 
     const runs = [...(runIndex.value?.runs ?? []), entry]

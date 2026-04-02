@@ -351,15 +351,17 @@ export function useRunStore() {
     const sanitized = sanitizePersistedSoloRunSnapshot(migrated)
     runState.value = mapPersistedSoloSnapshotToRunState(sanitized)
 
-    enqueueSoloPersist(() =>
-      Promise.all([
-        repository.persistSoloTeam(sanitized.team),
-        repository.persistSoloBox(sanitized.box),
-        repository.persistSoloDead(sanitized.dead),
-        repository.persistSoloDefeatedGyms(sanitized.defeatedGyms),
-        repository.persistSoloPinnedGym(sanitized.pinnedGym),
-        repository.persistSoloGenerationRules(sanitized.generationRules),
-      ]),
+    enqueueSoloPersistWithSnapshot(
+      () =>
+        Promise.all([
+          repository.persistSoloTeam(sanitized.team),
+          repository.persistSoloBox(sanitized.box),
+          repository.persistSoloDead(sanitized.dead),
+          repository.persistSoloDefeatedGyms(sanitized.defeatedGyms),
+          repository.persistSoloPinnedGym(sanitized.pinnedGym),
+          repository.persistSoloGenerationRules(sanitized.generationRules),
+        ]),
+      sanitized,
     ).catch(() => {})
   }
 

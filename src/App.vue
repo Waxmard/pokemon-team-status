@@ -280,6 +280,7 @@
                       Join
                     </button>
                   </div>
+                  <div v-if="soloJoinError" class="session-join-error">{{ soloJoinError }}</div>
                 </template>
                 <button v-else class="reset-option" @click="showSoloJoinInput = true">
                   Join Solo Run
@@ -457,6 +458,7 @@ const soloJoinCodeInput = ref(null)
 const soloJoinCodeValue = ref('')
 const showSoloJoinInput = ref(false)
 const sessionActionPending = ref(false)
+const soloJoinError = ref(null)
 const copyLabel = ref('tap to copy')
 const soloCopyLabel = ref('tap to copy')
 const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
@@ -833,6 +835,7 @@ async function handleSoloJoinSession() {
   const code = soloJoinCodeValue.value.trim()
   if (!code) return
   sessionActionPending.value = true
+  soloJoinError.value = null
   try {
     // Save current solo run before joining a new one
     if (isSoloMode.value && soloActiveRunId.value) {
@@ -848,6 +851,7 @@ async function handleSoloJoinSession() {
     showSoloDialog.value = false
   } catch (error) {
     console.error('Failed to join solo session:', error)
+    soloJoinError.value = error?.message || 'Failed to join'
   } finally {
     sessionActionPending.value = false
   }
@@ -1493,20 +1497,27 @@ onMounted(async () => {
 
   const initialRunMode = loadCurrentRunMode()
 
-  if (isSoloSyncAvailable) {
-    initSoloSyncSession(
-      () => buildSoloSnapshot(),
-      (snapshot) => applySoloRemoteSnapshot(snapshot),
-    ).catch((err) => console.error('Failed to init solo sync session:', err))
-  }
-
   const startupMode = await restoreMostRecentRun(initialRunMode)
 
   if (startupMode === RUN_MODES.SOLO) {
-    if (hasSoloRemoteSession.value) {
-      syncSoloSession()
-        .then(() => subscribeSolo())
-        .catch((err) => console.error('Solo auto-sync on mount failed:', err))
+    if (isSoloSyncAvailable) {
+      try {
+        await initSoloSyncSession(
+          () => buildSoloSnapshot(),
+          (snapshot) => applySoloRemoteSnapshot(snapshot),
+        )
+      } catch (err) {
+        console.error('Failed to init solo sync session:', err)
+      }
+      if (hasSoloRemoteSession.value) {
+        try {
+          await syncSoloSession()
+          await saveSoloRunToIndex(buildSoloSnapshot())
+          subscribeSolo()
+        } catch (err) {
+          console.error('Solo auto-sync on mount failed:', err)
+        }
+      }
     }
   } else if (soulLinkSessionMetadata.value?.sessionId) {
     syncSoulLinkSession()
@@ -1764,6 +1775,12 @@ if (import.meta.env.DEV) {
 
 .session-confirm-btn {
   flex-shrink: 0;
+}
+
+.session-join-error {
+  color: var(--color-danger);
+  font-size: 0.8rem;
+  margin-top: var(--space-1);
 }
 
 .session-code-display {

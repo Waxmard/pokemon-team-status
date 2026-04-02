@@ -7,6 +7,7 @@ import {
   mergeSoloRemoteState,
 } from '../utils/soloMergeModel.js'
 import { generateInviteCode } from '../utils/soulLinkModel.js'
+import { generateUUID } from '../utils/uuid.js'
 import { createSessionSync } from './useSessionSync.js'
 
 const repository = createLocalSoloRunRepository()
@@ -85,7 +86,7 @@ export function useSoloSync() {
     const snapshot = getCurrentSnapshot()
     if (!snapshot) return null
 
-    const newSessionId = crypto.randomUUID()
+    const newSessionId = generateUUID()
     const code = generateInviteCode()
     const payload = buildSoloRemotePayload(snapshot)
 
