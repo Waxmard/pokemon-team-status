@@ -64,6 +64,7 @@ describe('runSnapshot helpers', () => {
         generationRules: GENERATION_RULESETS.PRE_GEN_6,
       }),
     ).toEqual({
+      name: null,
       team: [
         expect.objectContaining({
           name: 'Tapu Fini',

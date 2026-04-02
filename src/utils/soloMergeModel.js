@@ -78,6 +78,7 @@ export function mergeSoloRemoteState(localSnapshot, remoteSnapshot) {
     localRulesTs >= remoteRulesTs ? localRulesTs : remoteRulesTs
 
   return {
+    name: remote.name ?? local.name ?? null,
     team: mergedRoster.team,
     box: mergedRoster.box,
     dead: mergedRoster.dead,
@@ -92,6 +93,7 @@ export function mergeSoloRemoteState(localSnapshot, remoteSnapshot) {
 
 export function buildSoloRemotePayload(snapshot) {
   return {
+    name: snapshot.name ?? null,
     team: snapshot.team ?? [],
     box: snapshot.box ?? [],
     dead: snapshot.dead ?? [],

@@ -96,6 +96,7 @@ export function sanitizePersistedSoloRunSnapshot(snapshot) {
   const generationRules = normalizeGenerationRules(snapshot.generationRules)
 
   return {
+    name: snapshot.name ?? null,
     team: sanitizePokemonCollectionForRules(snapshot.team, generationRules),
     box: sanitizePokemonCollectionForRules(snapshot.box, generationRules),
     dead: sanitizePokemonCollectionForRules(

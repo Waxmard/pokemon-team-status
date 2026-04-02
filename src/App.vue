@@ -119,6 +119,11 @@
               </button>
             </div>
           </DialogActionSection>
+          <DialogActionSection v-if="hasSoloRemoteSession && isSoloMode">
+            <button class="reset-option" @click="handleLeaveSoloSession">
+              Leave This Run
+            </button>
+          </DialogActionSection>
           <DialogActionSection v-if="currentActiveRunId">
             <div class="reset-option-group">
               <button class="reset-option reset-option-danger" @click="deleteRunTarget = currentActiveRunId; showResetDialog = false">
@@ -427,6 +432,7 @@ const {
   isAvailable: isSoloSyncAvailable,
   createSession: createSoloSession,
   joinSession: joinSoloSession,
+  leaveSession: leaveSoloSession,
   deleteRemoteSession: deleteSoloRemoteSession,
 } = useSoloSync()
 
@@ -664,6 +670,12 @@ function handleViewDeathBox() {
 function handleSoloViewDeathBox() {
   deathBoxMode.value = !deathBoxMode.value
   showSoloDialog.value = false
+}
+
+async function handleLeaveSoloSession() {
+  unsubscribeSolo()
+  await leaveSoloSession()
+  await handleDeleteSoloRun(soloActiveRunId.value)
 }
 
 function handleViewOtherSoulLinkPlayer() {
@@ -1360,7 +1372,9 @@ function handleSoloDeleteDeadPokemon({ id }) {
 }
 
 function buildSoloSnapshot() {
-  return mapSoloRunStateToPersistedSnapshot(soloRunState.value)
+  const snapshot = mapSoloRunStateToPersistedSnapshot(soloRunState.value)
+  snapshot.name = soloActiveRunSummary.value?.name ?? null
+  return snapshot
 }
 
 async function handleSwitchSoloRun(runId) {

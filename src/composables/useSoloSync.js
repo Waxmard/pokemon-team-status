@@ -137,6 +137,15 @@ export function useSoloSync() {
     return { sessionId: session.id, inviteCode: session.inviteCode }
   }
 
+  async function leaveSession() {
+    sync.unsubscribeFromSession()
+    _sessionId = null
+    _version = 0
+    sessionId.value = null
+    inviteCode.value = null
+    await repository.persistSoloBackupSessionId(null)
+  }
+
   async function deleteRemoteSession() {
     if (!remoteRepository || !_sessionId) return
 
@@ -161,6 +170,7 @@ export function useSoloSync() {
     initSyncSession,
     createSession,
     joinSession,
+    leaveSession,
     deleteRemoteSession,
     scheduleAutoSync: sync.scheduleAutoSync,
     pushState: sync.pushState,
