@@ -4,44 +4,46 @@
       <div v-if="activeLoadError" class="load-error-banner" @click="retryLoad">
         Failed to load saved data. Tap to retry.
       </div>
-      <div class="header-btns">
-        <button class="header-btn" @click="showResetDialog = true" aria-label="Options">⚙️</button>
-        <button class="header-btn" @click="showSoloDialog = true" aria-label="Solo Run">⚔️</button>
-        <button class="header-btn" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
-      </div>
-      <h1 class="app-title">
-        <span v-if="isSoloMode" class="title-player-row">
-          <label class="title-player-field">
-            <input
-              ref="soloRunNameInput"
-              :value="soloRunDisplayName"
-              :size="Math.max(soloRunDisplayName.length, 1)"
-              class="title-player-input"
-              type="text"
-              maxlength="32"
-              placeholder="Weakness Calculator"
-              aria-label="Solo run name"
-              @blur="handleRenameSoloRun"
-              @focus="soloRunNameInput?.select()"
-            />
-          </label>
-        </span>
-        <span v-else class="title-player-row">
-          <label class="title-player-field">
-            <input
-              ref="playerNameInput"
-              :value="viewedSoulLinkPlayerName"
-              :size="Math.max(viewedSoulLinkPlayerName.length, 1)"
-              class="title-player-input"
-              type="text"
-              maxlength="32"
-              aria-label="Viewed Soul Link player name"
-              @blur="handleRenameViewedSoulLinkPlayerInput"
-              @focus="selectPlayerNameInput"
-            />
-          </label>
-        </span>
-      </h1>
+      <AppHeader>
+        <template #actions>
+          <button @click="showResetDialog = true" aria-label="Options">⚙️</button>
+          <button @click="showSoloDialog = true" aria-label="Solo Run">⚔️</button>
+          <button @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
+        </template>
+        <template #title>
+          <span v-if="isSoloMode" class="title-player-row">
+            <label class="title-player-field">
+              <input
+                ref="soloRunNameInput"
+                :value="soloRunDisplayName"
+                :size="Math.max(soloRunDisplayName.length, 1)"
+                class="title-player-input"
+                type="text"
+                maxlength="32"
+                placeholder="Weakness Calculator"
+                aria-label="Solo run name"
+                @blur="handleRenameSoloRun"
+                @focus="soloRunNameInput?.select()"
+              />
+            </label>
+          </span>
+          <span v-else class="title-player-row">
+            <label class="title-player-field">
+              <input
+                ref="playerNameInput"
+                :value="viewedSoulLinkPlayerName"
+                :size="Math.max(viewedSoulLinkPlayerName.length, 1)"
+                class="title-player-input"
+                type="text"
+                maxlength="32"
+                aria-label="Viewed Soul Link player name"
+                @blur="handleRenameViewedSoulLinkPlayerInput"
+                @focus="selectPlayerNameInput"
+              />
+            </label>
+          </span>
+        </template>
+      </AppHeader>
 
       <template v-if="isSoloMode">
         <TeamSection :team="team" :box="box" :dead="dead" :has-death-box="true" :death-box-mode="deathBoxMode"
@@ -296,6 +298,7 @@
 <script setup>
 import { NConfigProvider } from 'naive-ui'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import AppHeader from './components/AppHeader.vue'
 import DialogActionSection from './components/DialogActionSection.vue'
 import GymColumns from './components/GymColumns.vue'
 import SoulLinkShell from './components/SoulLinkShell.vue'
@@ -1533,13 +1536,6 @@ if (import.meta.env.DEV) {
   animation: fadeIn var(--transition-slow) ease forwards;
 }
 
-.app-title {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: var(--space-6);
-}
-
 .title-player-row {
   display: inline-flex;
   align-items: center;
@@ -1553,15 +1549,6 @@ if (import.meta.env.DEV) {
   min-width: 0;
 }
 
-.title-accent {
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 .title-player-input {
   width: auto;
   max-width: min(100%, 24rem);
@@ -1571,7 +1558,6 @@ if (import.meta.env.DEV) {
   background: transparent;
   color: var(--color-text-primary);
   font: inherit;
-  font-size: 1.5rem;
   font-weight: 700;
   text-align: center;
   cursor: text;
@@ -1588,31 +1574,6 @@ if (import.meta.env.DEV) {
 .title-player-input::selection {
   -webkit-text-fill-color: var(--color-text-primary);
 }
-
-.header-btns {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 10;
-  display: flex;
-  gap: var(--space-1);
-}
-
-.header-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  font-size: 1.25rem;
-  cursor: pointer;
-  padding: var(--space-1);
-  transition: color var(--transition-base);
-}
-
-.header-btn:hover,
-.header-btn:active {
-  color: rgba(139, 92, 246, 1);
-}
-
 
 @media (orientation: landscape) and (max-height: 500px) {
   .app-container {
@@ -1636,15 +1597,6 @@ if (import.meta.env.DEV) {
     animation: fadeIn var(--transition-base) ease forwards;
   }
 
-  .app-title {
-    flex: 0 0 100%;
-    margin-bottom: var(--space-2);
-  }
-
-  .header-btns {
-    top: auto;
-    bottom: 0;
-  }
 }
 
 @media (min-width: 1024px) {
