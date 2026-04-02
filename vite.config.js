@@ -64,22 +64,6 @@ export default defineConfig({
             },
           },
           {
-            // Small sprites (pre-cached)
-            urlPattern:
-              /^https:\/\/raw\.githubusercontent\.com\/PokeAPI\/sprites\/master\/sprites\/pokemon\/\d+\.png$/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'pokemon-sprites-small',
-              expiration: {
-                maxEntries: 1000,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
             // Berry and item sprites
             urlPattern:
               /^https:\/\/raw\.githubusercontent\.com\/PokeAPI\/sprites\/master\/sprites\/items\//,

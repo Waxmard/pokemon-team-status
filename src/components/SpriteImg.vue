@@ -51,14 +51,17 @@ const hdLoaded = ref(false)
 
 // Convert high-res URL to small sprite URL
 function getSmallSpriteUrl(hdUrl) {
-  // HD: .../sprites/pokemon/other/official-artwork/25.png
-  // HD shiny: .../sprites/pokemon/other/official-artwork/shiny/25.png
-  // Small: .../sprites/pokemon/25.png or .../sprites/pokemon/shiny/25.png
-  // Female variant URLs don't contain /official-artwork/ so return null (already small)
+  // Default variant HD: .../official-artwork/25.png → /sprites/25.png (bundled)
+  const defaultMatch = hdUrl.match(/\/other\/official-artwork\/(\d+\.png)$/)
+  if (defaultMatch) return `/sprites/${defaultMatch[1]}`
+
+  // Shiny HD: .../official-artwork/shiny/25.png → remote small sprite
   const match = hdUrl.match(/\/other\/official-artwork\/(.+)$/)
   if (match) {
     return hdUrl.replace(`/other/official-artwork/${match[1]}`, `/${match[1]}`)
   }
+
+  // Female variants (already small URL, no HD)
   return null
 }
 

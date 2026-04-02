@@ -12,7 +12,6 @@ import {
 } from '../utils/runSnapshot.js'
 import { migrateLegacySoloSnapshot } from '../utils/soloMergeModel.js'
 import {
-  prefetchAllSprites,
   prefetchBerrySprites,
   prefetchTypeIcons,
 } from '../utils/spriteCache.js'
@@ -177,7 +176,6 @@ export function useRunStore() {
         )
       }
 
-      prefetchAllSprites()
       prefetchBerrySprites()
       prefetchTypeIcons()
       navigator.storage?.persist?.()

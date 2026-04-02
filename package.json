@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/download-sprites.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "preview:build": "vite build && vite preview --host",
