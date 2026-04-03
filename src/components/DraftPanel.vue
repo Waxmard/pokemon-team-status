@@ -104,6 +104,7 @@
             :sprite-alt="draftAction.pokemon.name"
             :types="previewTypes"
             :catch-location="draftAction.catchLocation"
+            :evolving="isEvolving"
           >
             <template #top-left>
               <button
@@ -116,7 +117,7 @@
               </button>
             </template>
             <template #top-right>
-              <button v-if="canEvolve" class="evolve-btn" @click="handleEvolveClick">
+              <button v-if="canEvolve" class="evolve-btn" :disabled="isEvolving" @click="handleEvolveClick">
                 ⬆
               </button>
             </template>
@@ -486,6 +487,7 @@ function focusPokemonInput() {
 
 const searchQuery = ref('')
 const showEvolveOptions = ref(false)
+const isEvolving = ref(false)
 const showSpecialMoveDropdown = ref(false)
 const specialMoveQuery = ref('')
 const abilityQuery = ref('')
@@ -697,32 +699,50 @@ function isCurrentMega(option) {
 function evolveTo(option) {
   // Handle mega evolution option
   if (option.isMega) {
-    // Toggle mega: if already selected, deselect
+    // Toggle mega: if already selected, deselect (no animation)
     if (draftAction.value?.megaForm === option.form) {
       updateMegaForm(null, null, null)
       // Clear ability if it was set by the mega
       if (option.ability && draftAction.value?.ability === option.ability) {
         updateAbility(null)
       }
-    } else {
+      showEvolveOptions.value = false
+      return
+    }
+
+    // Activating mega — animate
+    showEvolveOptions.value = false
+    isEvolving.value = true
+
+    setTimeout(() => {
       updateMegaForm(option.form, option.types, option.spriteId)
-      // Auto-apply ability if the mega has one
       if (option.ability) {
         updateAbility(option.ability)
       }
-    }
-    showEvolveOptions.value = false
+    }, 400)
+
+    setTimeout(() => {
+      isEvolving.value = false
+    }, 1200)
     return
   }
 
   // Handle regular evolution (option is just a string name)
   const pokemon = getPokemonDataForRules(option, effectiveGenerationRules.value)
   if (pokemon) {
-    updatePokemon(pokemon)
-    searchQuery.value = pokemon.name
-    // Clear mega form when evolving to a different Pokemon
-    updateMegaForm(null, null, null)
     showEvolveOptions.value = false
+    isEvolving.value = true
+
+    setTimeout(() => {
+      updatePokemon(pokemon)
+      searchQuery.value = pokemon.name
+      // Clear mega form when evolving to a different Pokemon
+      updateMegaForm(null, null, null)
+    }, 400)
+
+    setTimeout(() => {
+      isEvolving.value = false
+    }, 1200)
   }
 }
 

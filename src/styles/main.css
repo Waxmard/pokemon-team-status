@@ -113,6 +113,51 @@
   }
 }
 
+@keyframes evoSpriteOut {
+  0% {
+    filter: brightness(1) blur(0px);
+    transform: scale(1);
+  }
+  100% {
+    filter: brightness(3) blur(8px);
+    transform: scale(1.08);
+  }
+}
+
+@keyframes evoSpriteIn {
+  0% {
+    filter: brightness(2.5) blur(6px);
+    transform: scale(1.12);
+  }
+  40% {
+    filter: brightness(1.2) blur(2px);
+    transform: scale(0.97);
+  }
+  70% {
+    filter: brightness(1.05) blur(0.5px);
+    transform: scale(1.02);
+  }
+  100% {
+    filter: brightness(1) blur(0px);
+    transform: scale(1);
+  }
+}
+
+@keyframes evoFlashOverlay {
+  0% {
+    opacity: 0;
+  }
+  33% {
+    opacity: 0.85;
+  }
+  40% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Base reset */
 * {
   box-sizing: border-box;
