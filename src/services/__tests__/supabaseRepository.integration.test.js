@@ -105,8 +105,9 @@ describeIf('supabaseRepository (integration)', () => {
     expect(result).toEqual({ success: false, version: null })
   })
 
-  it('deletes a session', async () => {
+  it('soft-deletes a session', async () => {
     const sessionId = crypto.randomUUID()
+    createdSessionIds.push(sessionId)
 
     await repo.createSession({
       sessionId,
@@ -118,5 +119,14 @@ describeIf('supabaseRepository (integration)', () => {
 
     const fetched = await repo.fetchSessionById(sessionId)
     expect(fetched).toBeNull()
+
+    // Row still exists in database with deleted_at set
+    const { data } = await supabase
+      .from('sessions')
+      .select()
+      .eq('id', sessionId)
+      .maybeSingle()
+    expect(data).not.toBeNull()
+    expect(data.deleted_at).not.toBeNull()
   })
 })
