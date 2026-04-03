@@ -20,9 +20,12 @@ describe('runSnapshot helpers', () => {
       mode: RUN_MODES.SOLO,
       team: [],
       box: [],
+      dead: [],
+      _tombstones: [],
       progress: {
         defeatedGyms: [],
         pinnedGym: null,
+        updatedAt: null,
       },
       rules: {
         generation: DEFAULT_GENERATION_RULESET,
@@ -55,11 +58,13 @@ describe('runSnapshot helpers', () => {
           },
         ],
         box: [],
+        dead: [],
         defeatedGyms: ['water', 'fairy'],
         pinnedGym: 'fairy',
         generationRules: GENERATION_RULESETS.PRE_GEN_6,
       }),
     ).toEqual({
+      name: null,
       team: [
         expect.objectContaining({
           name: 'Tapu Fini',
@@ -69,9 +74,13 @@ describe('runSnapshot helpers', () => {
         }),
       ],
       box: [],
+      dead: [],
+      _tombstones: [],
       defeatedGyms: ['water'],
       pinnedGym: null,
+      progressUpdatedAt: null,
       generationRules: GENERATION_RULESETS.PRE_GEN_6,
+      generationRulesUpdatedAt: null,
     })
   })
 
@@ -79,6 +88,7 @@ describe('runSnapshot helpers', () => {
     const runState = mapPersistedSoloSnapshotToRunState({
       team: [],
       box: [],
+      dead: [],
       defeatedGyms: ['fire'],
       pinnedGym: 'water',
       generationRules: DEFAULT_GENERATION_RULESET,
@@ -88,9 +98,12 @@ describe('runSnapshot helpers', () => {
       mode: RUN_MODES.SOLO,
       team: [],
       box: [],
+      dead: [],
+      _tombstones: [],
       progress: {
         defeatedGyms: ['fire'],
         pinnedGym: 'water',
+        updatedAt: null,
       },
       rules: {
         generation: DEFAULT_GENERATION_RULESET,
@@ -100,9 +113,13 @@ describe('runSnapshot helpers', () => {
     expect(mapSoloRunStateToPersistedSnapshot(runState)).toEqual({
       team: [],
       box: [],
+      dead: [],
+      _tombstones: [],
       defeatedGyms: ['fire'],
       pinnedGym: 'water',
+      progressUpdatedAt: null,
       generationRules: DEFAULT_GENERATION_RULESET,
+      generationRulesUpdatedAt: null,
     })
   })
 

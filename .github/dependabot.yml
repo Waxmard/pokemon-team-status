@@ -6,6 +6,9 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     target-branch: "main"
+    ignore:
+      - dependency-name: "vite"
+        versions: [">=8"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

@@ -22,11 +22,15 @@ export function getSmallSpriteUrl(pokemonName, variant = 'default') {
 
   const pokemon = POKEMON_DATA[index]
   const id = pokemon.spriteId ?? index + 1
+
+  // Default variant: use bundled local sprite
+  if (variant === 'default') return `/sprites/${id}.png`
+
+  // Other variants: use remote sprites (not bundled)
   const variantSegment =
     { shiny: 'shiny/', female: 'female/', 'shiny-female': 'shiny/female/' }[
       variant
     ] || ''
-  // Small 96x96 sprites (~2-5KB each)
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${variantSegment}${id}.png`
 }
 
@@ -74,6 +78,7 @@ const MEMBER_FIELD_DEFAULTS = {
   nickname: null,
   catchLocation: null,
   pairId: null,
+  updatedAt: null,
 }
 
 export function pickMemberFields(source) {
@@ -97,5 +102,6 @@ export function buildPokemonMember(source, options = {}) {
     types: isDraft ? source.pokemon.types : source.types,
     ...pickMemberFields(source),
     ...(isDraft && { moves: (source.moves ?? []).filter(Boolean) }),
+    updatedAt: Date.now(),
   }
 }

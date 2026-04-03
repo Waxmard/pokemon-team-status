@@ -1,13 +1,8 @@
-import { computed, ref } from 'vue'
 import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
+import { createRunIndexManager } from './createRunIndexManager.js'
 
 const repository = createLocalSoloRunRepository()
-const runIndex = ref(null)
 let _switching = false
-
-function cloneIndex() {
-  return JSON.parse(JSON.stringify(runIndex.value))
-}
 
 function extractRunSummary(snapshot) {
   const playerNames = (snapshot.players ?? []).map((p) => p.name)
@@ -21,16 +16,23 @@ function extractRunSummary(snapshot) {
   }
 }
 
+const {
+  runIndex,
+  cloneIndex,
+  runList,
+  activeRunId,
+  activeRunSummary,
+  registerNewRun,
+  deleteRun,
+} = createRunIndexManager({
+  persistRun: (runId, snapshot) =>
+    repository.persistSoulLinkRun(runId, snapshot),
+  persistIndex: (index) => repository.persistSoulLinkRunIndex(index),
+  deletePersistedRun: (runId) => repository.deleteSoulLinkRun(runId),
+  extractSummary: extractRunSummary,
+})
+
 export function useSoulLinkRunManager() {
-  const runList = computed(() => {
-    if (!runIndex.value) return []
-    return [...runIndex.value.runs].sort(
-      (a, b) => new Date(b.updatedAt ?? 0) - new Date(a.updatedAt ?? 0),
-    )
-  })
-
-  const activeRunId = computed(() => runIndex.value?.activeRunId ?? null)
-
   async function loadRunIndex() {
     const index = await repository.loadSoulLinkRunIndex()
     if (index) {
@@ -41,16 +43,7 @@ export function useSoulLinkRunManager() {
     const existingSnapshot = await repository.loadSoulLinkSnapshot()
     if (!existingSnapshot) return
 
-    const runId = crypto.randomUUID()
-    const entry = { id: runId, ...extractRunSummary(existingSnapshot) }
-    const newIndex = { activeRunId: runId, runs: [entry] }
-
-    await Promise.all([
-      repository.persistSoulLinkRun(runId, existingSnapshot),
-      repository.persistSoulLinkRunIndex(newIndex),
-    ])
-
-    runIndex.value = newIndex
+    await registerNewRun(existingSnapshot)
   }
 
   async function saveCurrentRunToIndex(snapshot) {
@@ -96,43 +89,10 @@ export function useSoulLinkRunManager() {
     }
   }
 
-  async function registerNewRun(snapshot) {
-    const runId = crypto.randomUUID()
-    const entry = { id: runId, ...extractRunSummary(snapshot) }
-
-    const runs = [...(runIndex.value?.runs ?? []), entry]
-    runIndex.value = { activeRunId: runId, runs }
-
-    await Promise.all([
-      repository.persistSoulLinkRun(runId, snapshot),
-      repository.persistSoulLinkRunIndex(cloneIndex()),
-    ])
-
-    return runId
-  }
-
-  async function deleteRun(runId) {
-    if (!runIndex.value) return null
-
-    const runs = runIndex.value.runs.filter((r) => r.id !== runId)
-    const wasActive = runIndex.value.activeRunId === runId
-    const nextActiveId = wasActive
-      ? (runs[0]?.id ?? null)
-      : runIndex.value.activeRunId
-
-    runIndex.value = { activeRunId: nextActiveId, runs }
-
-    await Promise.all([
-      repository.deleteSoulLinkRun(runId),
-      repository.persistSoulLinkRunIndex(cloneIndex()),
-    ])
-
-    return { wasActive, nextRunId: nextActiveId }
-  }
-
   return {
     runList,
     activeRunId,
+    activeRunSummary,
     loadRunIndex,
     saveCurrentRunToIndex,
     switchToRun,

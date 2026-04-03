@@ -375,7 +375,7 @@ function deduplicateByCatchLocation(mergedRoster) {
   }
 }
 
-export function mergePlayerRoster(localRoster, remoteRoster) {
+export function mergeRosterMembers(localRoster, remoteRoster) {
   const localMembers = buildMemberMap(localRoster)
   const remoteMembers = buildMemberMap(remoteRoster)
   const localTombstones = buildTombstoneMap(localRoster)
@@ -395,9 +395,13 @@ export function mergePlayerRoster(localRoster, remoteRoster) {
     localRoster,
     remoteRoster,
   )
-  const deduped = deduplicateByCatchLocation(mergedRoster)
 
-  return capMergedTeam(deduped)
+  return capMergedTeam(mergedRoster)
+}
+
+export function mergePlayerRoster(localRoster, remoteRoster) {
+  const merged = mergeRosterMembers(localRoster, remoteRoster)
+  return deduplicateByCatchLocation(merged)
 }
 
 function buildLocationMap(members) {

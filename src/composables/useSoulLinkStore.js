@@ -30,6 +30,8 @@ import {
   sanitizeSoulLinkProgressForRules,
   sanitizeSoulLinkRostersForRules,
 } from '../utils/soulLinkNormalization.js'
+import { generateUUID } from '../utils/uuid.js'
+import { createSessionSync } from './useSessionSync.js'
 
 const repository = createLocalSoloRunRepository()
 const internalRunState = ref(createDefaultSoulLinkRunState())
@@ -39,46 +41,6 @@ let _supabaseRepo = null
 function getSupabaseRepository() {
   if (!_supabaseRepo) _supabaseRepo = createSupabaseRepository()
   return _supabaseRepo
-}
-
-let _unsubscribe = null
-let _lastPushedVersion = 0
-let _suppressAutoSync = false
-let _autoSyncScheduled = false
-let _pushStateFn = null
-
-function scheduleAutoSync() {
-  if (_suppressAutoSync || _autoSyncScheduled || !_pushStateFn) return
-  const sessionId =
-    internalRunState.value?.soulLink?.metadata?.sessionId ?? null
-  if (!sessionId) return
-
-  _autoSyncScheduled = true
-  queueMicrotask(() => {
-    _autoSyncScheduled = false
-    if (_suppressAutoSync) return
-    _pushStateFn().catch((err) => console.error('Auto-sync failed:', err))
-  })
-}
-
-function withSyncSuppressed(fn) {
-  const prev = _suppressAutoSync
-  _suppressAutoSync = true
-  try {
-    return fn()
-  } finally {
-    _suppressAutoSync = prev
-  }
-}
-
-async function withSyncSuppressedAsync(fn) {
-  const prev = _suppressAutoSync
-  _suppressAutoSync = true
-  try {
-    return await fn()
-  } finally {
-    _suppressAutoSync = prev
-  }
 }
 
 function getSoulLinkRunState(context) {
@@ -117,6 +79,29 @@ function buildPersistableSnapshot() {
   )
 }
 
+// Forward-declared so sync config can reference it before full definition
+let _setGenerationRules = null
+
+const sync = createSessionSync({
+  getSessionId: () =>
+    internalRunState.value?.soulLink?.metadata?.sessionId ?? null,
+  getVersion: () => internalRunState.value?.soulLink?.sync?.version ?? 0,
+  setVersion: (v) => setSyncVersion(v),
+  getLocalState: () => getSoulLinkState('Sync: reading local state'),
+  setLocalState: (merged) => replaceSoulLinkState(merged),
+  buildRemotePayload: () =>
+    buildRemoteState(
+      getSoulLinkState('Sync: building remote payload'),
+      getSoulLinkRunState('Sync: building remote payload').rules.generation,
+    ),
+  mergeRemote: (local, remote) => mergeRemoteState(local, remote),
+  onRemoteUpdate: (session) => {
+    if (session.state?.generationRules) {
+      _setGenerationRules?.(session.state.generationRules)
+    }
+  },
+})
+
 function replaceSoulLinkState(nextSoulLinkState) {
   const soulLinkRunState = getSoulLinkRunState('Updating Soul Link state')
 
@@ -126,7 +111,7 @@ function replaceSoulLinkState(nextSoulLinkState) {
   }
 
   repository.persistSoulLinkSnapshot(buildPersistableSnapshot()).catch(() => {})
-  scheduleAutoSync()
+  sync.scheduleAutoSync()
 }
 
 function updateSoulLinkState(updater) {
@@ -172,7 +157,7 @@ const localPreferences = computed(() =>
 const activity = computed(() =>
   cloneValue(getSoulLinkState('Accessing Soul Link activity').activity),
 )
-const sync = computed(() =>
+const syncData = computed(() =>
   cloneValue(getSoulLinkState('Accessing Soul Link sync state').sync),
 )
 
@@ -212,8 +197,10 @@ function setGenerationRules(nextGenerationRules) {
   }
 
   repository.persistSoulLinkSnapshot(buildPersistableSnapshot()).catch(() => {})
-  scheduleAutoSync()
+  sync.scheduleAutoSync()
 }
+
+_setGenerationRules = setGenerationRules
 
 function updatePlayer(playerId, updates) {
   const nextPlayerId = assertKnownPlayerId(
@@ -518,7 +505,7 @@ function reviveRosterMember(playerId, memberId) {
 }
 
 function setSyncState(nextSyncState) {
-  withSyncSuppressed(() =>
+  sync.withSyncSuppressed(() =>
     updateSoulLinkState((soulLinkState) => ({
       ...soulLinkState,
       activity: {
@@ -530,7 +517,7 @@ function setSyncState(nextSyncState) {
 }
 
 function setSyncVersion(nextVersion) {
-  withSyncSuppressed(() =>
+  sync.withSyncSuppressed(() =>
     updateSoulLinkState((soulLinkState) => ({
       ...soulLinkState,
       sync: {
@@ -539,13 +526,6 @@ function setSyncVersion(nextVersion) {
       },
     })),
   )
-}
-
-function unsubscribeFromSession() {
-  if (_unsubscribe) {
-    _unsubscribe()
-    _unsubscribe = null
-  }
 }
 
 export function useSoulLinkStore() {
@@ -611,7 +591,7 @@ export function useSoulLinkStore() {
 
   async function createSession() {
     const repo = getSupabaseRepository()
-    const sessionId = crypto.randomUUID()
+    const sessionId = generateUUID()
     const soulLinkState = getSoulLinkState('Creating a session')
     const currentRunState = getSoulLinkRunState('Creating a session')
     const remoteState = buildRemoteState(
@@ -691,90 +671,14 @@ export function useSoulLinkStore() {
     return { sessionId: session.id, inviteCode: session.inviteCode }
   }
 
-  async function pullState() {
-    return withSyncSuppressedAsync(async () => {
-      const soulLinkState = getSoulLinkState('Pulling state')
-      const sessionId = soulLinkState.metadata.sessionId
-      if (!sessionId) return
-
-      const repo = getSupabaseRepository()
-      const session = await repo.fetchSessionById(sessionId)
-
-      if (!session) {
-        startNewLocalSoulLinkRun()
-        return
-      }
-
-      const merged = mergeRemoteState(soulLinkState, session.state)
-      replaceSoulLinkState(merged)
-      setSyncVersion(session.version)
-    })
-  }
-
-  async function pushState() {
-    return withSyncSuppressedAsync(async () => {
-      const soulLinkState = getSoulLinkState('Pushing state')
-      const sessionId = soulLinkState.metadata.sessionId
-      if (!sessionId) return
-
-      const repo = getSupabaseRepository()
-      const currentRunState = getSoulLinkRunState('Pushing state')
-      const remoteState = buildRemoteState(
-        soulLinkState,
-        currentRunState.rules.generation,
-      )
-      const expectedVersion = soulLinkState.sync.version
-
-      const result = await repo.pushSessionState(
-        sessionId,
-        remoteState,
-        expectedVersion,
-      )
-
-      if (result.success) {
-        _lastPushedVersion = result.version
-        setSyncVersion(result.version)
-        return
-      }
-
-      // Version conflict — fetch current version, apply partner data, retry once
-      const session = await repo.fetchSessionById(sessionId)
-      if (!session) return
-
-      const currentState = getSoulLinkState('Retrying push after conflict')
-      const merged = mergeRemoteState(currentState, session.state)
-      replaceSoulLinkState(merged)
-      setSyncVersion(session.version)
-
-      const refreshedState = getSoulLinkState('Retrying push after conflict')
-      const refreshedRunState = getSoulLinkRunState(
-        'Retrying push after conflict',
-      )
-      const refreshedRemote = buildRemoteState(
-        refreshedState,
-        refreshedRunState.rules.generation,
-      )
-      const retryResult = await repo.pushSessionState(
-        sessionId,
-        refreshedRemote,
-        refreshedState.sync.version,
-      )
-
-      if (retryResult.success) {
-        _lastPushedVersion = retryResult.version
-        setSyncVersion(retryResult.version)
-      }
-    })
-  }
-
   async function syncSession() {
     const soulLinkState = getSoulLinkState('Syncing session')
     if (!soulLinkState.metadata.sessionId) return
 
     setSyncState(SOUL_LINK_SYNC_STATES.SYNCING)
     try {
-      await pullState()
-      await pushState()
+      await sync.pullState()
+      await sync.pushState()
       setSyncState(SOUL_LINK_SYNC_STATES.READY)
     } catch (error) {
       console.error('Sync failed:', error)
@@ -795,30 +699,6 @@ export function useSoulLinkStore() {
     setSyncState(SOUL_LINK_SYNC_STATES.LOCAL_ONLY)
   }
 
-  function subscribeToSessionUpdates() {
-    unsubscribeFromSession()
-
-    const soulLinkState = getSoulLinkState('Subscribing to session')
-    const sessionId = soulLinkState.metadata.sessionId
-    if (!sessionId) return
-
-    const repo = getSupabaseRepository()
-    _unsubscribe = repo.subscribeToSession(sessionId, (session) => {
-      if (session.version <= _lastPushedVersion) return
-      withSyncSuppressed(() => {
-        const currentState = getSoulLinkState('Handling realtime update')
-        const merged = mergeRemoteState(currentState, session.state)
-        replaceSoulLinkState(merged)
-        setSyncVersion(session.version)
-        if (session.state.generationRules) {
-          setGenerationRules(session.state.generationRules)
-        }
-      })
-    })
-  }
-
-  _pushStateFn = pushState
-
   return {
     runState,
     sessionMetadata,
@@ -828,7 +708,7 @@ export function useSoulLinkStore() {
     generationRules,
     localPreferences,
     activity,
-    sync,
+    sync: syncData,
     loadSoulLinkData,
     loadError,
     createLocalRun,
@@ -856,12 +736,12 @@ export function useSoulLinkStore() {
     resetPlayerGymProgress,
     createSession,
     joinSession,
-    pushState,
-    pullState,
+    pushState: sync.pushState,
+    pullState: sync.pullState,
     syncSession,
     deleteRemoteSession,
-    subscribeToSessionUpdates,
-    unsubscribeFromSession,
+    subscribeToSessionUpdates: sync.subscribeToSession,
+    unsubscribeFromSession: sync.unsubscribeFromSession,
     buildPersistableSnapshot,
   }
 }

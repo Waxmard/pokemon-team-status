@@ -1,0 +1,37 @@
+name: Deploy Preview
+
+on:
+  pull_request:
+    types: [labeled, synchronize]
+
+jobs:
+  deploy-preview:
+    name: Deploy Preview
+    if: contains(github.event.pull_request.labels.*.name, 'deploy-preview')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=pokemon-team-status --branch=preview
+      - name: Comment preview URL
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: deploy-preview
+          message: |
+            Preview deployed: https://preview.pokemon-team-status.pages.dev

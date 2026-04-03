@@ -5,3 +5,4 @@ dev-dist/
 coverage/
 supabase/
 *secret*
+public/sprites/

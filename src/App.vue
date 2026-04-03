@@ -4,34 +4,54 @@
       <div v-if="activeLoadError" class="load-error-banner" @click="retryLoad">
         Failed to load saved data. Tap to retry.
       </div>
-      <div class="header-btns">
-        <button class="header-btn" @click="showResetDialog = true" aria-label="Options">✦</button>
-        <button v-if="!isSoloMode" class="header-btn header-btn-link" @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
-      </div>
-      <h1 class="app-title">
-        <span v-if="isSoloMode" class="title-accent">{{ appTitle }}</span>
-        <span v-else class="title-player-row">
-          <label class="title-player-field">
-            <input
-              ref="playerNameInput"
-              :value="viewedSoulLinkPlayerName"
-              :size="Math.max(viewedSoulLinkPlayerName.length, 1)"
-              class="title-player-input"
-              type="text"
-              maxlength="32"
-              aria-label="Viewed Soul Link player name"
-              @blur="handleRenameViewedSoulLinkPlayerInput"
-              @focus="selectPlayerNameInput"
-            />
-          </label>
-        </span>
-      </h1>
+      <AppHeader>
+        <template #actions>
+          <button @click="showResetDialog = true" aria-label="Options">⚙️</button>
+          <button @click="showSoloDialog = true" aria-label="Solo Run">⚔️</button>
+          <button @click="showSoulLinkDialog = true" aria-label="Soul Link">🔗</button>
+        </template>
+        <template #title>
+          <span v-if="isSoloMode" class="title-player-row">
+            <label class="title-player-field">
+              <input
+                ref="soloRunNameInput"
+                :value="soloRunDisplayName"
+                :size="Math.max(soloRunDisplayName.length, 1)"
+                class="title-player-input"
+                type="text"
+                maxlength="32"
+                placeholder="Weakness Calculator"
+                aria-label="Solo run name"
+                @blur="handleRenameSoloRun"
+                @focus="soloRunNameInput?.select()"
+              />
+            </label>
+          </span>
+          <span v-else class="title-player-row">
+            <label class="title-player-field">
+              <input
+                ref="playerNameInput"
+                :value="viewedSoulLinkPlayerName"
+                :size="Math.max(viewedSoulLinkPlayerName.length, 1)"
+                class="title-player-input"
+                type="text"
+                maxlength="32"
+                aria-label="Viewed Soul Link player name"
+                @blur="handleRenameViewedSoulLinkPlayerInput"
+                @focus="selectPlayerNameInput"
+              />
+            </label>
+          </span>
+        </template>
+      </AppHeader>
 
       <template v-if="isSoloMode">
-        <TeamSection :team="team" :box="box" @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap"
-          :generation-rules="generationRules"
+        <TeamSection :team="team" :box="box" :dead="dead" :has-death-box="true" :death-box-mode="deathBoxMode"
+          @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap" :generation-rules="generationRules"
           @deleteTeamPokemon="deleteTeamPokemon" @deleteBoxPokemon="deleteBoxPokemon" @cancelSwap="handleCancelSwap"
-          @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion" />
+          @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion"
+          @killPokemon="handleSoloKillPokemon" @revivePokemon="handleSoloRevivePokemon"
+          @deleteDeadPokemon="handleSoloDeleteDeadPokemon" @exitDeathBox="deathBoxMode = false" />
 
         <GymColumns :team="team" :box="box" :remainingGyms="remainingGyms" :defeatedGymsList="defeatedGymsList"
           :defeated-gym-types="defeatedGyms" :pinned-type="pinnedGym" :persist-pinned-gym="persistPinnedGym" :generation-rules="generationRules"
@@ -71,57 +91,46 @@
       <div class="reset-dialog">
         <h3 class="reset-dialog-title">Options</h3>
         <div class="reset-dialog-options">
-          <button class="reset-option" @click="toggleGenerationRules">
-            {{ generationRulesLabel }}
-          </button>
-          <div class="reset-option-group">
-            <button class="reset-option" @click="resetPokemon">
-              Reset Team & Box
+          <DialogActionSection>
+            <button class="reset-option" @click="toggleGenerationRules">
+              {{ generationRulesLabel }}
             </button>
-            <button class="reset-option" @click="resetGyms">
-              Reset Gyms
-            </button>
-          </div>
-          <div class="reset-option-group">
-            <button class="reset-option" @click="switchToSoloMode">
-              Solo Mode
-            </button>
-            <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
-              New Soul Link Run
-            </button>
-            <template v-if="isSupabaseAvailable">
-              <template v-if="showJoinInput">
-                <div class="session-input-row">
-                  <input
-                    ref="joinCodeInput"
-                    v-model="joinCodeValue"
-                    class="session-code-input"
-                    type="text"
-                    maxlength="6"
-                    placeholder="Invite code"
-                    @keydown.enter="handleJoinSession"
-                  />
-                  <button class="reset-option session-confirm-btn" @click="handleJoinSession" :disabled="sessionActionPending">
-                    Join
-                  </button>
-                </div>
-              </template>
-              <button v-else class="reset-option" @click="showJoinInput = true">
-                Join Soul Link Run
+          </DialogActionSection>
+          <DialogActionSection v-if="allInactiveRuns.length > 0">
+            <div class="reset-option-group">
+              <div class="my-runs-header">Switch Run</div>
+              <button
+                v-for="run in allInactiveRuns"
+                :key="run.id"
+                class="reset-option"
+                @click="run.type === 'solo' ? handleSwitchSoloRun(run.id) : handleSwitchRun(run.id)"
+              >
+                {{ run.label }}
               </button>
-            </template>
-          </div>
-          <div v-if="inactiveRuns.length > 0" class="reset-option-group">
-            <div class="my-runs-header">Switch Soul Link Run</div>
-            <button
-              v-for="run in inactiveRuns"
-              :key="run.id"
-              class="reset-option"
-              @click="handleSwitchRun(run.id)"
-            >
-              {{ run.name || run.playerNames?.join(' & ') || 'Soul Link Run' }}
+            </div>
+          </DialogActionSection>
+          <DialogActionSection>
+            <div class="reset-option-group">
+              <button class="reset-option" @click="resetPokemon">
+                Reset Team & Box
+              </button>
+              <button class="reset-option" @click="resetGyms">
+                Reset Gyms
+              </button>
+            </div>
+          </DialogActionSection>
+          <DialogActionSection v-if="hasSoloRemoteSession && isSoloMode">
+            <button class="reset-option" @click="handleLeaveSoloSession">
+              Leave This Run
             </button>
-          </div>
+          </DialogActionSection>
+          <DialogActionSection v-if="currentActiveRunId">
+            <div class="reset-option-group">
+              <button class="reset-option reset-option-danger" @click="deleteRunTarget = currentActiveRunId; showResetDialog = false">
+                Delete This Run
+              </button>
+            </div>
+          </DialogActionSection>
         </div>
         <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
       </div>
@@ -139,10 +148,12 @@
           This run and all its data will be permanently deleted.
         </p>
         <div class="reset-dialog-options">
-          <button class="reset-option reset-option-danger"
-                  @click="handleDeleteRun(deleteRunTarget)">
-            Delete
-          </button>
+          <DialogActionSection>
+            <button class="reset-option reset-option-danger"
+                    @click="isSoloDeleteTarget ? handleDeleteSoloRun(deleteRunTarget) : handleDeleteRun(deleteRunTarget)">
+              Delete
+            </button>
+          </DialogActionSection>
         </div>
         <button class="reset-dialog-cancel"
                 @click="deleteRunTarget = null">✕</button>
@@ -161,10 +172,12 @@
           This linked Pokemon and its partner will both be deleted.
         </p>
         <div class="reset-dialog-options">
-          <button class="reset-option reset-option-danger"
-                  @click="confirmLinkedDelete">
-            Delete Both
-          </button>
+          <DialogActionSection>
+            <button class="reset-option reset-option-danger"
+                    @click="confirmLinkedDelete">
+              Delete Both
+            </button>
+          </DialogActionSection>
         </div>
         <button class="reset-dialog-cancel"
                 @click="linkedDeleteTarget = null">✕</button>
@@ -173,47 +186,62 @@
     </Transition>
   </Teleport>
 
-  <Teleport to="body">
-    <Transition name="dialog">
-    <div v-if="showSoulLinkDialog" class="reset-overlay" @click.self="showSoulLinkDialog = false">
-      <div class="reset-dialog">
-        <h3 class="reset-dialog-title">Soul Link</h3>
-        <div class="reset-dialog-options soul-link-dialog-options">
-          <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
-            View {{ otherSoulLinkPlayerName }}
-          </button>
-          <div v-if="hasRemoteSession && isSupabaseAvailable" class="reset-option-group">
-            <div class="session-code-display" @click="copyInviteCode">
-              {{ soulLinkSessionMetadata.inviteCode }}
-              <span class="session-code-hint">{{ copyLabel }}</span>
-            </div>
-          </div>
-          <hr class="dialog-divider" />
-          <button class="reset-option" @click="handleViewDeathBox">
-            {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
-          </button>
-          <div v-if="activeRunId" class="reset-option-group">
-            <button class="reset-option reset-option-danger" @click="deleteRunTarget = activeRunId; showSoulLinkDialog = false">
-              Delete This Run
-            </button>
-          </div>
-        </div>
-        <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
-      </div>
-    </div>
-    </Transition>
-  </Teleport>
+  <SessionDialog
+    v-model:visible="showSoulLinkDialog"
+    title="Soul Link"
+    :session-code="soulLinkSessionMetadata?.inviteCode"
+    :copy-label="copyLabel"
+    :has-remote-session="hasRemoteSession && isSupabaseAvailable"
+    :death-box-mode="deathBoxMode"
+    :show-view-player="!isSoloMode"
+    :other-player-name="otherSoulLinkPlayerName"
+    new-run-label="New Soul Link Run"
+    join-run-label="Join Soul Link Run"
+    :is-sync-available="isSupabaseAvailable"
+    :session-action-pending="sessionActionPending"
+    @copy-code="copyInviteCode"
+    @view-death-box="handleViewDeathBox('soulLink')"
+    @view-other-player="handleViewOtherSoulLinkPlayer"
+    @new-run="startNewRun(RUN_MODES.SOUL_LINK)"
+    @join-session="handleJoinSession"
+  />
+
+  <SessionDialog
+    v-model:visible="showSoloDialog"
+    title="Solo Run"
+    :session-code="soloInviteCode"
+    :copy-label="soloCopyLabel"
+    :has-remote-session="hasSoloRemoteSession && isSoloSyncAvailable"
+    :death-box-mode="deathBoxMode"
+    new-run-label="New Solo Run"
+    join-run-label="Join Solo Run"
+    :is-sync-available="isSoloSyncAvailable"
+    :session-action-pending="sessionActionPending"
+    :join-error="soloJoinError"
+    @copy-code="copySoloInviteCode"
+    @view-death-box="handleViewDeathBox('solo')"
+    @new-run="startNewRun(RUN_MODES.SOLO)"
+    @join-session="handleSoloJoinSession"
+  />
 </template>
 
 <script setup>
 import { NConfigProvider } from 'naive-ui'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import AppHeader from './components/AppHeader.vue'
+import DialogActionSection from './components/DialogActionSection.vue'
 import GymColumns from './components/GymColumns.vue'
+import SessionDialog from './components/SessionDialog.vue'
 import SoulLinkShell from './components/SoulLinkShell.vue'
 import TeamSection from './components/TeamSection.vue'
 import { useDraftAction } from './composables/useDraftAction.js'
 import { useRunModeStore } from './composables/useRunModeStore.js'
-import { useRunStore } from './composables/useRunStore.js'
+import {
+  registerSoloSyncScheduler,
+  useRunStore,
+} from './composables/useRunStore.js'
+import { useSoloRunManager } from './composables/useSoloRunManager.js'
+import { useSoloSync } from './composables/useSoloSync.js'
 import { useSoulLinkHandlers } from './composables/useSoulLinkHandlers.js'
 import { useSoulLinkRunManager } from './composables/useSoulLinkRunManager.js'
 import { useSoulLinkStore } from './composables/useSoulLinkStore.js'
@@ -221,16 +249,17 @@ import { getPokemonDataForRules } from './data/pokemon.js'
 import { GENERATION_RULESETS, getAllTypesForRules } from './data/types.js'
 import { supabase } from './services/supabaseClient.js'
 import { themeOverrides } from './theme/colors.js'
+import { copyToClipboard } from './utils/clipboard.js'
 import {
   sanitizeDraftActionForRules,
   sanitizePokemonCollectionForRules,
 } from './utils/generationRules.js'
+import { buildPokemonMember, pickMemberFields } from './utils/pokemon.js'
 import {
-  buildPokemonMember,
-  generatePokemonId,
-  pickMemberFields,
-} from './utils/pokemon.js'
-import { RUN_MODES } from './utils/runSnapshot.js'
+  mapSoloRunStateToPersistedSnapshot,
+  RUN_MODES,
+} from './utils/runSnapshot.js'
+import { resolveMostRecentRunMode } from './utils/runStartup.js'
 import {
   adaptSoulLinkMemberToUiMember,
   buildSoulLinkPlayerBoard,
@@ -238,9 +267,11 @@ import {
 import { calculateBerryTiebreaker, calculateScore } from './utils/typeCalc.js'
 
 const {
+  runState: soloRunState,
   team,
   defeatedGyms,
   box,
+  dead,
   loadData,
   loadError,
   persistTeam,
@@ -253,9 +284,14 @@ const {
   pinnedGym,
   deleteTeamPokemon,
   deleteBoxPokemon,
+  killTeamPokemon,
+  killBoxPokemon,
+  revivePokemon,
+  deleteDeadPokemon,
   defeatGym,
   undefeatGym,
   persistPinnedGym,
+  applyRemoteSnapshot: applySoloRemoteSnapshot,
 } = useRunStore()
 
 const {
@@ -303,6 +339,7 @@ const { currentRunMode, loadCurrentRunMode, setCurrentRunMode } =
 const {
   runList,
   activeRunId,
+  activeRunSummary,
   loadRunIndex,
   saveCurrentRunToIndex,
   switchToRun,
@@ -310,24 +347,65 @@ const {
   deleteRun,
 } = useSoulLinkRunManager()
 
+const {
+  initSyncSession: initSoloSyncSession,
+  syncSession: syncSoloSession,
+  subscribeToSession: subscribeSolo,
+  unsubscribeFromSession: unsubscribeSolo,
+  scheduleAutoSync: scheduleSoloAutoSync,
+  inviteCode: soloInviteCode,
+  sessionId: soloSessionId,
+  isAvailable: isSoloSyncAvailable,
+  createSession: createSoloSession,
+  joinSession: joinSoloSession,
+  leaveSession: leaveSoloSession,
+  deleteRemoteSession: deleteSoloRemoteSession,
+} = useSoloSync()
+
+registerSoloSyncScheduler(scheduleSoloAutoSync)
+
+const {
+  runList: soloRunList,
+  activeRunId: soloActiveRunId,
+  activeRunSummary: soloActiveRunSummary,
+  loadRunIndex: loadSoloRunIndex,
+  saveCurrentRunToIndex: saveSoloRunToIndex,
+  switchToRun: switchToSoloRun,
+  registerNewRun: registerNewSoloRun,
+  deleteRun: deleteSoloRun,
+  renameRun: renameSoloRun,
+} = useSoloRunManager()
+
 const showResetDialog = ref(false)
+const showSoloDialog = ref(false)
 const deleteRunTarget = ref(null)
 const showSoulLinkDialog = ref(false)
 const deathBoxMode = ref(false)
 const playerNameInput = ref(null)
-const joinCodeInput = ref(null)
-const joinCodeValue = ref('')
-const showJoinInput = ref(false)
+const soloRunNameInput = ref(null)
 const sessionActionPending = ref(false)
+const soloJoinError = ref(null)
 const copyLabel = ref('tap to copy')
+const soloCopyLabel = ref('tap to copy')
 const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
+const currentActiveRunId = computed(() =>
+  isSoloMode.value ? soloActiveRunId.value : activeRunId.value,
+)
 const isSupabaseAvailable = !!supabase
 const hasRemoteSession = computed(
   () => !isSoloMode.value && !!soulLinkSessionMetadata.value?.sessionId,
 )
+const hasSoloRemoteSession = computed(() => !!soloSessionId.value)
 const appTitle = computed(() =>
   isSoloMode.value ? 'Weakness Calculator' : viewedSoulLinkPlayerName.value,
 )
+
+const soloRunDisplayName = computed(() => {
+  const activeRun = soloRunList.value.find(
+    (r) => r.id === soloActiveRunId.value,
+  )
+  return activeRun?.name || 'Weakness Calculator'
+})
 
 const activeGenerationRules = computed(() =>
   isSoloMode.value ? generationRules.value : soulLinkGenerationRules.value,
@@ -335,6 +413,32 @@ const activeGenerationRules = computed(() =>
 
 const inactiveRuns = computed(() =>
   runList.value.filter((r) => r.id !== activeRunId.value),
+)
+
+const inactiveSoloRuns = computed(() =>
+  soloRunList.value.filter((r) => r.id !== soloActiveRunId.value),
+)
+
+const allInactiveRuns = computed(() => {
+  const soloSource = isSoloMode.value
+    ? inactiveSoloRuns.value
+    : soloRunList.value
+  const soulLinkSource = isSoloMode.value ? runList.value : inactiveRuns.value
+  const solo = soloSource.map((r) => ({
+    ...r,
+    type: 'solo',
+    label: r.name || 'Weakness Calculator',
+  }))
+  const soulLink = soulLinkSource.map((r) => ({
+    ...r,
+    type: 'soul-link',
+    label: r.name || r.playerNames?.join(' & ') || 'Soul Link',
+  }))
+  return [...solo, ...soulLink]
+})
+
+const isSoloDeleteTarget = computed(() =>
+  soloRunList.value.some((r) => r.id === deleteRunTarget.value),
 )
 
 const activeLoadError = computed(() =>
@@ -352,11 +456,10 @@ function retryLoad() {
 function resetPokemon() {
   if (isSoloMode.value) {
     resetTeamAndBox()
-    cancel()
   } else {
     resetPlayerRoster(viewedSoulLinkPlayerId.value)
-    cancel()
   }
+  cancel()
   showResetDialog.value = false
 }
 
@@ -479,9 +582,16 @@ function handleSoulLinkConfirmDraft() {
   }
 }
 
-function handleViewDeathBox() {
+function handleViewDeathBox(mode) {
   deathBoxMode.value = !deathBoxMode.value
-  showSoulLinkDialog.value = false
+  if (mode === 'soulLink') showSoulLinkDialog.value = false
+  else if (mode === 'solo') showSoloDialog.value = false
+}
+
+async function handleLeaveSoloSession() {
+  unsubscribeSolo()
+  await leaveSoloSession()
+  await handleDeleteSoloRun(soloActiveRunId.value)
 }
 
 function handleViewOtherSoulLinkPlayer() {
@@ -509,40 +619,73 @@ function handleRenameViewedSoulLinkPlayerInput(event) {
   handleRenameViewedSoulLinkPlayer(event.target.value)
 }
 
+function handleRenameSoloRun(event) {
+  const trimmed = event.target.value.trim()
+  if (!soloActiveRunId.value) return
+  const currentName = soloRunDisplayName.value
+  // If cleared or set to default, store null (shows placeholder)
+  const nextName =
+    !trimmed || trimmed === 'Weakness Calculator' ? null : trimmed
+  const currentStored =
+    currentName === 'Weakness Calculator' ? null : currentName
+  if (nextName === currentStored) return
+  renameSoloRun(soloActiveRunId.value, nextName)
+}
+
 function selectPlayerNameInput() {
   playerNameInput.value?.select()
 }
 
 // --- Session management ---
 
-async function handleJoinSession() {
-  const code = joinCodeValue.value.trim()
-  if (!code) return
+async function joinSessionFlow({
+  saveCurrentRun,
+  unsubscribe,
+  joinSession,
+  mode,
+  registerRun,
+  subscribe,
+  clearUI,
+}) {
   sessionActionPending.value = true
   try {
-    if (!isSoloMode.value) {
-      await saveCurrentRunToIndex(buildSoulLinkSnapshot())
-    }
-    unsubscribeSoulLink()
-    await joinSoulLinkSession(code)
-    setCurrentRunMode(RUN_MODES.SOUL_LINK)
-    await registerNewRun(buildSoulLinkSnapshot())
-    subscribeSoulLink()
-    showJoinInput.value = false
-    joinCodeValue.value = ''
-    showResetDialog.value = false
-  } catch (error) {
-    console.error('Failed to join session:', error)
+    if (saveCurrentRun) await saveCurrentRun()
+    unsubscribe()
+    await joinSession()
+    setCurrentRunMode(mode)
+    await registerRun()
+    subscribe()
+    clearUI()
   } finally {
     sessionActionPending.value = false
   }
 }
 
+async function handleJoinSession(code) {
+  try {
+    await joinSessionFlow({
+      saveCurrentRun: isSoloMode.value
+        ? null
+        : () => saveCurrentRunToIndex(buildSoulLinkSnapshot()),
+      unsubscribe: unsubscribeSoulLink,
+      joinSession: () => joinSoulLinkSession(code),
+      mode: RUN_MODES.SOUL_LINK,
+      registerRun: () => registerNewRun(buildSoulLinkSnapshot()),
+      subscribe: subscribeSoulLink,
+      clearUI: () => {
+        showSoulLinkDialog.value = false
+      },
+    })
+  } catch (error) {
+    console.error('Failed to join session:', error)
+  }
+}
+
 async function handleSwitchRun(runId) {
-  if (runId === activeRunId.value) return
+  if (runId === activeRunId.value && !isSoloMode.value) return
   await clearTransientUiState()
   unsubscribeSoulLink()
-  await switchToRun(runId, buildSoulLinkSnapshot())
+  await switchToRun(runId, isSoloMode.value ? null : buildSoulLinkSnapshot())
   await loadSoulLinkData()
   setCurrentRunMode(RUN_MODES.SOUL_LINK)
 
@@ -574,45 +717,34 @@ async function handleDeleteRun(runId) {
   }
 }
 
-function onCopySuccess() {
-  copyLabel.value = 'copied!'
-  setTimeout(() => {
-    copyLabel.value = 'tap to copy'
-  }, 2000)
-}
-
 function copyInviteCode() {
-  const code = soulLinkSessionMetadata.value?.inviteCode
-  if (!code) return
-
-  function tryFallback() {
-    if (fallbackCopy(code)) {
-      onCopySuccess()
-    } else {
-      copyLabel.value = 'copy failed'
-    }
-  }
-
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(code).then(onCopySuccess).catch(tryFallback)
-  } else {
-    tryFallback()
-  }
+  copyToClipboard(soulLinkSessionMetadata.value?.inviteCode, copyLabel)
 }
 
-function fallbackCopy(text) {
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.style.position = 'fixed'
-  textarea.style.opacity = '0'
-  document.body.appendChild(textarea)
-  textarea.select()
+function copySoloInviteCode() {
+  copyToClipboard(soloInviteCode.value, soloCopyLabel)
+}
+
+async function handleSoloJoinSession(code) {
+  soloJoinError.value = null
   try {
-    return document.execCommand('copy')
-  } catch {
-    return false
-  } finally {
-    textarea.remove()
+    await joinSessionFlow({
+      saveCurrentRun:
+        isSoloMode.value && soloActiveRunId.value
+          ? () => saveSoloRunToIndex(buildSoloSnapshot())
+          : null,
+      unsubscribe: unsubscribeSolo,
+      joinSession: () => joinSoloSession(code),
+      mode: RUN_MODES.SOLO,
+      registerRun: () => registerNewSoloRun(buildSoloSnapshot()),
+      subscribe: subscribeSolo,
+      clearUI: () => {
+        showSoloDialog.value = false
+      },
+    })
+  } catch (error) {
+    console.error('Failed to join solo session:', error)
+    soloJoinError.value = error?.message || 'Failed to join'
   }
 }
 
@@ -708,10 +840,27 @@ async function switchToSoloMode() {
 async function startNewRun(mode) {
   await clearTransientUiState()
   unsubscribeSoulLink()
+  unsubscribeSolo()
 
   if (mode === RUN_MODES.SOLO) {
+    // Save current solo run before starting a new one
+    if (isSoloMode.value && soloActiveRunId.value) {
+      await saveSoloRunToIndex(buildSoloSnapshot())
+    }
     await startNewSoloRun()
     setCurrentRunMode(RUN_MODES.SOLO)
+    await registerNewSoloRun(buildSoloSnapshot())
+    if (isSoloSyncAvailable) {
+      await deleteSoloRemoteSession()
+      initSoloSyncSession(
+        () => buildSoloSnapshot(),
+        (s) => applySoloRemoteSnapshot(s),
+      )
+        .then(() => subscribeSolo())
+        .catch((err) =>
+          console.error('Failed to create solo sync session:', err),
+        )
+    }
   } else {
     if (!isSoloMode.value) {
       await saveCurrentRunToIndex(buildSoulLinkSnapshot())
@@ -730,6 +879,7 @@ async function startNewRun(mode) {
   }
 
   showResetDialog.value = false
+  showSoloDialog.value = false
   showSoulLinkDialog.value = false
 }
 
@@ -824,6 +974,7 @@ function handleBoxToTeamSwap(targetId, inHandPokemon) {
     if (team.value.length >= 6) return
     const newTeamMember = buildPokemonMember(draftAction.value, {
       source: 'team',
+      id: boxPokemonId,
     })
     persistTeam([...team.value, newTeamMember])
     persistBox(box.value.filter((p) => p.id !== boxPokemonId))
@@ -835,11 +986,14 @@ function handleBoxToTeamSwap(targetId, inHandPokemon) {
   if (!targetPokemon) return
 
   const newTeam = team.value.map((p) =>
-    p.id === targetId ? { ...inHandPokemon, id: generatePokemonId('team') } : p,
+    p.id === targetId ? { ...inHandPokemon, id: boxPokemonId } : p,
   )
   persistTeam(newTeam)
 
-  const newBoxMember = buildPokemonMember(targetPokemon, { source: 'box' })
+  const newBoxMember = buildPokemonMember(targetPokemon, {
+    source: 'box',
+    id: targetId,
+  })
   persistBox([...box.value.filter((p) => p.id !== boxPokemonId), newBoxMember])
 
   swapInHandToTarget(targetPokemon)
@@ -852,6 +1006,7 @@ function handleTeamToBoxSwap(targetId, inHandPokemon) {
   if (targetId === null) {
     const newBoxMember = buildPokemonMember(draftAction.value, {
       source: 'box',
+      id: teamPokemonId,
     })
     persistBox([...box.value, newBoxMember])
     persistTeam(team.value.filter((p) => p.id !== teamPokemonId))
@@ -863,12 +1018,13 @@ function handleTeamToBoxSwap(targetId, inHandPokemon) {
   if (!targetPokemon) return
 
   const newBox = box.value.map((p) =>
-    p.id === targetId ? { ...inHandPokemon, id: generatePokemonId('box') } : p,
+    p.id === targetId ? { ...inHandPokemon, id: teamPokemonId } : p,
   )
   persistBox(newBox)
 
   const newTeamMember = buildPokemonMember(targetPokemon, {
     source: 'team',
+    id: targetId,
   })
   persistTeam(
     team.value.map((p) => (p.id === teamPokemonId ? newTeamMember : p)),
@@ -904,11 +1060,17 @@ function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
     if (!teamPokemon || !boxPokemon) return
 
     // B goes to team where A was
-    const newTeamMember = buildPokemonMember(boxPokemon, { source: 'team' })
+    const newTeamMember = buildPokemonMember(boxPokemon, {
+      source: 'team',
+      id: candidateId,
+    })
     persistTeam(team.value.map((p) => (p.id === currentId ? newTeamMember : p)))
 
     // A goes to box where B was
-    const newBoxMember = buildPokemonMember(teamPokemon, { source: 'box' })
+    const newBoxMember = buildPokemonMember(teamPokemon, {
+      source: 'box',
+      id: currentId,
+    })
     persistBox(box.value.map((p) => (p.id === candidateId ? newBoxMember : p)))
 
     // Set A as "in hand" box Pokemon for chain swapping
@@ -1064,28 +1226,160 @@ function handleDeleteFromDraft() {
   cancel()
 }
 
-function handleVisibilityChange() {
-  if (document.hidden || isSoloMode.value || !hasRemoteSession.value) return
-  syncSoulLinkSession().catch((err) =>
-    console.error('Foreground re-sync failed:', err),
+function handleSoloKillPokemon({ id, rosterKey }) {
+  if (rosterKey === 'team') killTeamPokemon(id)
+  else killBoxPokemon(id)
+  cancel()
+}
+
+function handleSoloRevivePokemon(memberId) {
+  revivePokemon(memberId)
+}
+
+function handleSoloDeleteDeadPokemon({ id }) {
+  deleteDeadPokemon(id)
+  cancel()
+}
+
+function buildSoloSnapshot() {
+  const snapshot = mapSoloRunStateToPersistedSnapshot(soloRunState.value)
+  snapshot.name = soloActiveRunSummary.value?.name ?? null
+  return snapshot
+}
+
+async function switchToSoloRunCore(runId, currentSnapshot) {
+  await clearTransientUiState()
+  unsubscribeSoulLink()
+  unsubscribeSolo()
+  const snapshot = await switchToSoloRun(runId, currentSnapshot)
+  if (snapshot) {
+    await loadData()
+  }
+  setCurrentRunMode(RUN_MODES.SOLO)
+  deathBoxMode.value = false
+  showResetDialog.value = false
+  showSoulLinkDialog.value = false
+  if (isSoloSyncAvailable) {
+    initSoloSyncSession(
+      () => buildSoloSnapshot(),
+      (s) => applySoloRemoteSnapshot(s),
+    )
+      .then(() => subscribeSolo())
+      .catch((err) => console.error('Solo sync after run switch failed:', err))
+  }
+}
+
+async function handleSwitchSoloRun(runId) {
+  if (runId === soloActiveRunId.value && isSoloMode.value) return
+  await switchToSoloRunCore(
+    runId,
+    isSoloMode.value ? buildSoloSnapshot() : null,
   )
+}
+
+async function handleDeleteSoloRun(runId) {
+  const result = await deleteSoloRun(runId)
+  deleteRunTarget.value = null
+
+  if (!result?.wasActive) return
+
+  if (result.nextRunId) {
+    await switchToSoloRunCore(result.nextRunId, null)
+  } else if (activeRunId.value) {
+    // No more solo runs — switch to the active soul link run
+    await clearTransientUiState()
+    unsubscribeSolo()
+    await switchToRun(activeRunId.value, null)
+    setCurrentRunMode(RUN_MODES.SOUL_LINK)
+    await loadSoulLinkData()
+    deathBoxMode.value = false
+    showResetDialog.value = false
+    showSoloDialog.value = false
+    if (soulLinkSessionMetadata.value?.sessionId) {
+      syncSoulLinkSession()
+        .then(() => subscribeSoulLink())
+        .catch((err) =>
+          console.error('Sync after last solo delete failed:', err),
+        )
+    }
+  } else {
+    // No runs of any kind — create a fresh solo run
+    await startNewSoloRun()
+    setCurrentRunMode(RUN_MODES.SOLO)
+    await registerNewSoloRun(buildSoloSnapshot())
+    showResetDialog.value = false
+    showSoloDialog.value = false
+  }
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) return
+  if (isSoloMode.value) {
+    if (hasSoloRemoteSession.value) {
+      syncSoloSession().catch((err) =>
+        console.error('Solo foreground re-sync failed:', err),
+      )
+    }
+  } else if (hasRemoteSession.value) {
+    syncSoulLinkSession().catch((err) =>
+      console.error('Foreground re-sync failed:', err),
+    )
+  }
+}
+
+async function restoreMostRecentRun(preferredMode) {
+  await Promise.all([loadRunIndex(), loadSoloRunIndex()])
+
+  const startupMode = resolveMostRecentRunMode({
+    preferredMode,
+    soloRun: soloActiveRunSummary.value,
+    soulLinkRun: activeRunSummary.value,
+  })
+
+  if (startupMode === RUN_MODES.SOUL_LINK && activeRunId.value) {
+    await switchToRun(activeRunId.value, null)
+    setCurrentRunMode(RUN_MODES.SOUL_LINK)
+    await loadSoulLinkData()
+    return RUN_MODES.SOUL_LINK
+  }
+
+  if (soloActiveRunId.value) {
+    await switchToSoloRun(soloActiveRunId.value, null)
+  }
+
+  setCurrentRunMode(RUN_MODES.SOLO)
+  await loadData()
+  return RUN_MODES.SOLO
 }
 
 onMounted(async () => {
   document.addEventListener('visibilitychange', handleVisibilityChange)
 
-  loadRunIndex().catch((err) => console.error('Failed to load run index:', err))
-
   const initialRunMode = loadCurrentRunMode()
 
-  if (initialRunMode === RUN_MODES.SOLO) {
-    loadData()
-    return
-  }
+  const startupMode = await restoreMostRecentRun(initialRunMode)
 
-  await loadSoulLinkData()
-
-  if (soulLinkSessionMetadata.value?.sessionId) {
+  if (startupMode === RUN_MODES.SOLO) {
+    if (isSoloSyncAvailable) {
+      try {
+        await initSoloSyncSession(
+          () => buildSoloSnapshot(),
+          (snapshot) => applySoloRemoteSnapshot(snapshot),
+        )
+      } catch (err) {
+        console.error('Failed to init solo sync session:', err)
+      }
+      if (hasSoloRemoteSession.value) {
+        try {
+          await syncSoloSession()
+          await saveSoloRunToIndex(buildSoloSnapshot())
+          subscribeSolo()
+        } catch (err) {
+          console.error('Solo auto-sync on mount failed:', err)
+        }
+      }
+    }
+  } else if (soulLinkSessionMetadata.value?.sessionId) {
     syncSoulLinkSession()
       .then(() => subscribeSoulLink())
       .catch((err) => console.error('Auto-sync on mount failed:', err))
@@ -1094,6 +1388,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange)
+  unsubscribeSolo()
 })
 
 if (import.meta.env.DEV) {
@@ -1120,13 +1415,6 @@ if (import.meta.env.DEV) {
   animation: fadeIn var(--transition-slow) ease forwards;
 }
 
-.app-title {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: var(--space-6);
-}
-
 .title-player-row {
   display: inline-flex;
   align-items: center;
@@ -1140,15 +1428,6 @@ if (import.meta.env.DEV) {
   min-width: 0;
 }
 
-.title-accent {
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 .title-player-input {
   width: auto;
   max-width: min(100%, 24rem);
@@ -1158,7 +1437,6 @@ if (import.meta.env.DEV) {
   background: transparent;
   color: var(--color-text-primary);
   font: inherit;
-  font-size: 1.5rem;
   font-weight: 700;
   text-align: center;
   cursor: text;
@@ -1176,42 +1454,6 @@ if (import.meta.env.DEV) {
   -webkit-text-fill-color: var(--color-text-primary);
 }
 
-.header-btns {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 10;
-  display: flex;
-  gap: var(--space-1);
-}
-
-.header-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  font-size: 1.25rem;
-  cursor: pointer;
-  padding: var(--space-1);
-  transition: color var(--transition-base);
-}
-
-.header-btn:hover,
-.header-btn:active {
-  color: rgba(139, 92, 246, 1);
-}
-
-.header-btn-link {
-  font-size: 0.6rem;
-  filter: grayscale(1);
-  opacity: 0.5;
-}
-
-.header-btn-link:hover,
-.header-btn-link:active {
-  filter: grayscale(0);
-  opacity: 1;
-}
-
 @media (orientation: landscape) and (max-height: 500px) {
   .app-container {
     display: flex;
@@ -1219,6 +1461,15 @@ if (import.meta.env.DEV) {
     flex-wrap: wrap;
     gap: var(--space-4);
     max-width: 100%;
+  }
+
+  .app-container :deep(.app-header) {
+    flex: 0 0 100%;
+    margin-bottom: var(--space-2);
+  }
+
+  .app-container :deep(.app-header .header-actions) {
+    justify-self: center;
   }
 
   .load-error-banner {
@@ -1234,15 +1485,6 @@ if (import.meta.env.DEV) {
     animation: fadeIn var(--transition-base) ease forwards;
   }
 
-  .app-title {
-    flex: 0 0 100%;
-    margin-bottom: var(--space-2);
-  }
-
-  .header-btns {
-    top: auto;
-    bottom: 0;
-  }
 }
 
 @media (min-width: 1024px) {
@@ -1304,13 +1546,6 @@ if (import.meta.env.DEV) {
 .reset-dialog-options {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-}
-
-.dialog-divider {
-  border: none;
-  border-top: 1px solid var(--color-border);
-  margin: 0;
 }
 
 .reset-option {
@@ -1343,18 +1578,6 @@ if (import.meta.env.DEV) {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-top: var(--space-4);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border);
-}
-
-.soul-link-dialog-options .reset-option-group {
-  margin-top: var(--space-1);
-  padding-top: var(--space-3);
-}
-
-.soul-link-dialog-options .dialog-divider {
-  margin: var(--space-2) 0;
 }
 
 
@@ -1421,6 +1644,12 @@ if (import.meta.env.DEV) {
 
 .session-confirm-btn {
   flex-shrink: 0;
+}
+
+.session-join-error {
+  color: var(--color-danger);
+  font-size: 0.8rem;
+  margin-top: var(--space-1);
 }
 
 .session-code-display {

@@ -46,6 +46,7 @@ export function createSupabaseRepository() {
         .from('sessions')
         .select()
         .eq('id', sessionId)
+        .is('deleted_at', null)
         .maybeSingle()
 
       if (error) {
@@ -60,6 +61,7 @@ export function createSupabaseRepository() {
         .from('sessions')
         .select()
         .eq('invite_code', inviteCode)
+        .is('deleted_at', null)
         .maybeSingle()
 
       if (error) {
@@ -98,7 +100,7 @@ export function createSupabaseRepository() {
       const client = assertClient()
       const { error } = await client
         .from('sessions')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', sessionId)
 
       if (error) {

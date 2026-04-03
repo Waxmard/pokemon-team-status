@@ -38,12 +38,6 @@
       class="mode-toggle"
       :class="{ 'draft-open': showDraftPanel }"
       @click="handleModeClick"
-      @mousedown="startLongPress"
-      @mouseup="cancelLongPress"
-      @mouseleave="cancelLongPress"
-      @touchstart.prevent="startLongPress"
-      @touchend="onTouchEnd"
-      @touchcancel="cancelLongPress"
     >
       <template v-if="swapMode && swapPokemonSpriteUrl">
         <SpriteImg :src="swapPokemonSpriteUrl" :width="32" :height="32" alt="Swap" />
@@ -52,8 +46,7 @@
       <span v-else class="mode-icon">{{ viewMode === 'team' ? '⚔️' : viewMode === 'box' ? '📦' : '💀' }}</span>
     </button>
 
-    <Transition name="section-collapse">
-    <div v-show="!isCollapsed" class="team-section">
+    <div class="team-section">
     <!-- Single transition for grid/panel switching -->
     <Transition name="content-fade" mode="out-in">
       <!-- Grid view -->
@@ -156,14 +149,12 @@
       </div>
     </Transition>
     </div>
-    </Transition>
   </div>
 </template>
 
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
-import { useLongPress } from '../composables/useLongPress.js'
 import { getPokemonDataForRules } from '../data/pokemon.js'
 import { resolveSpriteUrl } from '../utils/pokemon.js'
 import DraftPanel from './DraftPanel.vue'
@@ -200,6 +191,10 @@ const props = defineProps({
     default: null,
   },
   isSoulLinkMode: {
+    type: Boolean,
+    default: false,
+  },
+  hasDeathBox: {
     type: Boolean,
     default: false,
   },
@@ -260,32 +255,12 @@ const swapPokemonSpriteUrl = computed(() => {
 })
 
 const viewMode = ref('team')
-const isCollapsed = ref(false)
-
-// Long-press handling for collapse
-const { longPressFired, startLongPress, cancelLongPress, handleTouchEnd } =
-  useLongPress(() => {
-    isCollapsed.value = true
-  })
-
-function onTouchEnd() {
-  handleTouchEnd(handleModeClick)
-}
 
 function handleModeClick() {
-  // If long press just fired, don't also handle click
-  if (longPressFired.value) {
-    longPressFired.value = false
-    return
-  }
-  // If in death box, clicking skull exits it
+  // If in death box, clicking toggle returns to box
   if (viewMode.value === 'dead') {
+    viewMode.value = 'box'
     emit('exitDeathBox')
-    return
-  }
-  // If collapsed, expand on click
-  if (isCollapsed.value) {
-    isCollapsed.value = false
     return
   }
   // If in swap mode, clicking toggle cancels swap
@@ -326,7 +301,7 @@ watch(
 watch(
   () => props.deathBoxMode,
   (isDeathBox) => {
-    viewMode.value = isDeathBox ? 'dead' : 'team'
+    viewMode.value = isDeathBox ? 'dead' : 'box'
   },
 )
 
@@ -397,18 +372,16 @@ const isEditingDead = computed(() => {
   return draftAction.value?.isDeadPokemon && !swapMode.value
 })
 
+const hasKillAction = computed(() => props.isSoulLinkMode || props.hasDeathBox)
+
 const deleteActionIcon = computed(() => {
   if (isEditingDead.value) return '🗑'
-  return props.isSoulLinkMode ? '💀' : '🗑'
+  return hasKillAction.value ? '💀' : '🗑'
 })
 
-function handleEditPokemon(id) {
-  if (props.readOnly) return
-  const pokemon = props.team.find((p) => p.id === id)
-  if (!pokemon) return
-  const pokemonData = getRulesetPokemonData(pokemon.name)
-  startEdit(id, {
-    pokemonData,
+function buildEditPayload(pokemon) {
+  return {
+    pokemonData: getRulesetPokemonData(pokemon.name),
     ability: pokemon.ability,
     berry: pokemon.berry || null,
     moves: pokemon.moves,
@@ -420,29 +393,21 @@ function handleEditPokemon(id) {
     spriteVariant: pokemon.spriteVariant || 'default',
     catchLocation: pokemon.catchLocation || null,
     nickname: pokemon.nickname || null,
-  })
+  }
+}
+
+function handleEditPokemon(id) {
+  if (props.readOnly) return
+  const pokemon = props.team.find((p) => p.id === id)
+  if (!pokemon) return
+  startEdit(id, buildEditPayload(pokemon))
 }
 
 function handleEditBoxPokemon(boxPokemonId) {
   if (props.readOnly) return
   const pokemon = props.box.find((p) => p.id === boxPokemonId)
   if (!pokemon) return
-  const pokemonData = getRulesetPokemonData(pokemon.name)
-  startEditBox({
-    id: boxPokemonId,
-    pokemonData,
-    ability: pokemon.ability,
-    berry: pokemon.berry || null,
-    moves: pokemon.moves,
-    specialMove: pokemon.specialMove,
-    pairId: pokemon.pairId || null,
-    megaForm: pokemon.megaForm || null,
-    megaTypes: pokemon.megaTypes || null,
-    megaSpriteId: pokemon.megaSpriteId || null,
-    spriteVariant: pokemon.spriteVariant || 'default',
-    catchLocation: pokemon.catchLocation || null,
-    nickname: pokemon.nickname || null,
-  })
+  startEditBox({ id: boxPokemonId, ...buildEditPayload(pokemon) })
 }
 
 function toggleViewMode() {
@@ -477,7 +442,7 @@ function handleDeleteClick() {
     }
     return
   }
-  if (props.isSoulLinkMode) {
+  if (hasKillAction.value) {
     const rosterKey = draftAction.value?.isBoxPokemon ? 'box' : 'team'
     const id = draftAction.value?.isBoxPokemon
       ? draftAction.value.boxPokemonId
@@ -493,7 +458,7 @@ function handleDeleteClick() {
 
 function handleDeleteTeamPokemon(id) {
   if (props.readOnly) return
-  if (props.isSoulLinkMode) {
+  if (hasKillAction.value) {
     emit('killPokemon', { id, rosterKey: 'team' })
     return
   }
@@ -502,7 +467,7 @@ function handleDeleteTeamPokemon(id) {
 
 function handleDeleteBoxPokemon(id) {
   if (props.readOnly) return
-  if (props.isSoulLinkMode) {
+  if (hasKillAction.value) {
     emit('killPokemon', { id, rosterKey: 'box' })
     return
   }
@@ -513,22 +478,7 @@ function handleEditDeadPokemon(id) {
   if (props.readOnly) return
   const pokemon = props.dead.find((p) => p.id === id)
   if (!pokemon) return
-  const pokemonData = getRulesetPokemonData(pokemon.name)
-  startEditDead({
-    id,
-    pokemonData,
-    ability: pokemon.ability,
-    berry: pokemon.berry || null,
-    moves: pokemon.moves,
-    specialMove: pokemon.specialMove,
-    pairId: pokemon.pairId || null,
-    megaForm: pokemon.megaForm || null,
-    megaTypes: pokemon.megaTypes || null,
-    megaSpriteId: pokemon.megaSpriteId || null,
-    spriteVariant: pokemon.spriteVariant || 'default',
-    catchLocation: pokemon.catchLocation || null,
-    nickname: pokemon.nickname || null,
-  })
+  startEditDead({ id, ...buildEditPayload(pokemon) })
 }
 
 function handleReviveFromDraft() {
@@ -656,19 +606,6 @@ function handleDeleteDeadPokemon(id) {
   transform: scale(0.98);
 }
 
-
-.section-collapse-enter-active,
-.section-collapse-leave-active {
-  transition: opacity var(--transition-slow), transform var(--transition-slow);
-  overflow: hidden;
-}
-
-.section-collapse-enter-from,
-.section-collapse-leave-to {
-  opacity: 0;
-  transform: scaleY(0.95);
-  transform-origin: top;
-}
 
 
 .swap-action-buttons {

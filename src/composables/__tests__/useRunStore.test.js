@@ -5,9 +5,16 @@ const { repository } = vi.hoisted(() => ({
     loadSoloRunSnapshot: vi.fn(),
     persistSoloTeam: vi.fn(),
     persistSoloBox: vi.fn(),
+    persistSoloDead: vi.fn(),
     persistSoloDefeatedGyms: vi.fn(),
     persistSoloPinnedGym: vi.fn(),
     persistSoloGenerationRules: vi.fn(),
+  },
+}))
+
+const { soloRunManager } = vi.hoisted(() => ({
+  soloRunManager: {
+    persistActiveRunSnapshot: vi.fn(),
   },
 }))
 
@@ -21,12 +28,27 @@ vi.mock('../../utils/spriteCache.js', () => ({
   prefetchTypeIcons: vi.fn(),
 }))
 
-import { GENERATION_RULESETS } from '../../data/types.js'
+vi.mock('../useSoloRunManager.js', () => ({
+  useSoloRunManager: () => soloRunManager,
+}))
+
+import {
+  DEFAULT_GENERATION_RULESET,
+  GENERATION_RULESETS,
+} from '../../data/types.js'
 import {
   createDefaultRunState,
   createDefaultSoulLinkRunState,
 } from '../../utils/runSnapshot.js'
 import { useRunStore } from '../useRunStore.js'
+
+function createDeferred() {
+  let resolve
+  const promise = new Promise((nextResolve) => {
+    resolve = nextResolve
+  })
+  return { promise, resolve }
+}
 
 describe('useRunStore', () => {
   beforeEach(() => {
@@ -41,9 +63,11 @@ describe('useRunStore', () => {
     })
     repository.persistSoloTeam.mockResolvedValue(undefined)
     repository.persistSoloBox.mockResolvedValue(undefined)
+    repository.persistSoloDead.mockResolvedValue(undefined)
     repository.persistSoloDefeatedGyms.mockResolvedValue(undefined)
     repository.persistSoloPinnedGym.mockResolvedValue(undefined)
     repository.persistSoloGenerationRules.mockResolvedValue(undefined)
+    soloRunManager.persistActiveRunSnapshot.mockResolvedValue(undefined)
 
     useRunStore().runState.value = createDefaultRunState()
   })
@@ -62,6 +86,7 @@ describe('useRunStore', () => {
 
     expect(repository.persistSoloTeam).not.toHaveBeenCalled()
     expect(repository.persistSoloGenerationRules).not.toHaveBeenCalled()
+    expect(soloRunManager.persistActiveRunSnapshot).not.toHaveBeenCalled()
   })
 
   it('starts a fresh solo run and persists the reset snapshot', async () => {
@@ -86,10 +111,77 @@ describe('useRunStore', () => {
     expect(store.generationRules.value).toBe(GENERATION_RULESETS.PRE_GEN_6)
     expect(repository.persistSoloTeam).toHaveBeenCalledWith([])
     expect(repository.persistSoloBox).toHaveBeenCalledWith([])
+    expect(repository.persistSoloDead).toHaveBeenCalledWith([])
     expect(repository.persistSoloDefeatedGyms).toHaveBeenCalledWith([])
     expect(repository.persistSoloPinnedGym).toHaveBeenCalledWith(null)
     expect(repository.persistSoloGenerationRules).toHaveBeenCalledWith(
       GENERATION_RULESETS.PRE_GEN_6,
     )
+    expect(soloRunManager.persistActiveRunSnapshot).not.toHaveBeenCalled()
+  })
+
+  it('serializes solo writes so a reset cannot be overwritten by an older team save', async () => {
+    const store = useRunStore()
+    const firstTeamPersist = createDeferred()
+
+    repository.persistSoloTeam.mockImplementation((team) => {
+      if (team.length === 1) {
+        return firstTeamPersist.promise
+      }
+      return Promise.resolve()
+    })
+
+    store.runState.value = {
+      ...store.runState.value,
+      team: [{ id: 'team-1', name: 'Mudkip' }],
+    }
+
+    const staleWrite = store.persistTeam([{ id: 'team-2', name: 'Treecko' }])
+    const resetWrite = store.startNewSoloRun()
+
+    await vi.waitFor(() => {
+      expect(repository.persistSoloTeam).toHaveBeenCalledTimes(1)
+    })
+    expect(repository.persistSoloBox).not.toHaveBeenCalled()
+    expect(repository.persistSoloDead).not.toHaveBeenCalled()
+
+    firstTeamPersist.resolve()
+    await Promise.all([staleWrite, resetWrite])
+
+    expect(repository.persistSoloTeam).toHaveBeenNthCalledWith(1, [
+      { id: 'team-2', name: 'Treecko' },
+    ])
+    expect(repository.persistSoloTeam).toHaveBeenNthCalledWith(2, [])
+    expect(store.team.value).toEqual([])
+    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledTimes(1)
+    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledWith({
+      team: [{ id: 'team-2', name: 'Treecko' }],
+      box: [],
+      dead: [],
+      _tombstones: [],
+      defeatedGyms: [],
+      pinnedGym: null,
+      progressUpdatedAt: null,
+      generationRules: DEFAULT_GENERATION_RULESET,
+      generationRulesUpdatedAt: null,
+    })
+  })
+
+  it('syncs the active run snapshot after normal team updates', async () => {
+    const store = useRunStore()
+
+    await store.persistTeam([{ id: 'team-3', name: 'Torchic' }])
+
+    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledWith({
+      team: [{ id: 'team-3', name: 'Torchic' }],
+      box: [],
+      dead: [],
+      _tombstones: [],
+      defeatedGyms: [],
+      pinnedGym: null,
+      progressUpdatedAt: null,
+      generationRules: DEFAULT_GENERATION_RULESET,
+      generationRulesUpdatedAt: null,
+    })
   })
 })

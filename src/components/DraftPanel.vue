@@ -4,7 +4,7 @@
         <!-- Shared header with dynamic title -->
         <div class="wizard-header">
           <label v-if="wizardStep === 'pokemon' && draftAction.pokemon" class="wizard-title-field">
-            <span v-if="!displayName" class="wizard-title-placeholder">Pokemon Name</span>
+            <span v-if="!displayName" class="wizard-title-placeholder">{{ draftAction.pokemon?.name || 'Pokemon Name' }}</span>
             <input
               :value="displayName"
               :size="Math.max((displayName.length || 12) + 2, 3)"
@@ -98,42 +98,28 @@
             @select="onSelectPokemon"
             clearable
           />
-          <div v-if="draftAction.pokemon" class="pokemon-preview">
-            <button
-              class="variant-btn"
-              :class="{ active: draftAction.spriteVariant !== 'default' }"
-              @click="cycleSpriteVariant"
-              aria-label="Switch sprite variant"
-            >
-              ⇄
-            </button>
-            <div v-if="previewTypes.length" class="preview-type-list">
-              <span
-                v-for="(type, index) in previewTypes"
-                :key="type"
-                class="preview-type-label"
+          <PokemonPreview
+            v-if="draftAction.pokemon"
+            :sprite-url="selectedSpriteUrl"
+            :sprite-alt="draftAction.pokemon.name"
+            :types="previewTypes"
+            :catch-location="draftAction.catchLocation"
+          >
+            <template #top-left>
+              <button
+                class="variant-btn"
+                :class="{ active: draftAction.spriteVariant !== 'default' }"
+                @click="cycleSpriteVariant"
+                aria-label="Switch sprite variant"
               >
-                <span :style="getTypeTextColor(type)">
-                  {{ capitalize(type) }}<span v-if="index < previewTypes.length - 1">,</span>
-                </span>
-              </span>
-            </div>
-            <SpriteImg
-              v-if="selectedSpriteUrl"
-              :src="selectedSpriteUrl"
-              :alt="draftAction.pokemon.name"
-              :width="144"
-              :height="144"
-            />
-            <!-- Catch location display on pokemon step -->
-            <span v-if="draftAction.catchLocation" class="preview-catch-location">
-              {{ draftAction.catchLocation }}
-            </span>
-            <!-- Evolve button positioned inside preview -->
-            <button v-if="canEvolve" class="evolve-btn" @click="handleEvolveClick">
-              ⬆
-            </button>
-            <!-- Evolution options positioned under the button -->
+                ⇄
+              </button>
+            </template>
+            <template #top-right>
+              <button v-if="canEvolve" class="evolve-btn" @click="handleEvolveClick">
+                ⬆
+              </button>
+            </template>
             <div v-if="canEvolve && showEvolveOptions" class="evolve-options">
               <button
                 v-for="option in evolutionOptions"
@@ -145,7 +131,7 @@
                 <SpriteImg :src="getEvoSpriteUrl(option)" :alt="option.isMega ? option.name : option" :width="40" :height="40" />
               </button>
             </div>
-          </div>
+          </PokemonPreview>
         </div>
 
         <!-- Step: Catch Location -->
@@ -158,36 +144,28 @@
             @update:value="onCatchLocationInput"
             clearable
           />
-          <div class="pokemon-preview">
-            <SpriteImg
-              v-if="matchedPartnerForLocation"
-              :src="getPartnerPreviewSpriteUrl(matchedPartnerForLocation)"
-              :alt="matchedPartnerForLocation.name"
-              :width="144"
-              :height="144"
-            />
-            <svg v-else-if="draftAction.catchLocation" class="broken-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
-            <div v-if="matchedPartnerForLocation?.types?.length" class="preview-type-list">
-              <span
-                v-for="(type, index) in matchedPartnerForLocation.types"
-                :key="type"
-                class="preview-type-label"
-              >
-                <span :style="getTypeTextColor(type)">
-                  {{ capitalize(type) }}<span v-if="index < matchedPartnerForLocation.types.length - 1">,</span>
-                </span>
+          <PokemonPreview
+            v-if="isSoulLinkMode"
+            :sprite-url="matchedPartnerForLocation ? getPartnerPreviewSpriteUrl(matchedPartnerForLocation) : null"
+            :sprite-alt="matchedPartnerForLocation?.name"
+            :types="matchedPartnerForLocation?.types"
+            :catch-location="draftAction.catchLocation"
+            :catch-location-label="matchedPartnerForLocation ? draftAction.catchLocation : 'Not Yet Linked'"
+            :show-broken-link="!matchedPartnerForLocation && !!draftAction.catchLocation"
+          >
+            <template #top-right>
+              <span v-if="matchedPartnerForLocation?.nickname" class="preview-partner-nickname">
+                {{ matchedPartnerForLocation.nickname }}
               </span>
-            </div>
-            <span v-if="matchedPartnerForLocation?.nickname" class="preview-partner-nickname">
-              {{ matchedPartnerForLocation.nickname }}
-            </span>
-            <span v-if="draftAction.catchLocation" class="preview-catch-location">
-              {{ matchedPartnerForLocation ? draftAction.catchLocation : 'Not Yet Linked' }}
-            </span>
-          </div>
+            </template>
+          </PokemonPreview>
+          <PokemonPreview
+            v-else-if="draftAction.pokemon"
+            :sprite-url="selectedSpriteUrl"
+            :sprite-alt="draftAction.pokemon?.name"
+            :types="previewTypes"
+            :catch-location="draftAction.catchLocation"
+          />
         </div>
 
         <!-- Step: Ability -->
@@ -200,15 +178,11 @@
             @update:value="onAbilityInput"
             clearable
           />
-          <div class="pokemon-preview">
-            <SpriteImg
-              v-if="selectedSpriteUrl"
-              :src="selectedSpriteUrl"
-              :alt="draftAction.pokemon?.name"
-              :width="144"
-              :height="144"
-            />
-          </div>
+          <PokemonPreview
+            v-if="selectedSpriteUrl"
+            :sprite-url="selectedSpriteUrl"
+            :sprite-alt="draftAction.pokemon?.name"
+          />
         </div>
 
         <!-- Step: Berry -->
@@ -315,12 +289,14 @@ import {
   getSpriteUrl,
   resolveSpriteUrl,
 } from '../utils/pokemon.js'
+import { capitalize } from '../utils/string.js'
 import { getSuggestionIndicator } from '../utils/suggestion.js'
 import {
   applyAbilityDefense,
   findBestSwap,
   getDefensiveMultiplier,
 } from '../utils/typeCalc.js'
+import PokemonPreview from './PokemonPreview.vue'
 import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
@@ -471,10 +447,7 @@ function getSuggestionSpriteUrl(pokemonName, spriteVariant, megaSpriteId) {
 
 // Wizard state
 const wizardSteps = computed(() => {
-  if (props.isSoulLinkMode) {
-    return ['pokemon', 'catchLocation', 'moves', 'berry', 'ability']
-  }
-  return ['pokemon', 'moves', 'berry', 'ability']
+  return ['pokemon', 'catchLocation', 'moves', 'berry', 'ability']
 })
 
 const {
@@ -753,10 +726,6 @@ function evolveTo(option) {
   }
 }
 
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1)
-}
-
 function getTypeBackground(type, selected = false) {
   const color = TYPE_COLORS[type].bg
   const opacity = selected ? 0.7 : 0.1
@@ -764,33 +733,6 @@ function getTypeBackground(type, selected = false) {
   return {
     background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacityEnd)} 100%)`,
   }
-}
-
-function getTypeTextColor(type) {
-  return {
-    color: PREVIEW_TYPE_COLORS[type] || TYPE_COLORS[type].bg,
-  }
-}
-
-const PREVIEW_TYPE_COLORS = {
-  normal: '#7d7d4f',
-  fire: '#d94708',
-  water: '#2d6fe6',
-  electric: '#c79600',
-  grass: '#3f9f2a',
-  ice: '#2d9fb0',
-  fighting: '#9f1f19',
-  poison: '#812c98',
-  ground: '#b88a1c',
-  flying: '#6c63db',
-  psychic: '#e03274',
-  bug: '#7d9100',
-  rock: '#90761c',
-  ghost: '#53408c',
-  dragon: '#4c16d1',
-  dark: '#4c3b30',
-  steel: '#7b86a8',
-  fairy: '#d75f85',
 }
 
 // Wizard-related computed properties
@@ -1395,16 +1337,6 @@ function onSelectPokemon(value) {
   margin-top: var(--space-4);
 }
 
-.pokemon-preview {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: var(--space-4) 0;
-  overflow: visible;
-  filter: var(--drop-shadow-icon);
-}
-
 .variant-btn {
   position: absolute;
   top: var(--space-2);
@@ -1425,30 +1357,6 @@ function onSelectPokemon(value) {
 
 .variant-btn.active {
   color: rgba(139, 92, 246, 1);
-}
-
-.preview-type-list {
-  position: absolute;
-  bottom: -2rem;
-  left: var(--space-3);
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.14rem;
-  padding-bottom: 0.2rem;
-  overflow: visible;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.preview-type-label {
-  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  line-height: 1.28;
-  opacity: 0.92;
 }
 
 .evolve-btn {
@@ -1497,31 +1405,9 @@ function onSelectPokemon(value) {
   filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.6));
 }
 
-.broken-link-icon {
-  width: 80px;
-  height: 80px;
-  color: var(--color-text-muted);
-  opacity: 0.35;
-}
-
 .preview-partner-nickname {
   position: absolute;
   top: var(--space-2);
-  right: var(--space-3);
-  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  line-height: 1.28;
-  opacity: 0.92;
-  color: var(--color-text-primary);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.preview-catch-location {
-  position: absolute;
-  bottom: -2rem;
   right: var(--space-3);
   font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
   font-size: 0.68rem;
@@ -1567,10 +1453,6 @@ function onSelectPokemon(value) {
     padding-bottom: var(--space-2);
   }
 
-  .pokemon-preview {
-    margin: var(--space-2) 0;
-  }
-
   .wizard-header {
     margin-bottom: var(--space-2);
   }
@@ -1598,8 +1480,6 @@ function onSelectPokemon(value) {
     height: 32px;
   }
 
-  .preview-type-label,
-  .preview-catch-location,
   .preview-partner-nickname {
     font-size: 0.85rem;
   }
