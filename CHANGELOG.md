@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.2.2...v1.3.0) (2026-04-03)
+
+
+### Features
+
+* add solo run management, dead box, and cloud backup support ([#64](https://github.com/Waxmard/pokemon-team-status/issues/64)) ([331f6ce](https://github.com/Waxmard/pokemon-team-status/commit/331f6ced8a0c083b343d0db09754729d9b1f63de))
+
 ## [1.2.2](https://github.com/Waxmard/pokemon-team-status/compare/v1.2.1...v1.2.2) (2026-03-30)
 
 
