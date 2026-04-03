@@ -379,13 +379,9 @@ const deleteActionIcon = computed(() => {
   return hasKillAction.value ? '💀' : '🗑'
 })
 
-function handleEditPokemon(id) {
-  if (props.readOnly) return
-  const pokemon = props.team.find((p) => p.id === id)
-  if (!pokemon) return
-  const pokemonData = getRulesetPokemonData(pokemon.name)
-  startEdit(id, {
-    pokemonData,
+function buildEditPayload(pokemon) {
+  return {
+    pokemonData: getRulesetPokemonData(pokemon.name),
     ability: pokemon.ability,
     berry: pokemon.berry || null,
     moves: pokemon.moves,
@@ -397,29 +393,21 @@ function handleEditPokemon(id) {
     spriteVariant: pokemon.spriteVariant || 'default',
     catchLocation: pokemon.catchLocation || null,
     nickname: pokemon.nickname || null,
-  })
+  }
+}
+
+function handleEditPokemon(id) {
+  if (props.readOnly) return
+  const pokemon = props.team.find((p) => p.id === id)
+  if (!pokemon) return
+  startEdit(id, buildEditPayload(pokemon))
 }
 
 function handleEditBoxPokemon(boxPokemonId) {
   if (props.readOnly) return
   const pokemon = props.box.find((p) => p.id === boxPokemonId)
   if (!pokemon) return
-  const pokemonData = getRulesetPokemonData(pokemon.name)
-  startEditBox({
-    id: boxPokemonId,
-    pokemonData,
-    ability: pokemon.ability,
-    berry: pokemon.berry || null,
-    moves: pokemon.moves,
-    specialMove: pokemon.specialMove,
-    pairId: pokemon.pairId || null,
-    megaForm: pokemon.megaForm || null,
-    megaTypes: pokemon.megaTypes || null,
-    megaSpriteId: pokemon.megaSpriteId || null,
-    spriteVariant: pokemon.spriteVariant || 'default',
-    catchLocation: pokemon.catchLocation || null,
-    nickname: pokemon.nickname || null,
-  })
+  startEditBox({ id: boxPokemonId, ...buildEditPayload(pokemon) })
 }
 
 function toggleViewMode() {
@@ -490,22 +478,7 @@ function handleEditDeadPokemon(id) {
   if (props.readOnly) return
   const pokemon = props.dead.find((p) => p.id === id)
   if (!pokemon) return
-  const pokemonData = getRulesetPokemonData(pokemon.name)
-  startEditDead({
-    id,
-    pokemonData,
-    ability: pokemon.ability,
-    berry: pokemon.berry || null,
-    moves: pokemon.moves,
-    specialMove: pokemon.specialMove,
-    pairId: pokemon.pairId || null,
-    megaForm: pokemon.megaForm || null,
-    megaTypes: pokemon.megaTypes || null,
-    megaSpriteId: pokemon.megaSpriteId || null,
-    spriteVariant: pokemon.spriteVariant || 'default',
-    catchLocation: pokemon.catchLocation || null,
-    nickname: pokemon.nickname || null,
-  })
+  startEditDead({ id, ...buildEditPayload(pokemon) })
 }
 
 function handleReviveFromDraft() {

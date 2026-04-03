@@ -186,119 +186,43 @@
     </Transition>
   </Teleport>
 
-  <Teleport to="body">
-    <Transition name="dialog">
-    <div v-if="showSoulLinkDialog" class="reset-overlay" @click.self="showSoulLinkDialog = false">
-      <div class="reset-dialog">
-        <h3 class="reset-dialog-title">Soul Link</h3>
-        <div class="reset-dialog-options">
-          <DialogActionSection v-if="hasRemoteSession && isSupabaseAvailable">
-            <div class="reset-option-group">
-              <div class="session-code-display" @click="copyInviteCode">
-                {{ soulLinkSessionMetadata.inviteCode }}
-                <span class="session-code-hint">{{ copyLabel }}</span>
-              </div>
-            </div>
-          </DialogActionSection>
-          <DialogActionSection>
-            <button class="reset-option" @click="handleViewDeathBox">
-              {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
-            </button>
-          </DialogActionSection>
-          <DialogActionSection v-if="!isSoloMode">
-            <button class="reset-option" @click="handleViewOtherSoulLinkPlayer">
-              View {{ otherSoulLinkPlayerName }}
-            </button>
-          </DialogActionSection>
-          <DialogActionSection>
-            <div class="reset-option-group">
-              <button class="reset-option" @click="startNewRun(RUN_MODES.SOUL_LINK)">
-                New Soul Link Run
-              </button>
-              <template v-if="isSupabaseAvailable">
-                <template v-if="showJoinInput">
-                  <div class="session-input-row">
-                    <input
-                      ref="joinCodeInput"
-                      v-model="joinCodeValue"
-                      class="session-code-input"
-                      type="text"
-                      maxlength="6"
-                      placeholder="Invite code"
-                      @keydown.enter="handleJoinSession"
-                    />
-                    <button class="reset-option session-confirm-btn" @click="handleJoinSession" :disabled="sessionActionPending">
-                      Join
-                    </button>
-                  </div>
-                </template>
-                <button v-else class="reset-option" @click="showJoinInput = true">
-                  Join Soul Link Run
-                </button>
-              </template>
-            </div>
-          </DialogActionSection>
-        </div>
-        <button class="reset-dialog-cancel" @click="showSoulLinkDialog = false">✕</button>
-      </div>
-    </div>
-    </Transition>
-  </Teleport>
+  <SessionDialog
+    v-model:visible="showSoulLinkDialog"
+    title="Soul Link"
+    :session-code="soulLinkSessionMetadata?.inviteCode"
+    :copy-label="copyLabel"
+    :has-remote-session="hasRemoteSession && isSupabaseAvailable"
+    :death-box-mode="deathBoxMode"
+    :show-view-player="!isSoloMode"
+    :other-player-name="otherSoulLinkPlayerName"
+    new-run-label="New Soul Link Run"
+    join-run-label="Join Soul Link Run"
+    :is-sync-available="isSupabaseAvailable"
+    :session-action-pending="sessionActionPending"
+    @copy-code="copyInviteCode"
+    @view-death-box="handleViewDeathBox('soulLink')"
+    @view-other-player="handleViewOtherSoulLinkPlayer"
+    @new-run="startNewRun(RUN_MODES.SOUL_LINK)"
+    @join-session="handleJoinSession"
+  />
 
-  <Teleport to="body">
-    <Transition name="dialog">
-    <div v-if="showSoloDialog" class="reset-overlay" @click.self="showSoloDialog = false">
-      <div class="reset-dialog">
-        <h3 class="reset-dialog-title">Solo Run</h3>
-        <div class="reset-dialog-options">
-          <DialogActionSection v-if="hasSoloRemoteSession && isSoloSyncAvailable">
-            <div class="reset-option-group">
-              <div class="session-code-display" @click="copySoloInviteCode">
-                {{ soloInviteCode }}
-                <span class="session-code-hint">{{ soloCopyLabel }}</span>
-              </div>
-            </div>
-          </DialogActionSection>
-          <DialogActionSection>
-            <button class="reset-option" @click="handleSoloViewDeathBox">
-              {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
-            </button>
-          </DialogActionSection>
-          <DialogActionSection>
-            <div class="reset-option-group">
-              <button class="reset-option" @click="startNewRun(RUN_MODES.SOLO)">
-                New Solo Run
-              </button>
-              <template v-if="isSoloSyncAvailable">
-                <template v-if="showSoloJoinInput">
-                  <div class="session-input-row">
-                    <input
-                      ref="soloJoinCodeInput"
-                      v-model="soloJoinCodeValue"
-                      class="session-code-input"
-                      type="text"
-                      maxlength="6"
-                      placeholder="Invite code"
-                      @keydown.enter="handleSoloJoinSession"
-                    />
-                    <button class="reset-option session-confirm-btn" @click="handleSoloJoinSession" :disabled="sessionActionPending">
-                      Join
-                    </button>
-                  </div>
-                  <div v-if="soloJoinError" class="session-join-error">{{ soloJoinError }}</div>
-                </template>
-                <button v-else class="reset-option" @click="showSoloJoinInput = true">
-                  Join Solo Run
-                </button>
-              </template>
-            </div>
-          </DialogActionSection>
-        </div>
-        <button class="reset-dialog-cancel" @click="showSoloDialog = false">✕</button>
-      </div>
-    </div>
-    </Transition>
-  </Teleport>
+  <SessionDialog
+    v-model:visible="showSoloDialog"
+    title="Solo Run"
+    :session-code="soloInviteCode"
+    :copy-label="soloCopyLabel"
+    :has-remote-session="hasSoloRemoteSession && isSoloSyncAvailable"
+    :death-box-mode="deathBoxMode"
+    new-run-label="New Solo Run"
+    join-run-label="Join Solo Run"
+    :is-sync-available="isSoloSyncAvailable"
+    :session-action-pending="sessionActionPending"
+    :join-error="soloJoinError"
+    @copy-code="copySoloInviteCode"
+    @view-death-box="handleViewDeathBox('solo')"
+    @new-run="startNewRun(RUN_MODES.SOLO)"
+    @join-session="handleSoloJoinSession"
+  />
 </template>
 
 <script setup>
@@ -307,6 +231,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import DialogActionSection from './components/DialogActionSection.vue'
 import GymColumns from './components/GymColumns.vue'
+import SessionDialog from './components/SessionDialog.vue'
 import SoulLinkShell from './components/SoulLinkShell.vue'
 import TeamSection from './components/TeamSection.vue'
 import { useDraftAction } from './composables/useDraftAction.js'
@@ -324,6 +249,7 @@ import { getPokemonDataForRules } from './data/pokemon.js'
 import { GENERATION_RULESETS, getAllTypesForRules } from './data/types.js'
 import { supabase } from './services/supabaseClient.js'
 import { themeOverrides } from './theme/colors.js'
+import { copyToClipboard } from './utils/clipboard.js'
 import {
   sanitizeDraftActionForRules,
   sanitizePokemonCollectionForRules,
@@ -457,12 +383,6 @@ const showSoulLinkDialog = ref(false)
 const deathBoxMode = ref(false)
 const playerNameInput = ref(null)
 const soloRunNameInput = ref(null)
-const joinCodeInput = ref(null)
-const joinCodeValue = ref('')
-const showJoinInput = ref(false)
-const soloJoinCodeInput = ref(null)
-const soloJoinCodeValue = ref('')
-const showSoloJoinInput = ref(false)
 const sessionActionPending = ref(false)
 const soloJoinError = ref(null)
 const copyLabel = ref('tap to copy')
@@ -662,14 +582,10 @@ function handleSoulLinkConfirmDraft() {
   }
 }
 
-function handleViewDeathBox() {
+function handleViewDeathBox(mode) {
   deathBoxMode.value = !deathBoxMode.value
-  showSoulLinkDialog.value = false
-}
-
-function handleSoloViewDeathBox() {
-  deathBoxMode.value = !deathBoxMode.value
-  showSoloDialog.value = false
+  if (mode === 'soulLink') showSoulLinkDialog.value = false
+  else if (mode === 'solo') showSoloDialog.value = false
 }
 
 async function handleLeaveSoloSession() {
@@ -722,26 +638,46 @@ function selectPlayerNameInput() {
 
 // --- Session management ---
 
-async function handleJoinSession() {
-  const code = joinCodeValue.value.trim()
-  if (!code) return
+async function joinSessionFlow({
+  saveCurrentRun,
+  unsubscribe,
+  joinSession,
+  mode,
+  registerRun,
+  subscribe,
+  clearUI,
+}) {
   sessionActionPending.value = true
   try {
-    if (!isSoloMode.value) {
-      await saveCurrentRunToIndex(buildSoulLinkSnapshot())
-    }
-    unsubscribeSoulLink()
-    await joinSoulLinkSession(code)
-    setCurrentRunMode(RUN_MODES.SOUL_LINK)
-    await registerNewRun(buildSoulLinkSnapshot())
-    subscribeSoulLink()
-    showJoinInput.value = false
-    joinCodeValue.value = ''
-    showSoulLinkDialog.value = false
-  } catch (error) {
-    console.error('Failed to join session:', error)
+    if (saveCurrentRun) await saveCurrentRun()
+    unsubscribe()
+    await joinSession()
+    setCurrentRunMode(mode)
+    await registerRun()
+    subscribe()
+    clearUI()
   } finally {
     sessionActionPending.value = false
+  }
+}
+
+async function handleJoinSession(code) {
+  try {
+    await joinSessionFlow({
+      saveCurrentRun: isSoloMode.value
+        ? null
+        : () => saveCurrentRunToIndex(buildSoulLinkSnapshot()),
+      unsubscribe: unsubscribeSoulLink,
+      joinSession: () => joinSoulLinkSession(code),
+      mode: RUN_MODES.SOUL_LINK,
+      registerRun: () => registerNewRun(buildSoulLinkSnapshot()),
+      subscribe: subscribeSoulLink,
+      clearUI: () => {
+        showSoulLinkDialog.value = false
+      },
+    })
+  } catch (error) {
+    console.error('Failed to join session:', error)
   }
 }
 
@@ -781,100 +717,34 @@ async function handleDeleteRun(runId) {
   }
 }
 
-function onCopySuccess() {
-  copyLabel.value = 'copied!'
-  setTimeout(() => {
-    copyLabel.value = 'tap to copy'
-  }, 2000)
-}
-
 function copyInviteCode() {
-  const code = soulLinkSessionMetadata.value?.inviteCode
-  if (!code) return
-
-  function tryFallback() {
-    if (fallbackCopy(code)) {
-      onCopySuccess()
-    } else {
-      copyLabel.value = 'copy failed'
-    }
-  }
-
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(code).then(onCopySuccess).catch(tryFallback)
-  } else {
-    tryFallback()
-  }
-}
-
-function onSoloCopySuccess() {
-  soloCopyLabel.value = 'copied!'
-  setTimeout(() => {
-    soloCopyLabel.value = 'tap to copy'
-  }, 2000)
+  copyToClipboard(soulLinkSessionMetadata.value?.inviteCode, copyLabel)
 }
 
 function copySoloInviteCode() {
-  const code = soloInviteCode.value
-  if (!code) return
-
-  function tryFallback() {
-    if (fallbackCopy(code)) {
-      onSoloCopySuccess()
-    } else {
-      soloCopyLabel.value = 'copy failed'
-    }
-  }
-
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard
-      .writeText(code)
-      .then(onSoloCopySuccess)
-      .catch(tryFallback)
-  } else {
-    tryFallback()
-  }
+  copyToClipboard(soloInviteCode.value, soloCopyLabel)
 }
 
-async function handleSoloJoinSession() {
-  const code = soloJoinCodeValue.value.trim()
-  if (!code) return
-  sessionActionPending.value = true
+async function handleSoloJoinSession(code) {
   soloJoinError.value = null
   try {
-    // Save current solo run before joining a new one
-    if (isSoloMode.value && soloActiveRunId.value) {
-      await saveSoloRunToIndex(buildSoloSnapshot())
-    }
-    unsubscribeSolo()
-    await joinSoloSession(code)
-    setCurrentRunMode(RUN_MODES.SOLO)
-    await registerNewSoloRun(buildSoloSnapshot())
-    subscribeSolo()
-    showSoloJoinInput.value = false
-    soloJoinCodeValue.value = ''
-    showSoloDialog.value = false
+    await joinSessionFlow({
+      saveCurrentRun:
+        isSoloMode.value && soloActiveRunId.value
+          ? () => saveSoloRunToIndex(buildSoloSnapshot())
+          : null,
+      unsubscribe: unsubscribeSolo,
+      joinSession: () => joinSoloSession(code),
+      mode: RUN_MODES.SOLO,
+      registerRun: () => registerNewSoloRun(buildSoloSnapshot()),
+      subscribe: subscribeSolo,
+      clearUI: () => {
+        showSoloDialog.value = false
+      },
+    })
   } catch (error) {
     console.error('Failed to join solo session:', error)
     soloJoinError.value = error?.message || 'Failed to join'
-  } finally {
-    sessionActionPending.value = false
-  }
-}
-
-function fallbackCopy(text) {
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.style.position = 'fixed'
-  textarea.style.opacity = '0'
-  document.body.appendChild(textarea)
-  textarea.select()
-  try {
-    return document.execCommand('copy')
-  } catch {
-    return false
-  } finally {
-    textarea.remove()
   }
 }
 
@@ -1377,15 +1247,11 @@ function buildSoloSnapshot() {
   return snapshot
 }
 
-async function handleSwitchSoloRun(runId) {
-  if (runId === soloActiveRunId.value && isSoloMode.value) return
+async function switchToSoloRunCore(runId, currentSnapshot) {
   await clearTransientUiState()
   unsubscribeSoulLink()
   unsubscribeSolo()
-  const snapshot = await switchToSoloRun(
-    runId,
-    isSoloMode.value ? buildSoloSnapshot() : null,
-  )
+  const snapshot = await switchToSoloRun(runId, currentSnapshot)
   if (snapshot) {
     await loadData()
   }
@@ -1403,6 +1269,14 @@ async function handleSwitchSoloRun(runId) {
   }
 }
 
+async function handleSwitchSoloRun(runId) {
+  if (runId === soloActiveRunId.value && isSoloMode.value) return
+  await switchToSoloRunCore(
+    runId,
+    isSoloMode.value ? buildSoloSnapshot() : null,
+  )
+}
+
 async function handleDeleteSoloRun(runId) {
   const result = await deleteSoloRun(runId)
   deleteRunTarget.value = null
@@ -1410,29 +1284,7 @@ async function handleDeleteSoloRun(runId) {
   if (!result?.wasActive) return
 
   if (result.nextRunId) {
-    // Cannot use handleSwitchSoloRun here — deleteSoloRun already sets
-    // soloActiveRunId to nextRunId, so the early-return guard would skip it.
-    await clearTransientUiState()
-    unsubscribeSoulLink()
-    unsubscribeSolo()
-    const snapshot = await switchToSoloRun(result.nextRunId, null)
-    if (snapshot) {
-      await loadData()
-    }
-    setCurrentRunMode(RUN_MODES.SOLO)
-    deathBoxMode.value = false
-    showResetDialog.value = false
-    showSoulLinkDialog.value = false
-    if (isSoloSyncAvailable) {
-      initSoloSyncSession(
-        () => buildSoloSnapshot(),
-        (s) => applySoloRemoteSnapshot(s),
-      )
-        .then(() => subscribeSolo())
-        .catch((err) =>
-          console.error('Solo sync after delete+switch failed:', err),
-        )
-    }
+    await switchToSoloRunCore(result.nextRunId, null)
   } else if (activeRunId.value) {
     // No more solo runs — switch to the active soul link run
     await clearTransientUiState()

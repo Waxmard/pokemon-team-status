@@ -1,4 +1,3 @@
-import { computed, ref } from 'vue'
 import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
 import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
 import {
@@ -7,15 +6,10 @@ import {
   mapSoloRunStateToPersistedSnapshot,
   sanitizePersistedSoloRunSnapshot,
 } from '../utils/runSnapshot.js'
-import { generateUUID } from '../utils/uuid.js'
+import { createRunIndexManager } from './createRunIndexManager.js'
 
 const repository = createLocalSoloRunRepository()
-const runIndex = ref(null)
 let _switching = false
-
-function cloneIndex() {
-  return JSON.parse(JSON.stringify(runIndex.value))
-}
 
 function extractRunSummary(snapshot) {
   return {
@@ -70,20 +64,22 @@ function hasPersistedSoloData(snapshot) {
   )
 }
 
+const {
+  runIndex,
+  cloneIndex,
+  runList,
+  activeRunId,
+  activeRunSummary,
+  registerNewRun,
+  deleteRun,
+} = createRunIndexManager({
+  persistRun: (runId, snapshot) => repository.persistSoloRun(runId, snapshot),
+  persistIndex: (index) => repository.persistSoloRunIndex(index),
+  deletePersistedRun: (runId) => repository.deleteSoloRun(runId),
+  extractSummary: extractRunSummary,
+})
+
 export function useSoloRunManager() {
-  const runList = computed(() => {
-    if (!runIndex.value) return []
-    return [...runIndex.value.runs].sort(
-      (a, b) => new Date(b.updatedAt ?? 0) - new Date(a.updatedAt ?? 0),
-    )
-  })
-
-  const activeRunId = computed(() => runIndex.value?.activeRunId ?? null)
-  const activeRunSummary = computed(
-    () =>
-      runIndex.value?.runs.find((run) => run.id === activeRunId.value) ?? null,
-  )
-
   function getRunSummary(runId) {
     return runIndex.value?.runs.find((run) => run.id === runId) ?? null
   }
@@ -121,10 +117,7 @@ export function useSoloRunManager() {
   }
 
   async function initializeRun(snapshot) {
-    const runId = generateUUID()
     const snapshotWithMeta = mergeSnapshotWithRunMeta(snapshot, null)
-    const entry = { id: runId, ...extractRunSummary(snapshotWithMeta) }
-    const newIndex = { activeRunId: runId, runs: [entry] }
 
     await Promise.all([
       repository.persistSoloTeam(snapshotWithMeta.team ?? []),
@@ -135,11 +128,9 @@ export function useSoloRunManager() {
       repository.persistSoloGenerationRules(
         snapshotWithMeta.generationRules ?? DEFAULT_GENERATION_RULESET,
       ),
-      repository.persistSoloRun(runId, snapshotWithMeta),
-      repository.persistSoloRunIndex(newIndex),
     ])
 
-    runIndex.value = newIndex
+    await registerNewRun(snapshotWithMeta)
   }
 
   async function reinitializeFromLegacyOrDefault() {
@@ -260,41 +251,6 @@ export function useSoloRunManager() {
     } finally {
       _switching = false
     }
-  }
-
-  async function registerNewRun(snapshot) {
-    const runId = generateUUID()
-    const snapshotWithMeta = mergeSnapshotWithRunMeta(snapshot, null)
-    const entry = { id: runId, ...extractRunSummary(snapshotWithMeta) }
-
-    const runs = [...(runIndex.value?.runs ?? []), entry]
-    runIndex.value = { activeRunId: runId, runs }
-
-    await Promise.all([
-      repository.persistSoloRun(runId, snapshotWithMeta),
-      repository.persistSoloRunIndex(cloneIndex()),
-    ])
-
-    return runId
-  }
-
-  async function deleteRun(runId) {
-    if (!runIndex.value) return null
-
-    const runs = runIndex.value.runs.filter((r) => r.id !== runId)
-    const wasActive = runIndex.value.activeRunId === runId
-    const nextActiveId = wasActive
-      ? (runs[0]?.id ?? null)
-      : runIndex.value.activeRunId
-
-    runIndex.value = { activeRunId: nextActiveId, runs }
-
-    await Promise.all([
-      repository.deleteSoloRun(runId),
-      repository.persistSoloRunIndex(cloneIndex()),
-    ])
-
-    return { wasActive, nextRunId: nextActiveId }
   }
 
   async function renameRun(runId, name) {

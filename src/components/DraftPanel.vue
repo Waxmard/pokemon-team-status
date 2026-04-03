@@ -289,6 +289,7 @@ import {
   getSpriteUrl,
   resolveSpriteUrl,
 } from '../utils/pokemon.js'
+import { capitalize } from '../utils/string.js'
 import { getSuggestionIndicator } from '../utils/suggestion.js'
 import {
   applyAbilityDefense,
@@ -723,10 +724,6 @@ function evolveTo(option) {
     updateMegaForm(null, null, null)
     showEvolveOptions.value = false
   }
-}
-
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
 function getTypeBackground(type, selected = false) {

@@ -34,6 +34,7 @@
 <script setup>
 import { computed } from 'vue'
 import { TYPE_COLORS } from '../data/types.js'
+import { capitalize } from '../utils/string.js'
 import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
@@ -86,10 +87,6 @@ const PREVIEW_TYPE_COLORS = {
   dark: '#4c3b30',
   steel: '#7b86a8',
   fairy: '#d75f85',
-}
-
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
 function getTypeTextColor(type) {
