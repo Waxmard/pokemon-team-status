@@ -286,6 +286,10 @@ const cardBackgroundStyle = computed(() => {
 }
 
 @media (min-width: 1024px) {
+  .team-slot.empty {
+    grid-column: span 2;
+  }
+
   .sprite-container :deep(.sprite-wrapper) {
     width: 108px !important;
     height: 108px !important;
