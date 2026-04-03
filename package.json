@@ -20,7 +20,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.100.1",
+    "@supabase/supabase-js": "^2.101.1",
     "naive-ui": "^2.44.1",
     "vue": "^3.5.31",
     "vuedraggable": "^4.1.0"
