@@ -22,7 +22,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1",
     "naive-ui": "^2.44.1",
-    "vue": "^3.5.31",
+    "vue": "^3.5.32",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
