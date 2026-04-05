@@ -1560,7 +1560,7 @@ export const POKEMON_DATA = [
   { name: 'Hisuian Decidueye', types: ['grass', 'fighting'], spriteId: 10244 },
 ]
 
-export const PRE_GEN_6_TYPE_OVERRIDES = {
+const PRE_GEN_6_TYPE_OVERRIDES = {
   Clefairy: ['normal'],
   Clefable: ['normal'],
   Jigglypuff: ['normal'],

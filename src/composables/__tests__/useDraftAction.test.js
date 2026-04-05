@@ -108,7 +108,6 @@ describe('useDraftAction', () => {
       expect(draft.draftAction.value.type).toBe('edit')
       expect(draft.draftAction.value.isBoxPokemon).toBe(true)
       expect(draft.draftAction.value.boxPokemonId).toBe('box-1')
-      expect(draft.draftAction.value.replaceTarget).toBeNull()
     })
 
     it('toggles off when editing same box pokemon', () => {
@@ -233,14 +232,6 @@ describe('useDraftAction', () => {
     it('does nothing when draft is inactive', () => {
       draft.updateMegaForm('Mega', ['fire'], 10033)
       expect(draft.draftAction.value).toBeNull()
-    })
-  })
-
-  describe('updateReplaceTarget', () => {
-    it('sets the replaceTarget on the draft', () => {
-      draft.startAdd()
-      draft.updateReplaceTarget('target-id')
-      expect(draft.draftAction.value.replaceTarget).toBe('target-id')
     })
   })
 

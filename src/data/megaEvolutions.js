@@ -88,10 +88,3 @@ export function getMegaOptions(
   if (ruleset === GENERATION_RULESETS.PRE_GEN_6) return []
   return MEGA_EVOLUTIONS[pokemonName] || []
 }
-
-export function hasMegaEvolution(
-  pokemonName,
-  ruleset = DEFAULT_GENERATION_RULESET,
-) {
-  return getMegaOptions(pokemonName, ruleset).length > 0
-}

@@ -15,7 +15,7 @@
           </DialogActionSection>
           <DialogActionSection>
             <button class="reset-option" @click="$emit('viewDeathBox')">
-              {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
+              View Death Box
             </button>
           </DialogActionSection>
           <DialogActionSection v-if="showViewPlayer">
@@ -61,16 +61,15 @@
 </template>
 
 <script setup>
-import { nextTick, ref } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import DialogActionSection from './DialogActionSection.vue'
 
-defineProps({
+const props = defineProps({
   visible: { type: Boolean, required: true },
   title: { type: String, required: true },
   sessionCode: { type: String, default: null },
   copyLabel: { type: String, default: 'tap to copy' },
   hasRemoteSession: { type: Boolean, default: false },
-  deathBoxMode: { type: Boolean, default: false },
   showViewPlayer: { type: Boolean, default: false },
   otherPlayerName: { type: String, default: '' },
   newRunLabel: { type: String, required: true },
@@ -92,6 +91,16 @@ const emit = defineEmits([
 const showJoinInput = ref(false)
 const joinCodeValue = ref('')
 const joinCodeInputEl = ref(null)
+
+watch(
+  () => props.visible,
+  (val) => {
+    if (!val) {
+      showJoinInput.value = false
+      joinCodeValue.value = ''
+    }
+  },
+)
 
 function openJoinInput() {
   showJoinInput.value = true

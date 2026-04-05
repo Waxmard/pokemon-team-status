@@ -50,7 +50,6 @@ export function useDraftAction() {
       isBoxPokemon: true,
       boxPokemonId: boxMember.id,
       pokemon: boxMember.pokemonData,
-      replaceTarget: null,
       ...pickMemberFields(boxMember),
       moves: [...(boxMember.moves || [])],
     }
@@ -79,7 +78,6 @@ export function useDraftAction() {
       isDeadPokemon: true,
       deadPokemonId: deadMember.id,
       pokemon: deadMember.pokemonData,
-      replaceTarget: null,
       ...pickMemberFields(deadMember),
       moves: [...(deadMember.moves || [])],
     }
@@ -115,12 +113,6 @@ export function useDraftAction() {
       draftAction.value.megaForm = form
       draftAction.value.megaTypes = types
       draftAction.value.megaSpriteId = spriteId
-    }
-  }
-
-  function updateReplaceTarget(target) {
-    if (draftAction.value) {
-      draftAction.value = { ...draftAction.value, replaceTarget: target }
     }
   }
 
@@ -169,7 +161,6 @@ export function useDraftAction() {
     updateCatchLocation,
     updateNickname,
     updateMegaForm,
-    updateReplaceTarget,
     updateSpriteVariant,
     updateInHandPokemon,
     enterSwapMode,

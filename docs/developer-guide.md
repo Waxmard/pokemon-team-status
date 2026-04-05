@@ -85,6 +85,9 @@ docs/               # Documentation
 | `npm run lint` | Check for linting issues (Biome) |
 | `npm run lint:fix` | Auto-fix linting issues |
 | `npm run format` | Format all source files |
+| `npm run test` | Run unit tests (Vitest) |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Run tests with coverage |
 
 ## Architecture Overview
 
@@ -99,14 +102,16 @@ Handles solo run state and IndexedDB persistence:
 
 - `team` - Active Pokemon team (up to 6)
 - `box` - Reserve Pokemon storage
+- `dead` - Death box (fainted Pokemon)
 - `defeatedGyms` - List of defeated gym types
 - `pinnedGym` - Currently pinned gym type
+- `generationRules` - Active ruleset (Pre-Gen 6 or Post-Gen 6)
 
 #### useSoulLinkStore.js (Soul Link Mode)
 
 Full state management for two-player Soul Link runs:
 
-- Player rosters (team + box per player), gym progress, player names
+- Player rosters (team + box + dead per player), gym progress, player names
 - Supabase sync: `createSession`, `joinSession`, `pushState`, `pullState`
 - Realtime subscription for instant partner updates
 - Local persistence via IndexedDB snapshots
@@ -123,6 +128,16 @@ Manages the draft/editing state for adding or modifying Pokemon:
 - Tracks current edit operation (add to team, add to box, edit, swap)
 - Holds temporary Pokemon configuration (pokemon, ability, berry, moves,
   specialMove)
+
+#### Other Composables
+
+- `useSoloRunManager.js` / `useSoulLinkRunManager.js` - Run index/registry
+  (switch, create, delete, rename runs)
+- `useSoloSync.js` / `useSessionSync.js` - Supabase sync for solo and Soul
+  Link modes
+- `useSoulLinkHandlers.js` - Event handlers for Soul Link operations
+- `useWizardNavigation.js` - Draft panel multi-step navigation
+- `createRunIndexManager.js` - Shared factory for run index management
 
 ### Services
 
@@ -168,20 +183,25 @@ See [How It Works](how-it-works.md) for algorithm details.
 | `src/data/abilities.js` | Ability effects (immunities, resistances, etc.) |
 | `src/data/berries.js` | Type-reducing berries |
 | `src/data/specialMoves.js` | Moves with unique type mechanics |
+| `src/data/megaEvolutions.js` | Mega evolution forms with types and sprite IDs |
 
 ### Component Hierarchy
 
 ```text
 App.vue
-├── TeamSection.vue              # Team and box display with DraftPanel
+├── AppHeader.vue                # Header with title and action buttons
+├── TeamSection.vue              # Team and box display with DraftPanel (solo mode)
 │   ├── TeamSlot.vue             # Individual Pokemon slot
 │   └── DraftPanel.vue           # Multi-step wizard for adding/editing
-├── GymColumns.vue               # Gym type weakness columns
+│       └── PokemonPreview.vue   # Pokemon preview with sprites and evolution animation
+├── GymColumns.vue               # Gym type weakness columns (includes inline swap preview)
 │   └── GymColumn.vue            # Individual gym type with score
 │       └── GymRow.vue           # Single gym entry
-├── SwapPreview.vue              # Preview when swapping box/team Pokemon
-└── SoulLinkShell.vue            # Soul Link mode wrapper
-    └── SoulLinkPlayerView.vue   # Player view (TeamSection + GymColumns)
+├── SoulLinkShell.vue            # Soul Link mode wrapper
+│   └── SoulLinkPlayerView.vue   # Player view (TeamSection + GymColumns)
+├── SessionDialog.vue            # Session management (used for both Solo and Soul Link)
+├── DialogActionSection.vue      # Dialog section container
+└── SpriteImg.vue                # Sprite image with caching
 ```
 
 ## Code Style

@@ -192,7 +192,6 @@
     :session-code="soulLinkSessionMetadata?.inviteCode"
     :copy-label="copyLabel"
     :has-remote-session="hasRemoteSession && isSupabaseAvailable"
-    :death-box-mode="deathBoxMode"
     :show-view-player="!isSoloMode"
     :other-player-name="otherSoulLinkPlayerName"
     new-run-label="New Soul Link Run"
@@ -212,7 +211,6 @@
     :session-code="soloInviteCode"
     :copy-label="soloCopyLabel"
     :has-remote-session="hasSoloRemoteSession && isSoloSyncAvailable"
-    :death-box-mode="deathBoxMode"
     new-run-label="New Solo Run"
     join-run-label="Join Solo Run"
     :is-sync-available="isSoloSyncAvailable"
@@ -583,7 +581,7 @@ function handleSoulLinkConfirmDraft() {
 }
 
 function handleViewDeathBox(mode) {
-  deathBoxMode.value = !deathBoxMode.value
+  deathBoxMode.value = true
   if (mode === 'soulLink') showSoulLinkDialog.value = false
   else if (mode === 'solo') showSoloDialog.value = false
 }
@@ -899,20 +897,6 @@ function getDraftTeam() {
     return team.value.map((p) =>
       p.id === draftAction.value.editId ? draft : p,
     )
-  } else if (
-    draftAction.value.isBoxPokemon &&
-    draftAction.value.replaceTarget
-  ) {
-    // Box Pokemon swapping with team slot
-    if (draftAction.value.replaceTarget.startsWith('empty-')) {
-      // Adding to empty slot
-      return [...team.value, draft]
-    } else {
-      // Replacing existing team member
-      return team.value.map((p) =>
-        p.id === draftAction.value.replaceTarget ? draft : p,
-      )
-    }
   }
   return team.value
 }
@@ -922,8 +906,7 @@ const hasDraft = computed(() => {
   return (
     draftAction.value?.pokemon &&
     (draftAction.value.type === 'add' ||
-      (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) ||
-      (draftAction.value.isBoxPokemon && draftAction.value.replaceTarget))
+      (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon))
   )
 })
 
@@ -994,7 +977,7 @@ function handleBoxToTeamSwap(targetId, inHandPokemon) {
     source: 'box',
     id: targetId,
   })
-  persistBox([...box.value.filter((p) => p.id !== boxPokemonId), newBoxMember])
+  persistBox([newBoxMember, ...box.value.filter((p) => p.id !== boxPokemonId)])
 
   swapInHandToTarget(targetPokemon)
   draftAction.value.boxPokemonId = newBoxMember.id
@@ -1101,44 +1084,9 @@ function confirmBoxPokemonEdit() {
     id: draftAction.value.boxPokemonId,
   })
 
-  if (!draftAction.value.replaceTarget) {
-    const newBox = [...box.value]
-    newBox[boxIndex] = updatedPokemon
-    persistBox(newBox)
-    return
-  }
-
-  if (draftAction.value.replaceTarget.startsWith('empty-')) {
-    if (team.value.length < 6) {
-      persistTeam([
-        ...team.value,
-        buildPokemonMember(draftAction.value, { source: 'team' }),
-      ])
-      persistBox(
-        box.value.filter((p) => p.id !== draftAction.value.boxPokemonId),
-      )
-    }
-    return
-  }
-
-  const targetIndex = team.value.findIndex(
-    (p) => p.id === draftAction.value.replaceTarget,
-  )
-  if (targetIndex !== -1) {
-    const replacedPokemon = team.value[targetIndex]
-    const boxMember = buildPokemonMember(replacedPokemon, { source: 'box' })
-    persistTeam(
-      team.value.map((p) =>
-        p.id === draftAction.value.replaceTarget
-          ? buildPokemonMember(draftAction.value, { source: 'team' })
-          : p,
-      ),
-    )
-    persistBox([
-      ...box.value.filter((p) => p.id !== draftAction.value.boxPokemonId),
-      boxMember,
-    ])
-  }
+  const newBox = [...box.value]
+  newBox[boxIndex] = updatedPokemon
+  persistBox(newBox)
 }
 
 function handleDraftDeletion() {
@@ -1167,7 +1115,6 @@ function enterAddReplaceMode() {
     ...draftAction.value,
     type: 'edit',
     isBoxPokemon: true,
-    isAddReplace: true,
     boxPokemonId: tempBoxMember.id,
   }
 
@@ -1194,7 +1141,7 @@ function confirmDraft() {
       return
     }
   } else if (draftAction.value.type === 'addToBox') {
-    persistBox([...box.value, newMember])
+    persistBox([newMember, ...box.value])
   } else if (draftAction.value.type === 'edit') {
     if (draftAction.value.isBoxPokemon) {
       confirmBoxPokemonEdit()

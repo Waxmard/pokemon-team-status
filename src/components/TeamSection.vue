@@ -433,6 +433,11 @@ function handleSwapSuggestion(event) {
   emit('swapSuggestion', event)
 }
 
+function killPokemon(id, rosterKey) {
+  emit('killPokemon', { id, rosterKey })
+  viewMode.value = 'dead'
+}
+
 function handleDeleteClick() {
   if (props.readOnly) return
   if (draftAction.value?.isDeadPokemon) {
@@ -448,7 +453,7 @@ function handleDeleteClick() {
       ? draftAction.value.boxPokemonId
       : draftAction.value?.editId
     if (id) {
-      emit('killPokemon', { id, rosterKey })
+      killPokemon(id, rosterKey)
       cancel()
     }
     return
@@ -459,7 +464,7 @@ function handleDeleteClick() {
 function handleDeleteTeamPokemon(id) {
   if (props.readOnly) return
   if (hasKillAction.value) {
-    emit('killPokemon', { id, rosterKey: 'team' })
+    killPokemon(id, 'team')
     return
   }
   emit('deleteTeamPokemon', id)
@@ -468,7 +473,7 @@ function handleDeleteTeamPokemon(id) {
 function handleDeleteBoxPokemon(id) {
   if (props.readOnly) return
   if (hasKillAction.value) {
-    emit('killPokemon', { id, rosterKey: 'box' })
+    killPokemon(id, 'box')
     return
   }
   emit('deleteBoxPokemon', id)

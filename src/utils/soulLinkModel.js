@@ -88,7 +88,7 @@ export function createDefaultSoulLinkProgress() {
   }
 }
 
-export function createDefaultSoulLinkNotificationSettings() {
+function createDefaultSoulLinkNotificationSettings() {
   return {
     enabled: true,
     partnerUpdates: true,
@@ -107,7 +107,7 @@ export function createDefaultSoulLinkLocalPreferences() {
   }
 }
 
-export function createDefaultSoulLinkActivity() {
+function createDefaultSoulLinkActivity() {
   return {
     syncState: SOUL_LINK_SYNC_STATES.LOCAL_ONLY,
     lastUpdatedAt: null,
@@ -115,7 +115,7 @@ export function createDefaultSoulLinkActivity() {
   }
 }
 
-export function createDefaultSoulLinkSync() {
+function createDefaultSoulLinkSync() {
   return {
     version: 1,
     pendingChangeSets: [],

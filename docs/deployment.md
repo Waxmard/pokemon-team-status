@@ -37,8 +37,10 @@ All user data is stored in IndexedDB (`pokemon-team-calculator` database):
 
 - Team composition
 - Box (reserve Pokemon)
+- Dead (fainted Pokemon / death box)
 - Defeated gyms
 - Pinned gym
+- Generation rules
 - Soul Link snapshot (full state for Soul Link runs)
 
 This data persists across sessions and survives browser restarts.
@@ -69,9 +71,9 @@ The service worker (`vite-plugin-pwa` with Workbox):
 - Auto-updates when new versions are deployed
 - Falls back to cache when offline
 
-## Safari/iOS Optimization
+## Safari/iOS Support
 
-The primary target platform is Safari on iOS (iPhone/iPad). The app includes:
+The app includes iOS-specific PWA configuration:
 
 - PWA meta tags for home screen installation
 - Apple touch icons (192x192, 512x512)
@@ -109,9 +111,10 @@ closed.
 
 **Recommendation**: Always install to Home Screen for reliable offline access.
 
-## Supabase Setup (Soul Link)
+## Supabase Setup (Soul Link and Solo Sync)
 
-Soul Link mode requires a Supabase project for online sync.
+Soul Link mode and Solo cloud backup both require a Supabase project for
+online sync.
 
 ### Environment Variables
 
@@ -138,6 +141,7 @@ create table if not exists public.sessions (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+```
 
 ### Enable Realtime
 

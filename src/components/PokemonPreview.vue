@@ -1,5 +1,5 @@
 <template>
-  <div class="pokemon-preview">
+  <div class="pokemon-preview" :class="{ evolving }">
     <slot name="top-left" />
     <div v-if="types?.length" class="preview-type-list">
       <span
@@ -28,6 +28,7 @@
     </span>
     <slot name="top-right" />
     <slot />
+    <div v-if="evolving" class="evo-flash-overlay" />
   </div>
 </template>
 
@@ -59,6 +60,10 @@ const props = defineProps({
     default: null,
   },
   showBrokenLink: {
+    type: Boolean,
+    default: false,
+  },
+  evolving: {
     type: Boolean,
     default: false,
   },
@@ -157,6 +162,21 @@ function getTypeTextColor(type) {
   .pokemon-preview {
     margin: var(--space-2) 0;
   }
+}
+
+.pokemon-preview.evolving :deep(.sprite-img) {
+  animation: evoSpriteOut 400ms ease-in forwards,
+    evoSpriteIn 800ms ease-out 400ms forwards;
+}
+
+.evo-flash-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 70%);
+  animation: evoFlashOverlay 1200ms ease-in-out forwards;
+  pointer-events: none;
+  z-index: 2;
 }
 
 @media (min-width: 1024px) {
