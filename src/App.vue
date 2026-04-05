@@ -992,7 +992,7 @@ function handleBoxToTeamSwap(targetId, inHandPokemon) {
     source: 'box',
     id: targetId,
   })
-  persistBox([...box.value.filter((p) => p.id !== boxPokemonId), newBoxMember])
+  persistBox([newBoxMember, ...box.value.filter((p) => p.id !== boxPokemonId)])
 
   swapInHandToTarget(targetPokemon)
   draftAction.value.boxPokemonId = newBoxMember.id
