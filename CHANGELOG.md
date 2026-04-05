@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/Waxmard/pokemon-team-status/compare/v1.4.0...v1.4.1) (2026-04-05)
+
+
+### Bug Fixes
+
+* prevent stale-run persist and fix solo session leave logic ([#72](https://github.com/Waxmard/pokemon-team-status/issues/72)) ([7efc955](https://github.com/Waxmard/pokemon-team-status/commit/7efc9550b3b516c82427a91d4018c3598d25814e))
+
 ## [1.4.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.3.0...v1.4.0) (2026-04-05)
 
 
