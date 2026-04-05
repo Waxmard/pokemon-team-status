@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.3.0...v1.4.0) (2026-04-05)
+
+
+### Features
+
+* add evolution animation, simplify box/death-box UX, and update docs ([#70](https://github.com/Waxmard/pokemon-team-status/issues/70)) ([f6e31c8](https://github.com/Waxmard/pokemon-team-status/commit/f6e31c8d293b0722fda3a17983f0f0a47177e386))
+
 ## [1.3.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.2.2...v1.3.0) (2026-04-03)
 
 
