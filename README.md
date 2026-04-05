@@ -1,12 +1,10 @@
 # Pokemon Team Weakness Calculator
 
 A PWA for calculating team weaknesses against gym types. Built with Vue 3 +
-Vite. Optimized for Safari on iPhone.
+Vite. Works on mobile and desktop.
 
-Primarily designed for [Pokemon Emerald Rogue][rogue] where gym types are
-randomized, but works for any Pokemon game.
-
-[rogue]: https://www.pokecommunity.com/threads/pokemon-emerald-rogue.479406/
+Works for any Pokemon game. Especially useful for romhacks with randomized
+gym types.
 
 **[Try it live](https://pokemon-team-status.pages.dev)**
 
@@ -46,6 +44,10 @@ anon key. Without these, the app runs in local-only mode (no online sync).
 - Track defeated gyms
 - Swap suggestions to optimize team coverage
 - Mega evolution support
+- Death box: track fainted Pokemon, revive or delete them
+- Solo run management: save multiple runs, name them, switch between them
+- Generation rules: toggle Pre-Gen 6 / Post-Gen 6 rulesets
+- Cloud backup for solo runs via invite codes
 - **Soul Link mode**: Shared two-player runs with paired catches, real-time
   sync via Supabase, and invite code sharing
 - Works fully offline (PWA)

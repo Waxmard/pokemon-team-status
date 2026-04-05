@@ -9,10 +9,9 @@ When facing a gym, you want to know: "Is my team prepared for this type?" This
 app answers that by scoring your team's defensive resilience and offensive
 coverage against all 18 Pokemon types.
 
-The primary use case is [Pokemon Emerald Rogue](https://pokemonrogue.com/), a
-roguelike ROM hack where gym types are randomized each run. You can't predict
-what you'll face, so having a well-rounded team matters more than in the base
-games.
+This is especially useful for romhacks with randomized gym types, where you
+can't predict what you'll face and having a well-rounded team matters more
+than in the base games.
 
 ## Pokemon Basics
 
