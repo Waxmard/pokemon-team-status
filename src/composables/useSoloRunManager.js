@@ -269,10 +269,10 @@ export function useSoloRunManager() {
     }
   }
 
-  async function persistActiveRunSnapshot(snapshot) {
-    const currentId = runIndex.value?.activeRunId
-    if (!currentId || !runIndex.value) return
-    await persistRunSnapshot(currentId, snapshot)
+  async function persistActiveRunSnapshot(snapshot, runId = null) {
+    const targetId = runId ?? runIndex.value?.activeRunId
+    if (!targetId || !runIndex.value) return
+    await persistRunSnapshot(targetId, snapshot)
   }
 
   return {

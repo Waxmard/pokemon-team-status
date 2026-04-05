@@ -15,6 +15,7 @@ const { repository } = vi.hoisted(() => ({
 const { soloRunManager } = vi.hoisted(() => ({
   soloRunManager: {
     persistActiveRunSnapshot: vi.fn(),
+    activeRunId: { value: null },
   },
 }))
 
@@ -68,6 +69,7 @@ describe('useRunStore', () => {
     repository.persistSoloPinnedGym.mockResolvedValue(undefined)
     repository.persistSoloGenerationRules.mockResolvedValue(undefined)
     soloRunManager.persistActiveRunSnapshot.mockResolvedValue(undefined)
+    soloRunManager.activeRunId.value = 'test-run-1'
 
     useRunStore().runState.value = createDefaultRunState()
   })
@@ -154,17 +156,50 @@ describe('useRunStore', () => {
     expect(repository.persistSoloTeam).toHaveBeenNthCalledWith(2, [])
     expect(store.team.value).toEqual([])
     expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledTimes(1)
-    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledWith({
-      team: [{ id: 'team-2', name: 'Treecko' }],
-      box: [],
-      dead: [],
-      _tombstones: [],
-      defeatedGyms: [],
-      pinnedGym: null,
-      progressUpdatedAt: null,
-      generationRules: DEFAULT_GENERATION_RULESET,
-      generationRulesUpdatedAt: null,
-    })
+    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledWith(
+      {
+        team: [{ id: 'team-2', name: 'Treecko' }],
+        box: [],
+        dead: [],
+        _tombstones: [],
+        defeatedGyms: [],
+        pinnedGym: null,
+        progressUpdatedAt: null,
+        generationRules: DEFAULT_GENERATION_RULESET,
+        generationRulesUpdatedAt: null,
+      },
+      'test-run-1',
+    )
+  })
+
+  it('persists to the run that was active at enqueue time, not execution time', async () => {
+    const store = useRunStore()
+    const firstTeamPersist = createDeferred()
+
+    repository.persistSoloTeam.mockReturnValue(firstTeamPersist.promise)
+
+    soloRunManager.activeRunId.value = 'run-a'
+    store.runState.value = {
+      ...store.runState.value,
+      team: [{ id: 'team-1', name: 'Mudkip' }],
+    }
+
+    const persistPromise = store.persistTeam([
+      { id: 'team-2', name: 'Treecko' },
+    ])
+
+    // Simulate run switch while persist is queued
+    soloRunManager.activeRunId.value = 'run-b'
+
+    firstTeamPersist.resolve()
+    await persistPromise
+
+    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        team: [{ id: 'team-2', name: 'Treecko' }],
+      }),
+      'run-a',
+    )
   })
 
   it('syncs the active run snapshot after normal team updates', async () => {
@@ -172,16 +207,19 @@ describe('useRunStore', () => {
 
     await store.persistTeam([{ id: 'team-3', name: 'Torchic' }])
 
-    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledWith({
-      team: [{ id: 'team-3', name: 'Torchic' }],
-      box: [],
-      dead: [],
-      _tombstones: [],
-      defeatedGyms: [],
-      pinnedGym: null,
-      progressUpdatedAt: null,
-      generationRules: DEFAULT_GENERATION_RULESET,
-      generationRulesUpdatedAt: null,
-    })
+    expect(soloRunManager.persistActiveRunSnapshot).toHaveBeenCalledWith(
+      {
+        team: [{ id: 'team-3', name: 'Torchic' }],
+        box: [],
+        dead: [],
+        _tombstones: [],
+        defeatedGyms: [],
+        pinnedGym: null,
+        progressUpdatedAt: null,
+        generationRules: DEFAULT_GENERATION_RULESET,
+        generationRulesUpdatedAt: null,
+      },
+      'test-run-1',
+    )
   })
 })

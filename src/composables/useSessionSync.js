@@ -49,13 +49,14 @@ export function createSessionSync(config) {
 
   function scheduleAutoSync() {
     if (_suppressAutoSync || _autoSyncScheduled) return
-    const sessionId = config.getSessionId()
-    if (!sessionId) return
+    const scheduledSessionId = config.getSessionId()
+    if (!scheduledSessionId) return
 
     _autoSyncScheduled = true
     queueMicrotask(() => {
       _autoSyncScheduled = false
       if (_suppressAutoSync) return
+      if (config.getSessionId() !== scheduledSessionId) return
       pushState().catch((err) => console.error('Auto-sync failed:', err))
     })
   }
