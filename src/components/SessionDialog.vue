@@ -61,10 +61,10 @@
 </template>
 
 <script setup>
-import { nextTick, ref } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import DialogActionSection from './DialogActionSection.vue'
 
-defineProps({
+const props = defineProps({
   visible: { type: Boolean, required: true },
   title: { type: String, required: true },
   sessionCode: { type: String, default: null },
@@ -91,6 +91,16 @@ const emit = defineEmits([
 const showJoinInput = ref(false)
 const joinCodeValue = ref('')
 const joinCodeInputEl = ref(null)
+
+watch(
+  () => props.visible,
+  (val) => {
+    if (!val) {
+      showJoinInput.value = false
+      joinCodeValue.value = ''
+    }
+  },
+)
 
 function openJoinInput() {
   showJoinInput.value = true
