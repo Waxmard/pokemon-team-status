@@ -8,11 +8,6 @@ gym types.
 
 **[Try it live](https://pokemon-team-status.pages.dev)**
 
-| | |
-| :---: | :---: |
-| ![Team overview](screenshots/team-overview.png) | ![Gym grid](screenshots/gym-grid-mobile.png) |
-| ![Team with megas](screenshots/team-with-megas.png) | ![Pokemon selection](screenshots/choose-pokemon-lapras.png) |
-
 ## Quick Start
 
 ```bash
@@ -52,10 +47,6 @@ anon key. Without these, the app runs in local-only mode (no online sync).
   sync via Supabase, and invite code sharing
 - Works fully offline (PWA)
   - **iOS**: Must be added to Home Screen for offline support
-
-## Screenshots
-
-More screenshots available in the [`screenshots/`](screenshots/) directory.
 
 ## Tech Stack
 
