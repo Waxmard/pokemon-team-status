@@ -271,11 +271,7 @@ import { useWizardNavigation } from '../composables/useWizardNavigation.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
 import { getMegaOptions } from '../data/megaEvolutions.js'
-import {
-  getPokemonByName,
-  getPokemonDataForRules,
-  POKEMON_DATA,
-} from '../data/pokemon.js'
+import { getPokemonDataForRules, POKEMON_DATA } from '../data/pokemon.js'
 import { SPECIAL_MOVE_NAMES } from '../data/specialMoves.js'
 import { getAllTypesForRules, getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { hexToRgba } from '../utils/colors.js'
