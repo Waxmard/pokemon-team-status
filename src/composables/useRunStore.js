@@ -18,7 +18,7 @@ import {
 import { useSoloRunManager } from './useSoloRunManager.js'
 
 const repository = createLocalSoloRunRepository()
-const { persistActiveRunSnapshot } = useSoloRunManager()
+const { persistActiveRunSnapshot, activeRunId } = useSoloRunManager()
 let queuedPersist = Promise.resolve()
 
 let _scheduleSync = null
@@ -51,9 +51,10 @@ function enqueueSoloPersist(operation) {
 }
 
 async function enqueueSoloPersistWithSnapshot(operation, snapshot) {
+  const capturedRunId = activeRunId.value
   return enqueueSoloPersist(async () => {
     await operation()
-    await persistActiveRunSnapshot(snapshot)
+    await persistActiveRunSnapshot(snapshot, capturedRunId)
   })
 }
 

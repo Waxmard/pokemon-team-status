@@ -586,10 +586,27 @@ function handleViewDeathBox(mode) {
   else if (mode === 'solo') showSoloDialog.value = false
 }
 
+async function createFreshSoloRun() {
+  await startNewSoloRun()
+  setCurrentRunMode(RUN_MODES.SOLO)
+  await registerNewSoloRun(buildSoloSnapshot())
+  showResetDialog.value = false
+  showSoloDialog.value = false
+}
+
 async function handleLeaveSoloSession() {
   unsubscribeSolo()
   await leaveSoloSession()
-  await handleDeleteSoloRun(soloActiveRunId.value)
+
+  const result = await deleteSoloRun(soloActiveRunId.value)
+
+  if (!result?.wasActive) return
+
+  if (result.nextRunId) {
+    await switchToSoloRunCore(result.nextRunId, null)
+  } else {
+    await createFreshSoloRun()
+  }
 }
 
 function handleViewOtherSoulLinkPlayer() {
@@ -1251,11 +1268,7 @@ async function handleDeleteSoloRun(runId) {
     }
   } else {
     // No runs of any kind — create a fresh solo run
-    await startNewSoloRun()
-    setCurrentRunMode(RUN_MODES.SOLO)
-    await registerNewSoloRun(buildSoloSnapshot())
-    showResetDialog.value = false
-    showSoloDialog.value = false
+    await createFreshSoloRun()
   }
 }
 

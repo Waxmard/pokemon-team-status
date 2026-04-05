@@ -457,4 +457,61 @@ describe('useSoloRunManager', () => {
       }),
     )
   })
+
+  it('uses an explicit runId parameter over the current activeRunId', async () => {
+    const existingIndex = {
+      activeRunId: 'solo-run-9',
+      runs: [
+        {
+          id: 'solo-run-9',
+          name: 'Current Run',
+          createdAt: '2026-03-31T18:00:00.000Z',
+          updatedAt: '2026-04-01T12:00:00.000Z',
+          generationRules: 'current',
+          teamCount: 0,
+        },
+        {
+          id: 'solo-run-other',
+          name: 'Other Run',
+          createdAt: '2026-03-30T18:00:00.000Z',
+          updatedAt: '2026-03-31T12:00:00.000Z',
+          generationRules: 'current',
+          teamCount: 0,
+        },
+      ],
+    }
+    repository.loadSoloRunIndex.mockResolvedValue(existingIndex)
+    repository.loadSoloRun.mockResolvedValue({
+      team: [],
+      box: [],
+      dead: [],
+      defeatedGyms: [],
+      pinnedGym: null,
+      generationRules: 'current',
+    })
+
+    const { useSoloRunManager } = await import('../useSoloRunManager.js')
+    const manager = useSoloRunManager()
+
+    await manager.loadRunIndex()
+    await manager.persistActiveRunSnapshot(
+      {
+        team: [{ id: 'team-1', name: 'Mudkip' }],
+        box: [],
+        dead: [],
+        defeatedGyms: [],
+        pinnedGym: null,
+        generationRules: 'current',
+      },
+      'solo-run-other',
+    )
+
+    expect(repository.persistSoloRun).toHaveBeenCalledWith(
+      'solo-run-other',
+      expect.objectContaining({
+        name: 'Other Run',
+        team: [expect.objectContaining({ id: 'team-1', name: 'Mudkip' })],
+      }),
+    )
+  })
 })
