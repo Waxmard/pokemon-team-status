@@ -1192,7 +1192,7 @@ function confirmDraft() {
       return
     }
   } else if (draftAction.value.type === 'addToBox') {
-    persistBox([...box.value, newMember])
+    persistBox([newMember, ...box.value])
   } else if (draftAction.value.type === 'edit') {
     if (draftAction.value.isBoxPokemon) {
       confirmBoxPokemonEdit()
