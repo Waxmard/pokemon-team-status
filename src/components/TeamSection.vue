@@ -450,6 +450,9 @@ function handleDeleteClick() {
     if (id) {
       emit('killPokemon', { id, rosterKey })
       cancel()
+      nextTick(() => {
+        viewMode.value = 'dead'
+      })
     }
     return
   }
@@ -460,6 +463,7 @@ function handleDeleteTeamPokemon(id) {
   if (props.readOnly) return
   if (hasKillAction.value) {
     emit('killPokemon', { id, rosterKey: 'team' })
+    viewMode.value = 'dead'
     return
   }
   emit('deleteTeamPokemon', id)
@@ -469,6 +473,7 @@ function handleDeleteBoxPokemon(id) {
   if (props.readOnly) return
   if (hasKillAction.value) {
     emit('killPokemon', { id, rosterKey: 'box' })
+    viewMode.value = 'dead'
     return
   }
   emit('deleteBoxPokemon', id)
