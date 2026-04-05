@@ -15,7 +15,7 @@
           </DialogActionSection>
           <DialogActionSection>
             <button class="reset-option" @click="$emit('viewDeathBox')">
-              {{ deathBoxMode ? 'View Team' : 'View Death Box' }}
+              View Death Box
             </button>
           </DialogActionSection>
           <DialogActionSection v-if="showViewPlayer">
@@ -70,7 +70,6 @@ defineProps({
   sessionCode: { type: String, default: null },
   copyLabel: { type: String, default: 'tap to copy' },
   hasRemoteSession: { type: Boolean, default: false },
-  deathBoxMode: { type: Boolean, default: false },
   showViewPlayer: { type: Boolean, default: false },
   otherPlayerName: { type: String, default: '' },
   newRunLabel: { type: String, required: true },

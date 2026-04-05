@@ -192,7 +192,6 @@
     :session-code="soulLinkSessionMetadata?.inviteCode"
     :copy-label="copyLabel"
     :has-remote-session="hasRemoteSession && isSupabaseAvailable"
-    :death-box-mode="deathBoxMode"
     :show-view-player="!isSoloMode"
     :other-player-name="otherSoulLinkPlayerName"
     new-run-label="New Soul Link Run"
@@ -212,7 +211,6 @@
     :session-code="soloInviteCode"
     :copy-label="soloCopyLabel"
     :has-remote-session="hasSoloRemoteSession && isSoloSyncAvailable"
-    :death-box-mode="deathBoxMode"
     new-run-label="New Solo Run"
     join-run-label="Join Solo Run"
     :is-sync-available="isSoloSyncAvailable"
@@ -583,7 +581,7 @@ function handleSoulLinkConfirmDraft() {
 }
 
 function handleViewDeathBox(mode) {
-  deathBoxMode.value = !deathBoxMode.value
+  deathBoxMode.value = true
   if (mode === 'soulLink') showSoulLinkDialog.value = false
   else if (mode === 'solo') showSoloDialog.value = false
 }
