@@ -424,7 +424,6 @@ describe('useSoulLinkHandlers', () => {
       expect.objectContaining({
         type: 'edit',
         isBoxPokemon: true,
-        isAddReplace: true,
         boxPokemonId: expect.any(String),
       }),
     )

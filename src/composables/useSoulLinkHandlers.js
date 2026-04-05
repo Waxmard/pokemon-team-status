@@ -182,50 +182,6 @@ export function useSoulLinkHandlers(
 
   // --- Soul Link confirm draft handlers ---
 
-  function confirmSoulLinkBoxPokemonReplace(pid, newMember) {
-    const roster = getSoulLinkRoster()
-    const boxPokemonId = draftAction.value.boxPokemonId
-
-    if (draftAction.value.replaceTarget.startsWith('empty-')) {
-      if (roster.team.length >= 6) return
-      const boxedMember = roster.box.find((m) => m.id === boxPokemonId)
-      const movedMember = preserveSoulLinkPairingFields(
-        { ...newMember, id: boxPokemonId },
-        boxedMember,
-      )
-      addRosterMember(pid, 'team', movedMember)
-      removeSoulLinkRosterMember(pid, 'box', boxPokemonId)
-      reconcileSoulLinkPairing(pid, movedMember.id, 'team')
-      return
-    }
-
-    const boxedMember = roster.box.find((m) => m.id === boxPokemonId)
-    const replacedTeamMember = roster.team.find(
-      (m) => m.id === draftAction.value.replaceTarget,
-    )
-    if (!boxedMember || !replacedTeamMember) return
-
-    const nextTeamMember = preserveSoulLinkPairingFields(
-      { ...newMember, id: boxPokemonId },
-      boxedMember,
-    )
-
-    const now = Date.now()
-    setPlayerRoster(pid, {
-      team: roster.team.map((m) =>
-        m.id === draftAction.value.replaceTarget
-          ? { ...nextTeamMember, updatedAt: now }
-          : m,
-      ),
-      box: roster.box.map((m) =>
-        m.id === boxPokemonId ? { ...replacedTeamMember, updatedAt: now } : m,
-      ),
-    })
-
-    reconcileSoulLinkPairing(pid, nextTeamMember.id, 'team')
-    reconcileSoulLinkPairing(pid, replacedTeamMember.id, 'box')
-  }
-
   function confirmSoulLinkMemberUpdate(pid, rosterKey, memberId) {
     const uiMember = buildPokemonMember(draftAction.value, { id: memberId })
     const slMember = adaptUiMemberToSoulLinkMember(
@@ -251,20 +207,15 @@ export function useSoulLinkHandlers(
       ...draftAction.value,
       type: 'edit',
       isBoxPokemon: true,
-      isAddReplace: true,
       boxPokemonId: tempMember.id,
     }
 
     enterSwapMode()
   }
 
-  function handleSoulLinkConfirmEdit(pid, newMember) {
+  function handleSoulLinkConfirmEdit(pid) {
     if (draftAction.value.isBoxPokemon) {
-      if (draftAction.value.replaceTarget) {
-        confirmSoulLinkBoxPokemonReplace(pid, newMember)
-      } else {
-        confirmSoulLinkMemberUpdate(pid, 'box', draftAction.value.boxPokemonId)
-      }
+      confirmSoulLinkMemberUpdate(pid, 'box', draftAction.value.boxPokemonId)
     } else {
       confirmSoulLinkMemberUpdate(pid, 'team', draftAction.value.editId)
     }
@@ -316,13 +267,13 @@ export function useSoulLinkHandlers(
     return { placedInDead: rosterKey === 'dead' }
   }
 
-  function handleSoulLinkEditDraft(pid, newMember) {
+  function handleSoulLinkEditDraft(pid) {
     if (draftAction.value.isDeadPokemon) {
       confirmSoulLinkMemberUpdate(pid, 'dead', draftAction.value.deadPokemonId)
       return
     }
 
-    handleSoulLinkConfirmEdit(pid, newMember)
+    handleSoulLinkConfirmEdit(pid)
   }
 
   function confirmSoulLinkDraftByType(pid, newMember) {
@@ -334,7 +285,7 @@ export function useSoulLinkHandlers(
       case 'addToDead':
         return handleSoulLinkAddToRoster(pid, 'dead')
       case 'edit':
-        handleSoulLinkEditDraft(pid, newMember)
+        handleSoulLinkEditDraft(pid)
         return { placedInDead: false }
       default:
         return { placedInDead: false }
