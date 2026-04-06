@@ -18,17 +18,17 @@ describe('resolveMostRecentRunMode', () => {
     ).toBe(RUN_MODES.SOLO)
   })
 
-  it('returns soul link when it is newer than solo', () => {
+  it('returns the preferred mode when both runs exist', () => {
     expect(
       resolveMostRecentRunMode({
         preferredMode: RUN_MODES.SOLO,
         soloRun: { updatedAt: '2026-04-01T10:00:00.000Z' },
         soulLinkRun: { updatedAt: '2026-04-01T11:00:00.000Z' },
       }),
-    ).toBe(RUN_MODES.SOUL_LINK)
+    ).toBe(RUN_MODES.SOLO)
   })
 
-  it('uses the preferred mode as a tie-breaker', () => {
+  it('returns soul link preferred mode when both runs exist', () => {
     expect(
       resolveMostRecentRunMode({
         preferredMode: RUN_MODES.SOUL_LINK,
