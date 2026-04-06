@@ -13,7 +13,7 @@
               </div>
             </div>
           </DialogActionSection>
-          <DialogActionSection>
+          <DialogActionSection v-if="showDeathBox">
             <button class="reset-option" @click="$emit('viewDeathBox')">
               View Death Box
             </button>
@@ -49,6 +49,7 @@ defineProps({
   hasRemoteSession: { type: Boolean, default: false },
   showViewPlayer: { type: Boolean, default: false },
   otherPlayerName: { type: String, default: '' },
+  showDeathBox: { type: Boolean, default: true },
   newRunLabel: { type: String, required: true },
 })
 
