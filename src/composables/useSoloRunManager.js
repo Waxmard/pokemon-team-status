@@ -263,6 +263,16 @@ export function useSoloRunManager() {
     await persistRunSnapshot(targetId, snapshot)
   }
 
+  async function updateRunMeta(runId, meta) {
+    if (!runIndex.value) return
+
+    const runs = runIndex.value.runs.map((r) =>
+      r.id === runId ? { ...r, ...meta } : r,
+    )
+    runIndex.value = { ...runIndex.value, runs }
+    await repository.persistSoloRunIndex(cloneIndex())
+  }
+
   return {
     runList,
     activeRunId,
@@ -274,5 +284,6 @@ export function useSoloRunManager() {
     registerNewRun,
     deleteRun,
     renameRun,
+    updateRunMeta,
   }
 }

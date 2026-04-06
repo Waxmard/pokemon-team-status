@@ -375,6 +375,7 @@ const {
   registerNewRun: registerNewSoloRun,
   deleteRun: deleteSoloRun,
   renameRun: renameSoloRun,
+  updateRunMeta: updateSoloRunMeta,
 } = useSoloRunManager()
 
 const showResetDialog = ref(false)
@@ -388,6 +389,31 @@ function dismissAllDialogs() {
   showResetDialog.value = false
   showSoloDialog.value = false
   showSoulLinkDialog.value = false
+}
+
+function buildSoloSessionCallbacks() {
+  return {
+    loadSessionId: () => {
+      const run = soloRunList.value.find((r) => r.id === soloActiveRunId.value)
+      return run?.sessionId ?? null
+    },
+    saveSessionId: (id, code) =>
+      updateSoloRunMeta(soloActiveRunId.value, {
+        sessionId: id,
+        inviteCode: code,
+      }),
+  }
+}
+
+function setupSoloSync() {
+  if (!isSoloSyncAvailable) return
+  initSoloSyncSession(
+    () => buildSoloSnapshot(),
+    (s) => applySoloRemoteSnapshot(s),
+    buildSoloSessionCallbacks(),
+  )
+    .then(() => subscribeSolo())
+    .catch((err) => console.error('Failed to init solo sync session:', err))
 }
 
 const playerNameInput = ref(null)
@@ -605,14 +631,7 @@ async function createFreshSoloRun() {
   freshSnapshot.name = null
   await registerNewSoloRun(freshSnapshot)
   dismissAllDialogs()
-  if (isSoloSyncAvailable) {
-    initSoloSyncSession(
-      () => buildSoloSnapshot(),
-      (s) => applySoloRemoteSnapshot(s),
-    )
-      .then(() => subscribeSolo())
-      .catch((err) => console.error('Failed to create solo sync session:', err))
-  }
+  setupSoloSync()
 }
 
 async function handleLeaveSoloSession() {
@@ -765,6 +784,8 @@ async function handleSoloJoinSession(code) {
   const previousRunId = soloActiveRunId.value
   const previousRunIsEmpty = isEmptySoloRun(buildSoloSnapshot())
   let joinedRunName = null
+  let joinedSessionId = null
+  let joinedInviteCode = null
   try {
     await joinSessionFlow({
       saveCurrentRun:
@@ -775,12 +796,18 @@ async function handleSoloJoinSession(code) {
       joinSession: async () => {
         const result = await joinSoloSession(code)
         joinedRunName = result.state?.name ?? null
+        joinedSessionId = result.sessionId
+        joinedInviteCode = result.inviteCode
       },
       mode: RUN_MODES.SOLO,
-      registerRun: () => {
+      registerRun: async () => {
         const snapshot = buildSoloSnapshot()
         snapshot.name = joinedRunName
-        return registerNewSoloRun(snapshot)
+        await registerNewSoloRun(snapshot)
+        await updateSoloRunMeta(soloActiveRunId.value, {
+          sessionId: joinedSessionId,
+          inviteCode: joinedInviteCode,
+        })
       },
       subscribe: subscribeSolo,
       clearUI: () => {
@@ -906,15 +933,8 @@ async function startNewRun(mode) {
     await registerNewSoloRun(freshSnapshot)
     if (isSoloSyncAvailable) {
       await deleteSoloRemoteSession()
-      initSoloSyncSession(
-        () => buildSoloSnapshot(),
-        (s) => applySoloRemoteSnapshot(s),
-      )
-        .then(() => subscribeSolo())
-        .catch((err) =>
-          console.error('Failed to create solo sync session:', err),
-        )
     }
+    setupSoloSync()
   } else {
     if (!isSoloMode.value) {
       await saveCurrentRunToIndex(buildSoulLinkSnapshot())
@@ -1275,14 +1295,7 @@ async function switchToSoloRunCore(runId, currentSnapshot) {
   }
   setCurrentRunMode(RUN_MODES.SOLO)
   dismissAllDialogs()
-  if (isSoloSyncAvailable) {
-    initSoloSyncSession(
-      () => buildSoloSnapshot(),
-      (s) => applySoloRemoteSnapshot(s),
-    )
-      .then(() => subscribeSolo())
-      .catch((err) => console.error('Solo sync after run switch failed:', err))
-  }
+  setupSoloSync()
 }
 
 async function handleSwitchSoloRun(runId) {
@@ -1376,6 +1389,7 @@ onMounted(async () => {
       await initSoloSyncSession(
         () => buildSoloSnapshot(),
         (snapshot) => applySoloRemoteSnapshot(snapshot),
+        buildSoloSessionCallbacks(),
       )
     } catch (err) {
       console.error('Failed to init solo sync session:', err)
