@@ -812,7 +812,9 @@ async function handleSwitchRun(runId) {
   if (runId === activeRunId.value && !isSoloMode.value) return
   await clearTransientUiState()
   unsubscribeSoulLink()
-  await switchToRun(runId, isSoloMode.value ? null : buildSoulLinkSnapshot())
+  if (runId !== activeRunId.value) {
+    await switchToRun(runId, isSoloMode.value ? null : buildSoulLinkSnapshot())
+  }
   await loadSoulLinkData()
   setCurrentRunMode(RUN_MODES.SOUL_LINK)
 
@@ -1341,6 +1343,9 @@ function buildSoloSnapshot() {
 
 async function switchToSoloRunCore(runId, currentSnapshot) {
   await clearTransientUiState()
+  if (!isSoloMode.value) {
+    await saveCurrentRunToIndex(buildSoulLinkSnapshot())
+  }
   unsubscribeSoulLink()
   unsubscribeSolo()
   const snapshot = await switchToSoloRun(runId, currentSnapshot)
@@ -1414,7 +1419,6 @@ async function restoreMostRecentRun(preferredMode) {
   })
 
   if (startupMode === RUN_MODES.SOUL_LINK && activeRunId.value) {
-    await switchToRun(activeRunId.value, null)
     setCurrentRunMode(RUN_MODES.SOUL_LINK)
     await loadSoulLinkData()
     return RUN_MODES.SOUL_LINK
