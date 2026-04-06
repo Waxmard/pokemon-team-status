@@ -457,7 +457,9 @@ const isSupabaseAvailable = !!supabase
 const hasRemoteSession = computed(
   () => !isSoloMode.value && !!soulLinkSessionMetadata.value?.sessionId,
 )
-const hasSoloRemoteSession = computed(() => !!soloSessionId.value)
+const hasSoloRemoteSession = computed(
+  () => isSoloMode.value && !!soloSessionId.value,
+)
 const appTitle = computed(() =>
   isSoloMode.value ? 'Weakness Calculator' : viewedSoulLinkPlayerName.value,
 )
