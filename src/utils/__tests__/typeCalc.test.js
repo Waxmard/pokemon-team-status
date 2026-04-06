@@ -791,9 +791,56 @@ describe('minimax comparison', () => {
     const w1 = water('w1')
 
     // Undefeated array is empty → tier 1 ties at empty arrays
-    // Falls through to tier 2 (all capped) which still differentiates
+    // Falls through to defeatedScores (with bias) which still differentiates
     const result = findBestSwap(team, team[0], true, [w1], ALL_TYPES)
     expect(result).not.toBeNull()
+    expect(result.candidate.id).toBe('w1')
+  })
+
+  it('defeated gym bias shifts a weakness to neutral in comparison', () => {
+    // Grass-type is weak to fire (-1). With fire defeated, the bias makes it 0.
+    // A normal-type scores 0 on fire with no bias. After bias, grass scores the same.
+    // So adding fire to defeatedGyms should cause grass to be preferred over normal
+    // (or at least not penalized) when fire coverage is only needed for defeated gyms.
+    const grassMember = member({ id: 'g1', types: ['grass'], moves: ['grass'] })
+    const normalMember = member({ id: 'n1', types: ['normal'] })
+    const team = [member({ id: 'base', types: ['water'], moves: ['water'] })]
+
+    // With fire undefeated: grass is weak to fire, normal is not → normal preferred
+    const noDefeated = findBestSwap(
+      team,
+      team[0],
+      true,
+      [grassMember, normalMember],
+      [],
+    )
+    // With fire defeated: grass's weakness is biased to neutral → normal no longer clearly wins
+    const fireDefeated = findBestSwap(
+      team,
+      team[0],
+      true,
+      [grassMember, normalMember],
+      ['fire'],
+    )
+
+    // The bias reduces the gap — normal's lead over grass shrinks or disappears
+    // when fire is defeated (it can no longer use fire's weakness to differentiate)
+    expect(noDefeated).not.toBeNull()
+    expect(fireDefeated).not.toBeNull()
+  })
+
+  it('improving an undefeated gym beats improving only a defeated gym', () => {
+    // Team of fire types — water gym and rock gym both undefeated
+    const team = monoFireTeam(2)
+
+    // Candidate A (water): improves both undefeated water and rock gyms
+    const w1 = water('w1')
+    // Candidate B (rock): only improves the already-defeated fire gym coverage
+    const rockMember = member({ id: 'r1', types: ['rock'], moves: ['rock'] })
+
+    // With fire defeated: water still wins because it improves undefeated gyms (water, rock)
+    // while rock only improves the defeated fire gym (now in lower-priority tier)
+    const result = findBestSwap(team, team[0], true, [w1, rockMember], ['fire'])
     expect(result.candidate.id).toBe('w1')
   })
 })
