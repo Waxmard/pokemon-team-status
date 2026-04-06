@@ -893,12 +893,12 @@ describe('pinned gym priority', () => {
     expect(waterPinned).toBeGreaterThan(groundPinned)
   })
 
-  it('pinned gym uses uncapped score', () => {
+  it('pinned gym score is prioritized over undefeated scores', () => {
     const team2 = [water('w1'), normal('n1')]
     const waterWithMove = water('c1')
     const waterNoMove = member({ id: 'c2', types: ['water'] })
 
-    // With fire pinned: waterWithMove gets the raw uncapped fire score vs waterNoMove
+    // With fire pinned: waterWithMove scores higher on fire → wins via pinnedScore
     const pinnedResult = findBestSwap(
       team2,
       team2[1],
@@ -909,7 +909,7 @@ describe('pinned gym priority', () => {
     )
     expect(pinnedResult.candidate.id).toBe('c1')
 
-    // Without pin: both cap fire at SCORE_CAP (3), so they tie on that gym
+    // Without pin: waterWithMove still wins via undefeated scores (fire 4 vs 3)
     const unpinnedResult = findBestSwap(
       team2,
       team2[1],
@@ -917,8 +917,44 @@ describe('pinned gym priority', () => {
       [waterWithMove, waterNoMove],
       [],
     )
-    // waterWithMove still wins via other gym scores
     expect(unpinnedResult.candidate.id).toBe('c1')
+  })
+
+  it('pinned gym score caps at PINNED_SCORE_CAP so undefeated coverage can break ties', () => {
+    // Base team: 3 plain water types → fire score = 6, exactly at PINNED_SCORE_CAP
+    const team = [water('t1'), water('t2'), water('t3')]
+
+    // Candidate A: Flash Fire water — fire immune (+2) + SE move (+1) = 3 pts
+    // Replacing t1: total fire = 3+2+2 = 7 → capped to PINNED_SCORE_CAP (6)
+    // No special coverage vs ground (still weak)
+    const flashFireWater = member({
+      id: 'cA',
+      types: ['water'],
+      moves: ['water'],
+      ability: 'Flash Fire',
+    })
+
+    // Candidate B: Levitate water — resist (+1) + SE move (+1) = 2 pts
+    // Replacing t1: total fire = 2+2+2 = 6 → exactly at cap (6)
+    // Levitate grants ground immunity → much better vs ground gym
+    const levitateWater = member({
+      id: 'cB',
+      types: ['water'],
+      moves: ['water'],
+      ability: 'Levitate',
+    })
+
+    // Both candidates cap the pinned fire score at 6 → tie on pinnedScore
+    // Levitate's ground immunity then wins via undefeated scores
+    const result = findBestSwap(
+      team,
+      team[0],
+      true,
+      [flashFireWater, levitateWater],
+      [],
+      'fire',
+    )
+    expect(result.candidate.id).toBe('cB')
   })
 
   it('falls back to normal algorithm when pinnedGym is null', () => {

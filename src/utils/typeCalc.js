@@ -199,7 +199,8 @@ export function calculateScoreChanges(
     .filter((c) => c.diff !== 0)
 }
 
-const SCORE_CAP = 3
+const SCORE_CAP = 4
+const PINNED_SCORE_CAP = 6
 const DEFEATED_GYM_BIAS = 1
 
 function teamScoreProfile(
@@ -218,7 +219,7 @@ function teamScoreProfile(
     const raw = calculateScore(type, team, ruleset)
     const capped = Math.min(raw, SCORE_CAP)
     if (type === pinnedGym) {
-      pinnedScore.push(raw)
+      pinnedScore.push(Math.min(raw, PINNED_SCORE_CAP))
     }
     if (defeatedGyms.includes(type)) {
       defeatedScores.push(Math.min(raw + DEFEATED_GYM_BIAS, SCORE_CAP))
