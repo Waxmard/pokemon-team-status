@@ -127,6 +127,35 @@ export function useDraftAction() {
 
   const updateSpriteVariant = (val) => updateField('spriteVariant', val)
 
+  function sanitizeDraft(sanitizeFn) {
+    if (draftAction.value) {
+      draftAction.value = sanitizeFn(draftAction.value)
+    }
+  }
+
+  function updateBoxPokemonId(id) {
+    if (draftAction.value) {
+      draftAction.value.boxPokemonId = id
+    }
+  }
+
+  function updateEditId(id) {
+    if (draftAction.value) {
+      draftAction.value.editId = id
+    }
+  }
+
+  function convertToBoxEdit(boxPokemonId) {
+    if (draftAction.value) {
+      draftAction.value = {
+        ...draftAction.value,
+        type: 'edit',
+        isBoxPokemon: true,
+        boxPokemonId,
+      }
+    }
+  }
+
   function updateInHandPokemon(source) {
     if (draftAction.value) {
       draftAction.value = {
@@ -162,6 +191,10 @@ export function useDraftAction() {
     updateNickname,
     updateMegaForm,
     updateSpriteVariant,
+    sanitizeDraft,
+    updateBoxPokemonId,
+    updateEditId,
+    convertToBoxEdit,
     updateInHandPokemon,
     enterSwapMode,
     exitSwapMode,

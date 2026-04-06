@@ -328,8 +328,13 @@ const {
 const {
   draftAction,
   swapMode,
+  startEditBox,
   enterSwapMode,
   exitSwapMode,
+  sanitizeDraft,
+  updateBoxPokemonId,
+  updateEditId,
+  convertToBoxEdit,
   updateInHandPokemon,
   cancel,
 } = useDraftAction()
@@ -856,9 +861,7 @@ watch(swapMode, (isSwapMode) => {
 })
 
 watch(generationRules, (ruleset) => {
-  if (draftAction.value) {
-    draftAction.value = sanitizeDraftActionForRules(draftAction.value, ruleset)
-  }
+  sanitizeDraft((draft) => sanitizeDraftActionForRules(draft, ruleset))
 
   if (swapOriginalState.value) {
     swapOriginalState.value = {
@@ -1061,7 +1064,7 @@ async function handleBoxToTeamSwap(targetId, inHandPokemon) {
   ])
 
   swapInHandToTarget(targetPokemon)
-  draftAction.value.boxPokemonId = newBoxMember.id
+  updateBoxPokemonId(newBoxMember.id)
 }
 
 async function handleTeamToBoxSwap(targetId, inHandPokemon) {
@@ -1099,7 +1102,7 @@ async function handleTeamToBoxSwap(targetId, inHandPokemon) {
   ])
 
   swapInHandToTarget(targetPokemon)
-  draftAction.value.editId = newTeamMember.id
+  updateEditId(newTeamMember.id)
 }
 
 // Handle immediate swap when clicking a slot in swap mode
@@ -1148,16 +1151,12 @@ async function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
     ])
 
     // Set A as "in hand" box Pokemon for chain swapping
-    const pokemonData = getRulesetPokemonData(teamPokemon.name)
-    draftAction.value = {
-      type: 'edit',
-      isBoxPokemon: true,
-      isTeamPokemon: false,
-      boxPokemonId: newBoxMember.id,
-      pokemon: pokemonData,
+    startEditBox({
+      id: newBoxMember.id,
+      pokemonData: getRulesetPokemonData(teamPokemon.name),
       ...pickMemberFields(teamPokemon),
       moves: [...(teamPokemon.moves || [])],
-    }
+    })
   } else {
     // Box editing: handleImmediateSwap already sets correct perspective
     await handleImmediateSwap(candidateId)
@@ -1202,13 +1201,7 @@ function enterAddReplaceMode() {
   })
   persistBox([...box.value, tempBoxMember])
 
-  draftAction.value = {
-    ...draftAction.value,
-    type: 'edit',
-    isBoxPokemon: true,
-    boxPokemonId: tempBoxMember.id,
-  }
-
+  convertToBoxEdit(tempBoxMember.id)
   enterSwapMode()
 }
 
