@@ -111,6 +111,30 @@
               </button>
             </div>
           </DialogActionSection>
+          <DialogActionSection v-if="isSupabaseAvailable">
+            <div class="reset-option-group">
+              <template v-if="showOptionsJoinInput">
+                <div class="session-input-row">
+                  <input
+                    ref="optionsJoinInputEl"
+                    v-model="optionsJoinCode"
+                    class="session-code-input"
+                    type="text"
+                    maxlength="6"
+                    placeholder="Invite code"
+                    @keydown.enter="handleJoinRun"
+                  />
+                  <button class="reset-option session-confirm-btn" @click="handleJoinRun" :disabled="sessionActionPending">
+                    Join
+                  </button>
+                </div>
+                <div v-if="joinRunError" class="session-join-error">{{ joinRunError }}</div>
+              </template>
+              <button v-else class="reset-option" @click="openOptionsJoinInput">
+                Join Run
+              </button>
+            </div>
+          </DialogActionSection>
           <DialogActionSection>
             <div class="reset-option-group">
               <button class="reset-option" @click="resetPokemon">
@@ -197,15 +221,10 @@
     :show-view-player="!isSoloMode"
     :other-player-name="otherSoulLinkPlayerName"
     new-run-label="New Soul Link Run"
-    join-run-label="Join Soul Link Run"
-    :is-sync-available="isSupabaseAvailable"
-    :session-action-pending="sessionActionPending"
-    :join-error="soulLinkJoinError"
     @copy-code="copyInviteCode"
     @view-death-box="handleViewDeathBox('soulLink')"
     @view-other-player="handleViewOtherSoulLinkPlayer"
     @new-run="startNewRun(RUN_MODES.SOUL_LINK)"
-    @join-session="handleJoinSession"
   />
 
   <SessionDialog
@@ -215,20 +234,15 @@
     :copy-label="soloCopyLabel"
     :has-remote-session="hasSoloRemoteSession && isSoloSyncAvailable"
     new-run-label="New Solo Run"
-    join-run-label="Join Solo Run"
-    :is-sync-available="isSoloSyncAvailable"
-    :session-action-pending="sessionActionPending"
-    :join-error="soloJoinError"
     @copy-code="copySoloInviteCode"
     @view-death-box="handleViewDeathBox('solo')"
     @new-run="startNewRun(RUN_MODES.SOLO)"
-    @join-session="handleSoloJoinSession"
   />
 </template>
 
 <script setup>
 import { NConfigProvider } from 'naive-ui'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import DialogActionSection from './components/DialogActionSection.vue'
 import GymColumns from './components/GymColumns.vue'
@@ -249,6 +263,7 @@ import { useSoulLinkStore } from './composables/useSoulLinkStore.js'
 import { getPokemonDataForRules } from './data/pokemon.js'
 import { GENERATION_RULESETS, getAllTypesForRules } from './data/types.js'
 import { supabase } from './services/supabaseClient.js'
+import { createSupabaseRepository } from './services/supabaseRepository.js'
 import { themeOverrides } from './theme/colors.js'
 import { copyToClipboard } from './utils/clipboard.js'
 import {
@@ -395,6 +410,7 @@ function dismissAllDialogs() {
   showResetDialog.value = false
   showSoloDialog.value = false
   showSoulLinkDialog.value = false
+  resetOptionsJoinState()
 }
 
 function buildSoloSessionCallbacks() {
@@ -426,8 +442,10 @@ const playerNameInput = ref(null)
 const soloRunNameInput = ref(null)
 const ready = ref(false)
 const sessionActionPending = ref(false)
-const soloJoinError = ref(null)
-const soulLinkJoinError = ref(null)
+const showOptionsJoinInput = ref(false)
+const optionsJoinCode = ref('')
+const optionsJoinInputEl = ref(null)
+const joinRunError = ref(null)
 const copyLabel = ref('tap to copy')
 const soloCopyLabel = ref('tap to copy')
 const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
@@ -722,26 +740,59 @@ async function joinSessionFlow({
   }
 }
 
-async function handleJoinSession(code) {
-  soulLinkJoinError.value = null
+function openOptionsJoinInput() {
+  showOptionsJoinInput.value = true
+  nextTick(() => optionsJoinInputEl.value?.focus())
+}
+
+function resetOptionsJoinState() {
+  showOptionsJoinInput.value = false
+  optionsJoinCode.value = ''
+  joinRunError.value = null
+}
+
+async function handleJoinRun() {
+  const code = optionsJoinCode.value.trim()
+  if (!code) return
+
+  joinRunError.value = null
   try {
-    await joinSessionFlow({
-      saveCurrentRun: isSoloMode.value
-        ? null
-        : () => saveCurrentRunToIndex(buildSoulLinkSnapshot()),
-      unsubscribe: unsubscribeSoulLink,
-      joinSession: () => joinSoulLinkSession(code),
-      mode: RUN_MODES.SOUL_LINK,
-      registerRun: () => registerNewRun(buildSoulLinkSnapshot()),
-      subscribe: subscribeSoulLink,
-      clearUI: () => {
-        showSoulLinkDialog.value = false
-      },
-    })
+    const repo = createSupabaseRepository()
+    const session = await repo.fetchSessionByInviteCode(
+      code.toUpperCase().trim(),
+    )
+
+    if (!session) {
+      throw new Error('No session found with that invite code.')
+    }
+
+    const isSoulLink = Array.isArray(session.state?.players)
+    if (isSoulLink) {
+      await handleJoinSoulLinkSession(code)
+    } else {
+      await handleSoloJoinSession(code)
+    }
+
+    resetOptionsJoinState()
+    showResetDialog.value = false
   } catch (error) {
-    console.error('Failed to join session:', error)
-    soulLinkJoinError.value = error?.message || 'Failed to join session'
+    console.error('Failed to join run:', error)
+    joinRunError.value = error?.message || 'Failed to join run'
   }
+}
+
+async function handleJoinSoulLinkSession(code) {
+  await joinSessionFlow({
+    saveCurrentRun: isSoloMode.value
+      ? null
+      : () => saveCurrentRunToIndex(buildSoulLinkSnapshot()),
+    unsubscribe: unsubscribeSoulLink,
+    joinSession: () => joinSoulLinkSession(code),
+    mode: RUN_MODES.SOUL_LINK,
+    registerRun: () => registerNewRun(buildSoulLinkSnapshot()),
+    subscribe: subscribeSoulLink,
+    clearUI: () => {},
+  })
 }
 
 async function handleSwitchRun(runId) {
@@ -789,52 +840,45 @@ function copySoloInviteCode() {
 }
 
 async function handleSoloJoinSession(code) {
-  soloJoinError.value = null
   const previousRunId = soloActiveRunId.value
   const previousRunIsEmpty = isEmptySoloRun(buildSoloSnapshot())
   let joinedRunName = null
   let joinedSessionId = null
   let joinedInviteCode = null
-  try {
-    await joinSessionFlow({
-      saveCurrentRun:
-        isSoloMode.value && soloActiveRunId.value && !previousRunIsEmpty
-          ? () => saveSoloRunToIndex(buildSoloSnapshot())
-          : null,
-      unsubscribe: unsubscribeSolo,
-      joinSession: async () => {
-        const result = await joinSoloSession(code)
-        joinedRunName = result.state?.name ?? null
-        joinedSessionId = result.sessionId
-        joinedInviteCode = result.inviteCode
-      },
-      mode: RUN_MODES.SOLO,
-      registerRun: async () => {
-        const snapshot = buildSoloSnapshot()
-        snapshot.name = joinedRunName
-        await registerNewSoloRun(snapshot)
-        await updateSoloRunMeta(soloActiveRunId.value, {
-          sessionId: joinedSessionId,
-          inviteCode: joinedInviteCode,
-        })
-      },
-      subscribe: subscribeSolo,
-      clearUI: () => {
-        showSoloDialog.value = false
-      },
-    })
 
-    // Clean up the empty default run that was created on first load
-    if (
-      previousRunIsEmpty &&
-      previousRunId &&
-      previousRunId !== soloActiveRunId.value
-    ) {
-      await deleteSoloRun(previousRunId)
-    }
-  } catch (error) {
-    console.error('Failed to join solo session:', error)
-    soloJoinError.value = error?.message || 'Failed to join'
+  await joinSessionFlow({
+    saveCurrentRun:
+      isSoloMode.value && soloActiveRunId.value && !previousRunIsEmpty
+        ? () => saveSoloRunToIndex(buildSoloSnapshot())
+        : null,
+    unsubscribe: unsubscribeSolo,
+    joinSession: async () => {
+      const result = await joinSoloSession(code)
+      joinedRunName = result.state?.name ?? null
+      joinedSessionId = result.sessionId
+      joinedInviteCode = result.inviteCode
+    },
+    mode: RUN_MODES.SOLO,
+    registerRun: async () => {
+      const snapshot = buildSoloSnapshot()
+      snapshot.name = joinedRunName
+      await registerNewSoloRun(snapshot)
+      await updateSoloRunMeta(soloActiveRunId.value, {
+        sessionId: joinedSessionId,
+        inviteCode: joinedInviteCode,
+      })
+    },
+    subscribe: subscribeSolo,
+    clearUI: () => {},
+  })
+
+  // Clean up the empty default run that was created on first load
+  if (
+    previousRunIsEmpty &&
+    previousRunId &&
+    previousRunId !== soloActiveRunId.value
+  ) {
+    await deleteSoloRun(previousRunId)
   }
 }
 
