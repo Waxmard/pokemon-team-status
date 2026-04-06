@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/Waxmard/pokemon-team-status/compare/v1.4.1...v1.4.2) (2026-04-06)
+
+
+### Code Refactoring
+
+* consolidate join flow, harden startup, and polish session lifecycle ([#74](https://github.com/Waxmard/pokemon-team-status/issues/74)) ([91a017d](https://github.com/Waxmard/pokemon-team-status/commit/91a017d909f2b92cc0385af7fb0f5f2a52229109))
+
 ## [1.4.1](https://github.com/Waxmard/pokemon-team-status/compare/v1.4.0...v1.4.1) (2026-04-05)
 
 
