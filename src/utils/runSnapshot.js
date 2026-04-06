@@ -150,3 +150,14 @@ export function mapSoloRunStateToPersistedSnapshot(runState) {
     generationRulesUpdatedAt: soloRunState.rules.generationUpdatedAt ?? null,
   }
 }
+
+export function isEmptySoloRun(snapshot) {
+  return (
+    (snapshot.team?.length ?? 0) === 0 &&
+    (snapshot.box?.length ?? 0) === 0 &&
+    (snapshot.dead?.length ?? 0) === 0 &&
+    (snapshot.defeatedGyms?.length ?? 0) === 0 &&
+    snapshot.pinnedGym == null &&
+    snapshot.name == null
+  )
+}

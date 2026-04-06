@@ -256,6 +256,7 @@ import {
 } from './utils/generationRules.js'
 import { buildPokemonMember, pickMemberFields } from './utils/pokemon.js'
 import {
+  isEmptySoloRun,
   mapSoloRunStateToPersistedSnapshot,
   RUN_MODES,
 } from './utils/runSnapshot.js'
@@ -756,8 +757,7 @@ function copySoloInviteCode() {
 async function handleSoloJoinSession(code) {
   soloJoinError.value = null
   const previousRunId = soloActiveRunId.value
-  const previousRunIsEmpty =
-    team.value.length === 0 && box.value.length === 0 && dead.value.length === 0
+  const previousRunIsEmpty = isEmptySoloRun(buildSoloSnapshot())
   let joinedRunName = null
   try {
     await joinSessionFlow({
