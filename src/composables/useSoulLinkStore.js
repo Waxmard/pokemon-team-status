@@ -694,6 +694,13 @@ export function useSoulLinkStore() {
     }
   }
 
+  function leaveSession() {
+    sync.unsubscribeFromSession()
+    updateSessionMetadata({ sessionId: null, inviteCode: null })
+    setSyncVersion(1)
+    setSyncState(SOUL_LINK_SYNC_STATES.LOCAL_ONLY)
+  }
+
   async function deleteRemoteSession() {
     const soulLinkState = getSoulLinkState('Deleting remote session')
     const sessionId = soulLinkState.metadata.sessionId
@@ -747,6 +754,7 @@ export function useSoulLinkStore() {
     pushState: sync.pushState,
     pullState: sync.pullState,
     syncSession,
+    leaveSession,
     deleteRemoteSession,
     subscribeToSessionUpdates: sync.subscribeToSession,
     unsubscribeFromSession: sync.unsubscribeFromSession,

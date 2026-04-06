@@ -145,8 +145,8 @@
               </button>
             </div>
           </DialogActionSection>
-          <DialogActionSection v-if="hasSoloRemoteSession && isSoloMode">
-            <button class="reset-option" @click="handleLeaveSoloSession">
+          <DialogActionSection v-if="(hasSoloRemoteSession && isSoloMode) || (hasRemoteSession && !isSoloMode)">
+            <button class="reset-option" @click="isSoloMode ? handleLeaveSoloSession() : handleLeaveSoulLinkSession()">
               Leave This Run
             </button>
           </DialogActionSection>
@@ -337,6 +337,7 @@ const {
   pullState: pullSoulLinkState,
   pushState: pushSoulLinkState,
   subscribeToSessionUpdates: subscribeSoulLink,
+  leaveSession: leaveSoulLinkSession,
   unsubscribeFromSession: unsubscribeSoulLink,
   buildPersistableSnapshot: buildSoulLinkSnapshot,
 } = useSoulLinkStore()
@@ -673,6 +674,14 @@ async function handleLeaveSoloSession() {
   } else {
     await createFreshSoloRun()
   }
+}
+
+async function handleLeaveSoulLinkSession() {
+  await clearTransientUiState()
+  unsubscribeSoulLink()
+  leaveSoulLinkSession()
+  await deleteRun(activeRunId.value)
+  await switchToSoloMode()
 }
 
 function handleViewOtherSoulLinkPlayer() {
