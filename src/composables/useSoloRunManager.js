@@ -2,6 +2,7 @@ import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
 import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
 import {
   createDefaultSoloRunState,
+  isEmptySoloRun,
   mapPersistedSoloSnapshotToRunState,
   mapSoloRunStateToPersistedSnapshot,
   sanitizePersistedSoloRunSnapshot,
@@ -48,19 +49,6 @@ function toPlainPersistedSnapshot(snapshot) {
       name: snapshot?.name ?? null,
       createdAt: snapshot?.createdAt ?? null,
     }),
-  )
-}
-
-function hasPersistedSoloData(snapshot) {
-  if (!snapshot) return false
-
-  return (
-    (snapshot.team?.length ?? 0) > 0 ||
-    (snapshot.box?.length ?? 0) > 0 ||
-    (snapshot.dead?.length ?? 0) > 0 ||
-    (snapshot.defeatedGyms?.length ?? 0) > 0 ||
-    snapshot.pinnedGym !== null ||
-    snapshot.generationRules !== null
   )
 }
 
@@ -136,10 +124,10 @@ export function useSoloRunManager() {
   async function reinitializeFromLegacyOrDefault() {
     runIndex.value = null
     const existing = await repository.loadSoloRunSnapshot(null)
-    if (hasPersistedSoloData(existing)) {
-      await initializeRun(existing)
-    } else {
+    if (isEmptySoloRun(existing)) {
       await initializeRun(createDefaultSnapshot())
+    } else {
+      await initializeRun(existing)
     }
   }
 
@@ -201,7 +189,7 @@ export function useSoloRunManager() {
 
     // Migrate existing solo data to first run entry
     const existingSnapshot = await repository.loadSoloRunSnapshot(null)
-    if (hasPersistedSoloData(existingSnapshot)) {
+    if (!isEmptySoloRun(existingSnapshot)) {
       await initializeRun(existingSnapshot)
       return
     }
@@ -275,6 +263,16 @@ export function useSoloRunManager() {
     await persistRunSnapshot(targetId, snapshot)
   }
 
+  async function updateRunMeta(runId, meta) {
+    if (!runIndex.value) return
+
+    const runs = runIndex.value.runs.map((r) =>
+      r.id === runId ? { ...r, ...meta } : r,
+    )
+    runIndex.value = { ...runIndex.value, runs }
+    await repository.persistSoloRunIndex(cloneIndex())
+  }
+
   return {
     runList,
     activeRunId,
@@ -286,5 +284,6 @@ export function useSoloRunManager() {
     registerNewRun,
     deleteRun,
     renameRun,
+    updateRunMeta,
   }
 }

@@ -37,7 +37,7 @@
         :suggestionMode="suggestionMode"
         :readOnly="readOnly"
         :style="{ animationDelay: `${index * 30}ms` }"
-        @click="$emit('gymClick', element.type)"
+        @click="onGymCardClick(element.type)"
         @dragstart="onRowDragStart(element.type, $event)"
         @touchdragstart="onTouchDragStart(element.type)"
       />
@@ -95,6 +95,7 @@ const isDragging = ref(false)
 const draggedType = ref(null)
 const isPinSlotHover = ref(false)
 const touchDragType = ref(null)
+const justDragged = ref(false)
 
 function onRowDragStart(type, event) {
   if (props.readOnly) return
@@ -114,6 +115,8 @@ function onDragEnd() {
 }
 
 // Touch drag handlers for mobile
+const PIN_SLOT_HEIGHT = 60
+
 function onTouchDragStart(type) {
   if (props.readOnly) return
   isDragging.value = true
@@ -125,25 +128,44 @@ function onTouchMove(event) {
   if (!touchDragType.value) return
 
   const touch = event.touches[0]
-  const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY)
-
-  // Check if touch is over pin slot
-  const pinSlot = elementAtPoint?.closest('.pin-slot-overlay')
-  isPinSlotHover.value = !!pinSlot
+  isPinSlotHover.value = touch.clientY < PIN_SLOT_HEIGHT
 }
 
 function onTouchEnd(event) {
   if (props.readOnly) return
-  if (touchDragType.value && isPinSlotHover.value) {
-    // Prevent synthetic click from firing on whatever is under the finger
-    event.preventDefault()
+  if (!touchDragType.value) return
+
+  // Always prevent synthetic click when a drag was active
+  event.preventDefault()
+
+  // Final position check — covers cases where touchmove barely fires
+  // (e.g. first gym slot whose drag handle is already in the pin zone)
+  const touch = event.changedTouches[0]
+  if (touch) {
+    isPinSlotHover.value = touch.clientY < PIN_SLOT_HEIGHT
+  }
+
+  if (isPinSlotHover.value) {
     emit('pin', touchDragType.value)
   }
+
   // Reset all state
   isDragging.value = false
   isPinSlotHover.value = false
   touchDragType.value = null
   draggedType.value = null
+
+  // Suppress any gym clicks briefly — preventDefault on touchend alone
+  // doesn't reliably block synthetic clicks in all browsers
+  justDragged.value = true
+  setTimeout(() => {
+    justDragged.value = false
+  }, 400)
+}
+
+function onGymCardClick(type) {
+  if (justDragged.value) return
+  emit('gymClick', type)
 }
 
 function onPinSlotEnter() {
@@ -168,13 +190,11 @@ function onDropPin() {
 onMounted(() => {
   document.addEventListener('dragend', onDragEnd)
   document.addEventListener('mouseup', onDragEnd)
-  document.addEventListener('touchend', onDragEnd)
 })
 
 onUnmounted(() => {
   document.removeEventListener('dragend', onDragEnd)
   document.removeEventListener('mouseup', onDragEnd)
-  document.removeEventListener('touchend', onDragEnd)
 })
 </script>
 

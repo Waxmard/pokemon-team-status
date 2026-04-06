@@ -13,7 +13,7 @@
               </div>
             </div>
           </DialogActionSection>
-          <DialogActionSection>
+          <DialogActionSection v-if="showDeathBox">
             <button class="reset-option" @click="$emit('viewDeathBox')">
               View Death Box
             </button>
@@ -28,28 +28,6 @@
               <button class="reset-option" @click="$emit('newRun')">
                 {{ newRunLabel }}
               </button>
-              <template v-if="isSyncAvailable">
-                <template v-if="showJoinInput">
-                  <div class="session-input-row">
-                    <input
-                      ref="joinCodeInputEl"
-                      v-model="joinCodeValue"
-                      class="session-code-input"
-                      type="text"
-                      maxlength="6"
-                      placeholder="Invite code"
-                      @keydown.enter="handleJoin"
-                    />
-                    <button class="reset-option session-confirm-btn" @click="handleJoin" :disabled="sessionActionPending">
-                      Join
-                    </button>
-                  </div>
-                  <div v-if="joinError" class="session-join-error">{{ joinError }}</div>
-                </template>
-                <button v-else class="reset-option" @click="openJoinInput">
-                  {{ joinRunLabel }}
-                </button>
-              </template>
             </div>
           </DialogActionSection>
         </div>
@@ -61,10 +39,9 @@
 </template>
 
 <script setup>
-import { nextTick, ref, watch } from 'vue'
 import DialogActionSection from './DialogActionSection.vue'
 
-const props = defineProps({
+defineProps({
   visible: { type: Boolean, required: true },
   title: { type: String, required: true },
   sessionCode: { type: String, default: null },
@@ -72,44 +49,15 @@ const props = defineProps({
   hasRemoteSession: { type: Boolean, default: false },
   showViewPlayer: { type: Boolean, default: false },
   otherPlayerName: { type: String, default: '' },
+  showDeathBox: { type: Boolean, default: true },
   newRunLabel: { type: String, required: true },
-  joinRunLabel: { type: String, required: true },
-  isSyncAvailable: { type: Boolean, default: false },
-  sessionActionPending: { type: Boolean, default: false },
-  joinError: { type: String, default: null },
 })
 
-const emit = defineEmits([
+defineEmits([
   'update:visible',
   'copyCode',
   'viewDeathBox',
   'viewOtherPlayer',
   'newRun',
-  'joinSession',
 ])
-
-const showJoinInput = ref(false)
-const joinCodeValue = ref('')
-const joinCodeInputEl = ref(null)
-
-watch(
-  () => props.visible,
-  (val) => {
-    if (!val) {
-      showJoinInput.value = false
-      joinCodeValue.value = ''
-    }
-  },
-)
-
-function openJoinInput() {
-  showJoinInput.value = true
-  nextTick(() => joinCodeInputEl.value?.focus())
-}
-
-function handleJoin() {
-  const code = joinCodeValue.value.trim()
-  if (!code) return
-  emit('joinSession', code)
-}
 </script>

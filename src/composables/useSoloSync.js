@@ -10,15 +10,17 @@ import { generateInviteCode } from '../utils/soulLinkModel.js'
 import { generateUUID } from '../utils/uuid.js'
 import { createSessionSync } from './useSessionSync.js'
 
-const repository = createLocalSoloRunRepository()
+// Kept for legacy migration only — new sessions use per-run callbacks
+const legacyRepository = createLocalSoloRunRepository()
 const remoteRepository = supabase ? createSupabaseRepository() : null
 
 let _getSnapshotFn = null
 let _applySnapshotFn = null
+let _loadSessionId = null
+let _saveSessionId = null
 let _sessionId = null
 let _version = 0
 
-const syncStatus = ref('idle')
 const sessionId = ref(null)
 const inviteCode = ref(null)
 
@@ -50,7 +52,14 @@ const sync = createSessionSync({
 async function loadStoredSession() {
   if (!remoteRepository) return null
 
-  const storedId = await repository.loadSoloBackupSessionId()
+  // Try per-run session ID first
+  let storedId = _loadSessionId?.() ?? null
+
+  // Fall back to legacy global session ID for migration
+  if (!storedId) {
+    storedId = await legacyRepository.loadSoloBackupSessionId()
+  }
+
   if (!storedId) return null
 
   try {
@@ -60,19 +69,32 @@ async function loadStoredSession() {
       _version = session.version
       sessionId.value = storedId
       inviteCode.value = session.inviteCode
+
+      // Migrate legacy global key to per-run storage
+      await _saveSessionId?.(session.id, session.inviteCode)
+      await legacyRepository.persistSoloBackupSessionId(null)
+
       return session
     }
   } catch {
     // Session was deleted remotely
   }
 
+  // Clear stale legacy key if it existed
+  await legacyRepository.persistSoloBackupSessionId(null)
   return null
 }
 
 export function useSoloSync() {
-  async function initSyncSession(getSnapshotFn, applySnapshotFn) {
+  async function initSyncSession(
+    getSnapshotFn,
+    applySnapshotFn,
+    { loadSessionId, saveSessionId } = {},
+  ) {
     _getSnapshotFn = getSnapshotFn
     _applySnapshotFn = applySnapshotFn
+    _loadSessionId = loadSessionId ?? null
+    _saveSessionId = saveSessionId ?? null
     if (!remoteRepository) return
 
     const existing = await loadStoredSession()
@@ -101,7 +123,7 @@ export function useSoloSync() {
       _version = session.version
       sessionId.value = session.id
       inviteCode.value = session.inviteCode
-      await repository.persistSoloBackupSessionId(session.id)
+      await _saveSessionId?.(session.id, session.inviteCode)
 
       return { sessionId: session.id, inviteCode: session.inviteCode }
     } catch (err) {
@@ -127,14 +149,19 @@ export function useSoloSync() {
     _version = session.version
     sessionId.value = session.id
     inviteCode.value = session.inviteCode
-    await repository.persistSoloBackupSessionId(session.id)
+    // NOTE: caller handles persisting session ID to the correct run entry
+    // after registering the new run (see handleSoloJoinSession in App.vue)
 
     // Replace local state with remote — joining adopts the remote run's data
     if (session.state) {
       applySnapshot(session.state)
     }
 
-    return { sessionId: session.id, inviteCode: session.inviteCode }
+    return {
+      sessionId: session.id,
+      inviteCode: session.inviteCode,
+      state: session.state ?? null,
+    }
   }
 
   async function leaveSession() {
@@ -143,7 +170,7 @@ export function useSoloSync() {
     _version = 0
     sessionId.value = null
     inviteCode.value = null
-    await repository.persistSoloBackupSessionId(null)
+    await _saveSessionId?.(null, null)
   }
 
   async function deleteRemoteSession() {
@@ -159,11 +186,10 @@ export function useSoloSync() {
     _version = 0
     sessionId.value = null
     inviteCode.value = null
-    await repository.persistSoloBackupSessionId(null)
+    await _saveSessionId?.(null, null)
   }
 
   return {
-    syncStatus,
     sessionId,
     inviteCode,
     isAvailable: sync.isAvailable,

@@ -643,7 +643,15 @@ export function useSoulLinkStore() {
       savedLocal?.devicePlayerId ?? SOUL_LINK_PLAYER_IDS.PARTNER
 
     const remoteState = session.state
-    const remotePlayers = (remoteState.players ?? []).map((player) => ({
+    if (
+      !Array.isArray(remoteState?.players) ||
+      remoteState.players.length === 0
+    ) {
+      throw new Error(
+        'This session is not a Soul Link run. Check the invite code and try again.',
+      )
+    }
+    const remotePlayers = remoteState.players.map((player) => ({
       ...player,
       isLocal: player.id === devicePlayerId,
     }))
@@ -684,6 +692,13 @@ export function useSoulLinkStore() {
       console.error('Sync failed:', error)
       setSyncState(SOUL_LINK_SYNC_STATES.READY)
     }
+  }
+
+  function leaveSession() {
+    sync.unsubscribeFromSession()
+    updateSessionMetadata({ sessionId: null, inviteCode: null })
+    setSyncVersion(1)
+    setSyncState(SOUL_LINK_SYNC_STATES.LOCAL_ONLY)
   }
 
   async function deleteRemoteSession() {
@@ -739,6 +754,7 @@ export function useSoulLinkStore() {
     pushState: sync.pushState,
     pullState: sync.pullState,
     syncSession,
+    leaveSession,
     deleteRemoteSession,
     subscribeToSessionUpdates: sync.subscribeToSession,
     unsubscribeFromSession: sync.unsubscribeFromSession,
