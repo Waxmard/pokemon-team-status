@@ -58,6 +58,7 @@ const {
   runList,
   activeRunId,
   activeRunSummary,
+  deduplicateIndex,
   registerNewRun,
   deleteRun,
 } = createRunIndexManager({
@@ -144,6 +145,8 @@ export function useSoloRunManager() {
       await reinitializeFromLegacyOrDefault()
       return
     }
+
+    await deduplicateIndex()
 
     // Ensure activeRunId points to an entry in runs
     const hasActiveEntry = runIndex.value.runs.some(

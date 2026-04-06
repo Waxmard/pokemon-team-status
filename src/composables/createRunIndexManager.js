@@ -26,6 +26,20 @@ export function createRunIndexManager({
       runIndex.value?.runs.find((run) => run.id === activeRunId.value) ?? null,
   )
 
+  async function deduplicateIndex() {
+    if (!runIndex.value?.runs?.length) return
+    const seen = new Set()
+    const deduped = runIndex.value.runs.filter((r) => {
+      if (seen.has(r.id)) return false
+      seen.add(r.id)
+      return true
+    })
+    if (deduped.length !== runIndex.value.runs.length) {
+      runIndex.value = { ...runIndex.value, runs: deduped }
+      await persistIndex(cloneIndex())
+    }
+  }
+
   async function registerNewRun(snapshot) {
     const runId = generateUUID()
     const entry = { id: runId, ...extractSummary(snapshot) }
@@ -60,6 +74,7 @@ export function createRunIndexManager({
     runList,
     activeRunId,
     activeRunSummary,
+    deduplicateIndex,
     registerNewRun,
     deleteRun,
   }

@@ -887,12 +887,8 @@ async function handleSoloJoinSession(code) {
     clearUI: () => {},
   })
 
-  // Clean up the empty default run that was created on first load
-  if (
-    previousRunIsEmpty &&
-    previousRunId &&
-    previousRunId !== soloActiveRunId.value
-  ) {
+  // Clean up the run that was displaced by the join
+  if (previousRunId && previousRunId !== soloActiveRunId.value) {
     await deleteSoloRun(previousRunId)
   }
 }
