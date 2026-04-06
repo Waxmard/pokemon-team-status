@@ -329,7 +329,7 @@ export function useRunStore() {
           repository.persistSoloGenerationRules(sanitized.generationRules),
         ]),
       sanitized,
-    ).catch(() => {})
+    ).catch((err) => console.error('Failed to persist remote snapshot:', err))
   }
 
   return {
