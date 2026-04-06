@@ -1091,7 +1091,7 @@ async function handleImmediateSwap(targetId) {
   }
 }
 
-function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
+async function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
   swapOriginalState.value = {
     team: JSON.parse(JSON.stringify(team.value)),
     box: JSON.parse(JSON.stringify(box.value)),
@@ -1108,14 +1108,20 @@ function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
       source: 'team',
       id: candidateId,
     })
-    persistTeam(team.value.map((p) => (p.id === currentId ? newTeamMember : p)))
-
     // A goes to box where B was
     const newBoxMember = buildPokemonMember(teamPokemon, {
       source: 'box',
       id: currentId,
     })
-    persistBox(box.value.map((p) => (p.id === candidateId ? newBoxMember : p)))
+
+    await Promise.all([
+      persistTeam(
+        team.value.map((p) => (p.id === currentId ? newTeamMember : p)),
+      ),
+      persistBox(
+        box.value.map((p) => (p.id === candidateId ? newBoxMember : p)),
+      ),
+    ])
 
     // Set A as "in hand" box Pokemon for chain swapping
     const pokemonData = getRulesetPokemonData(teamPokemon.name)
@@ -1130,7 +1136,7 @@ function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
     }
   } else {
     // Box editing: handleImmediateSwap already sets correct perspective
-    handleImmediateSwap(candidateId)
+    await handleImmediateSwap(candidateId)
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' })
