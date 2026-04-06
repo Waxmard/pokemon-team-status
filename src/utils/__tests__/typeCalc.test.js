@@ -171,6 +171,12 @@ describe('applyAbilityDefense', () => {
   it('caps weakness with Fluffy vs fire when already weak (2x -> 4x)', () => {
     expect(applyAbilityDefense(2, 'fire', 'Fluffy')).toBe(4)
   })
+
+  it('resistance ability floors at 0.25 and does not reduce further', () => {
+    // Code path: baseMultiplier <= 0.5 ? 0.25 : baseMultiplier / 2
+    // 0.25 is already at the floor (triple-resist scenario), stays at 0.25
+    expect(applyAbilityDefense(0.25, 'fire', 'Thick Fat')).toBe(0.25)
+  })
 })
 
 describe('getSpecialMoveEffectiveness', () => {
@@ -413,6 +419,17 @@ describe('calculateBerryTiebreaker', () => {
     // ground->fire = 2 (weak) -> count 1
     const team = [member({ types: ['fire'], berry: 'Air Balloon' })]
     expect(calculateBerryTiebreaker('ground', team)).toBe(1)
+  })
+
+  it('counts berries across multiple team members', () => {
+    // Two grass-types with Occa Berry (fire) — both weak to fire
+    // Water-type with Occa Berry — resists fire, so not counted
+    const team = [
+      member({ types: ['grass'], berry: 'Occa Berry' }),
+      member({ types: ['grass'], berry: 'Occa Berry' }),
+      member({ types: ['water'], berry: 'Occa Berry' }),
+    ]
+    expect(calculateBerryTiebreaker('fire', team)).toBe(2)
   })
 })
 
@@ -843,6 +860,51 @@ describe('minimax comparison', () => {
     const result = findBestSwap(team, team[0], true, [w1, rockMember], ['fire'])
     expect(result.candidate.id).toBe('w1')
   })
+
+  it('SCORE_CAP: score of 4 beats score of 3 in undefeated comparison', () => {
+    // Verifies scores below SCORE_CAP (4) are not yet capped and still differentiate.
+    // With SCORE_CAP=3, both fire=4 and fire=3 would cap to 3 and tie on fire;
+    // with SCORE_CAP=4, fire=4 (at cap) beats fire=3 (below cap).
+    // (cA also benefits on ground/rock via water move, but fire is the primary differentiator.)
+    const team = [water('w1'), normal('n1')]
+
+    // cA (water with move): fire total = w1(2) + cA(2) = 4 — at SCORE_CAP
+    const cA = water('cA')
+    // cB (water no move): fire total = w1(2) + cB(1) = 3 — below SCORE_CAP
+    const cB = member({ id: 'cB', types: ['water'] })
+
+    const result = findBestSwap(team, team[1], true, [cA, cB], [])
+    expect(result.candidate.id).toBe('cA')
+  })
+
+  it('SCORE_CAP: scores above 4 cap equally and are differentiated only by allUncapped', () => {
+    // Flash Fire water contributes 3 to fire (immunity+SE); plain water contributes 2.
+    // With base team contributing 2, teams score fire=5 and fire=4 respectively.
+    // Both cap at SCORE_CAP=4 in undefeated and allCapped — they tie there.
+    // Flash Fire does not affect non-fire gyms, so all other scores are identical.
+    // The only differentiator is allUncapped (5 > 4) → Flash Fire candidate wins.
+    const team = [water('w1'), normal('n1')]
+
+    const flashFireWater = member({
+      id: 'cFF',
+      types: ['water'],
+      moves: ['water'],
+      ability: 'Flash Fire',
+    })
+    const plainWater = water('cPlain')
+
+    // flashFireWater: fire = w1(2) + cFF(3) = 5, capped to 4 in undefeated
+    // plainWater:     fire = w1(2) + cPlain(2) = 4, at cap in undefeated
+    // Tie on undefeated fire (both 4) → allUncapped breaks it (5 > 4)
+    const result = findBestSwap(
+      team,
+      team[1],
+      true,
+      [flashFireWater, plainWater],
+      [],
+    )
+    expect(result.candidate.id).toBe('cFF')
+  })
 })
 
 describe('pinned gym priority', () => {
@@ -1001,6 +1063,31 @@ describe('findGlobalBestSwap', () => {
     // because ground is also weak to water, leaving it at -3
     expect(result.boxMember.id).toBe('w1')
     expect(result.improvement).toBeGreaterThan(0)
+  })
+
+  it('uses defeated gym bias when selecting the global best swap', () => {
+    // Fire defeated; box has water and rock
+    // Water improves undefeated ground/rock gyms (SE on both)
+    // Rock only meaningfully helps the already-defeated fire gym
+    const team = monoFireTeam(2)
+    const w1 = water('w1')
+    const rockMember = member({ id: 'r1', types: ['rock'], moves: ['rock'] })
+
+    const result = findGlobalBestSwap(team, [w1, rockMember], ['fire'])
+    // Water's undefeated improvements (ground, rock) outweigh rock's defeated-gym boost
+    expect(result.boxMember.id).toBe('w1')
+    expect(result.improvement).toBeGreaterThan(0)
+  })
+
+  it('returns negative improvement when all box swaps are worse', () => {
+    // Diverse team with strong coverage; only weak box members available
+    const team = [
+      member({ id: 't1', types: ['water'], moves: ['water', 'ice'] }),
+      member({ id: 't2', types: ['ground'], moves: ['ground', 'rock'] }),
+    ]
+    const result = findGlobalBestSwap(team, [normal('b1'), normal('b2')], [])
+    expect(result).not.toBeNull()
+    expect(result.improvement).toBeLessThan(0)
   })
 })
 
