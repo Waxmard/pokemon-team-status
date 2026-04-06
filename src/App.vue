@@ -200,6 +200,7 @@
     join-run-label="Join Soul Link Run"
     :is-sync-available="isSupabaseAvailable"
     :session-action-pending="sessionActionPending"
+    :join-error="soulLinkJoinError"
     @copy-code="copyInviteCode"
     @view-death-box="handleViewDeathBox('soulLink')"
     @view-other-player="handleViewOtherSoulLinkPlayer"
@@ -426,6 +427,7 @@ const soloRunNameInput = ref(null)
 const ready = ref(false)
 const sessionActionPending = ref(false)
 const soloJoinError = ref(null)
+const soulLinkJoinError = ref(null)
 const copyLabel = ref('tap to copy')
 const soloCopyLabel = ref('tap to copy')
 const isSoloMode = computed(() => currentRunMode.value === RUN_MODES.SOLO)
@@ -721,6 +723,7 @@ async function joinSessionFlow({
 }
 
 async function handleJoinSession(code) {
+  soulLinkJoinError.value = null
   try {
     await joinSessionFlow({
       saveCurrentRun: isSoloMode.value
@@ -737,6 +740,7 @@ async function handleJoinSession(code) {
     })
   } catch (error) {
     console.error('Failed to join session:', error)
+    soulLinkJoinError.value = error?.message || 'Failed to join session'
   }
 }
 

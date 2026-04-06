@@ -643,7 +643,15 @@ export function useSoulLinkStore() {
       savedLocal?.devicePlayerId ?? SOUL_LINK_PLAYER_IDS.PARTNER
 
     const remoteState = session.state
-    const remotePlayers = (remoteState.players ?? []).map((player) => ({
+    if (
+      !Array.isArray(remoteState?.players) ||
+      remoteState.players.length === 0
+    ) {
+      throw new Error(
+        'This session is not a Soul Link run. Check the invite code and try again.',
+      )
+    }
+    const remotePlayers = remoteState.players.map((player) => ({
       ...player,
       isLocal: player.id === devicePlayerId,
     }))
