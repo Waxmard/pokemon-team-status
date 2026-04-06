@@ -18,7 +18,6 @@ let _applySnapshotFn = null
 let _sessionId = null
 let _version = 0
 
-const syncStatus = ref('idle')
 const sessionId = ref(null)
 const inviteCode = ref(null)
 
@@ -167,7 +166,6 @@ export function useSoloSync() {
   }
 
   return {
-    syncStatus,
     sessionId,
     inviteCode,
     isAvailable: sync.isAvailable,
