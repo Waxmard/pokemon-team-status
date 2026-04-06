@@ -382,6 +382,14 @@ const showSoloDialog = ref(false)
 const deleteRunTarget = ref(null)
 const showSoulLinkDialog = ref(false)
 const deathBoxMode = ref(false)
+
+function dismissAllDialogs() {
+  deathBoxMode.value = false
+  showResetDialog.value = false
+  showSoloDialog.value = false
+  showSoulLinkDialog.value = false
+}
+
 const playerNameInput = ref(null)
 const soloRunNameInput = ref(null)
 const ready = ref(false)
@@ -593,10 +601,10 @@ function handleViewDeathBox(mode) {
 async function createFreshSoloRun() {
   await startNewSoloRun()
   setCurrentRunMode(RUN_MODES.SOLO)
-  await registerNewSoloRun(buildSoloSnapshot())
-  deathBoxMode.value = false
-  showResetDialog.value = false
-  showSoloDialog.value = false
+  const freshSnapshot = buildSoloSnapshot()
+  freshSnapshot.name = null
+  await registerNewSoloRun(freshSnapshot)
+  dismissAllDialogs()
   if (isSoloSyncAvailable) {
     initSoloSyncSession(
       () => buildSoloSnapshot(),
@@ -630,9 +638,7 @@ function handleViewOtherSoulLinkPlayer() {
   if (other) {
     setCachedPlayerSlot(other.id)
   }
-  deathBoxMode.value = false
-  showResetDialog.value = false
-  showSoulLinkDialog.value = false
+  dismissAllDialogs()
 }
 
 function handleRenameViewedSoulLinkPlayer(nextName) {
@@ -730,7 +736,7 @@ async function handleSwitchRun(runId) {
       )
   }
 
-  showResetDialog.value = false
+  dismissAllDialogs()
 }
 
 async function handleDeleteRun(runId) {
@@ -880,9 +886,7 @@ async function switchToSoloMode() {
   await clearTransientUiState()
   unsubscribeSoulLink()
   setCurrentRunMode(RUN_MODES.SOLO)
-  deathBoxMode.value = false
-  showResetDialog.value = false
-  showSoulLinkDialog.value = false
+  dismissAllDialogs()
 }
 
 async function startNewRun(mode) {
@@ -897,7 +901,9 @@ async function startNewRun(mode) {
     }
     await startNewSoloRun()
     setCurrentRunMode(RUN_MODES.SOLO)
-    await registerNewSoloRun(buildSoloSnapshot())
+    const freshSnapshot = buildSoloSnapshot()
+    freshSnapshot.name = null
+    await registerNewSoloRun(freshSnapshot)
     if (isSoloSyncAvailable) {
       await deleteSoloRemoteSession()
       initSoloSyncSession(
@@ -926,9 +932,7 @@ async function startNewRun(mode) {
     }
   }
 
-  showResetDialog.value = false
-  showSoloDialog.value = false
-  showSoulLinkDialog.value = false
+  dismissAllDialogs()
 }
 
 // Helper to construct the hypothetical draft team
@@ -1270,9 +1274,7 @@ async function switchToSoloRunCore(runId, currentSnapshot) {
     await loadData()
   }
   setCurrentRunMode(RUN_MODES.SOLO)
-  deathBoxMode.value = false
-  showResetDialog.value = false
-  showSoulLinkDialog.value = false
+  dismissAllDialogs()
   if (isSoloSyncAvailable) {
     initSoloSyncSession(
       () => buildSoloSnapshot(),
@@ -1306,9 +1308,7 @@ async function handleDeleteSoloRun(runId) {
     await switchToRun(activeRunId.value, null)
     setCurrentRunMode(RUN_MODES.SOUL_LINK)
     await loadSoulLinkData()
-    deathBoxMode.value = false
-    showResetDialog.value = false
-    showSoloDialog.value = false
+    dismissAllDialogs()
     if (soulLinkSessionMetadata.value?.sessionId) {
       syncSoulLinkSession()
         .then(() => subscribeSoulLink())
