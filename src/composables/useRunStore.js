@@ -296,7 +296,7 @@ export function useRunStore() {
     const stamped = { ...pokemon, updatedAt: Date.now() }
     await Promise.all([
       persistDead(dead.value.filter((p) => p.id !== id)),
-      persistBox([...box.value, stamped]),
+      persistBox([stamped, ...box.value]),
     ])
   }
 
