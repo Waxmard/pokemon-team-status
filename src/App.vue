@@ -45,6 +45,7 @@
         </template>
       </AppHeader>
 
+      <template v-if="ready">
       <template v-if="isSoloMode">
         <TeamSection :team="team" :box="box" :dead="dead" :has-death-box="true" :death-box-mode="deathBoxMode"
           @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap" :generation-rules="generationRules"
@@ -60,7 +61,7 @@
       </template>
 
       <SoulLinkShell
-        v-else
+        v-else-if="!isSoloMode"
         :generation-rules="soulLinkGenerationRules"
         :viewed-player-board="viewedSoulLinkPlayerBoard"
         :draft-active="hasDraft"
@@ -82,6 +83,7 @@
         @exitDeathBox="deathBoxMode = false"
         @deleteDeadPokemon="handleSoulLinkDeleteDeadPokemon"
       />
+      </template>
     </div>
   </n-config-provider>
 
@@ -381,6 +383,7 @@ const showSoulLinkDialog = ref(false)
 const deathBoxMode = ref(false)
 const playerNameInput = ref(null)
 const soloRunNameInput = ref(null)
+const ready = ref(false)
 const sessionActionPending = ref(false)
 const soloJoinError = ref(null)
 const copyLabel = ref('tap to copy')
@@ -590,11 +593,21 @@ async function createFreshSoloRun() {
   await startNewSoloRun()
   setCurrentRunMode(RUN_MODES.SOLO)
   await registerNewSoloRun(buildSoloSnapshot())
+  deathBoxMode.value = false
   showResetDialog.value = false
   showSoloDialog.value = false
+  if (isSoloSyncAvailable) {
+    initSoloSyncSession(
+      () => buildSoloSnapshot(),
+      (s) => applySoloRemoteSnapshot(s),
+    )
+      .then(() => subscribeSolo())
+      .catch((err) => console.error('Failed to create solo sync session:', err))
+  }
 }
 
 async function handleLeaveSoloSession() {
+  await clearTransientUiState()
   unsubscribeSolo()
   await leaveSoloSession()
 
@@ -742,21 +755,41 @@ function copySoloInviteCode() {
 
 async function handleSoloJoinSession(code) {
   soloJoinError.value = null
+  const previousRunId = soloActiveRunId.value
+  const previousRunIsEmpty =
+    team.value.length === 0 && box.value.length === 0 && dead.value.length === 0
+  let joinedRunName = null
   try {
     await joinSessionFlow({
       saveCurrentRun:
-        isSoloMode.value && soloActiveRunId.value
+        isSoloMode.value && soloActiveRunId.value && !previousRunIsEmpty
           ? () => saveSoloRunToIndex(buildSoloSnapshot())
           : null,
       unsubscribe: unsubscribeSolo,
-      joinSession: () => joinSoloSession(code),
+      joinSession: async () => {
+        const result = await joinSoloSession(code)
+        joinedRunName = result.state?.name ?? null
+      },
       mode: RUN_MODES.SOLO,
-      registerRun: () => registerNewSoloRun(buildSoloSnapshot()),
+      registerRun: () => {
+        const snapshot = buildSoloSnapshot()
+        snapshot.name = joinedRunName
+        return registerNewSoloRun(snapshot)
+      },
       subscribe: subscribeSolo,
       clearUI: () => {
         showSoloDialog.value = false
       },
     })
+
+    // Clean up the empty default run that was created on first load
+    if (
+      previousRunIsEmpty &&
+      previousRunId &&
+      previousRunId !== soloActiveRunId.value
+    ) {
+      await deleteSoloRun(previousRunId)
+    }
   } catch (error) {
     console.error('Failed to join solo session:', error)
     soloJoinError.value = error?.message || 'Failed to join'
@@ -967,7 +1000,7 @@ function swapInHandToTarget(targetPokemon) {
   })
 }
 
-function handleBoxToTeamSwap(targetId, inHandPokemon) {
+async function handleBoxToTeamSwap(targetId, inHandPokemon) {
   const boxPokemonId = draftAction.value.boxPokemonId
 
   if (targetId === null) {
@@ -976,8 +1009,10 @@ function handleBoxToTeamSwap(targetId, inHandPokemon) {
       source: 'team',
       id: boxPokemonId,
     })
-    persistTeam([...team.value, newTeamMember])
-    persistBox(box.value.filter((p) => p.id !== boxPokemonId))
+    await Promise.all([
+      persistTeam([...team.value, newTeamMember]),
+      persistBox(box.value.filter((p) => p.id !== boxPokemonId)),
+    ])
     exitSwapMode()
     return
   }
@@ -988,19 +1023,24 @@ function handleBoxToTeamSwap(targetId, inHandPokemon) {
   const newTeam = team.value.map((p) =>
     p.id === targetId ? { ...inHandPokemon, id: boxPokemonId } : p,
   )
-  persistTeam(newTeam)
 
   const newBoxMember = buildPokemonMember(targetPokemon, {
     source: 'box',
     id: targetId,
   })
-  persistBox([newBoxMember, ...box.value.filter((p) => p.id !== boxPokemonId)])
+  await Promise.all([
+    persistTeam(newTeam),
+    persistBox([
+      newBoxMember,
+      ...box.value.filter((p) => p.id !== boxPokemonId),
+    ]),
+  ])
 
   swapInHandToTarget(targetPokemon)
   draftAction.value.boxPokemonId = newBoxMember.id
 }
 
-function handleTeamToBoxSwap(targetId, inHandPokemon) {
+async function handleTeamToBoxSwap(targetId, inHandPokemon) {
   const teamPokemonId = draftAction.value.editId
 
   if (targetId === null) {
@@ -1008,8 +1048,10 @@ function handleTeamToBoxSwap(targetId, inHandPokemon) {
       source: 'box',
       id: teamPokemonId,
     })
-    persistBox([...box.value, newBoxMember])
-    persistTeam(team.value.filter((p) => p.id !== teamPokemonId))
+    await Promise.all([
+      persistBox([...box.value, newBoxMember]),
+      persistTeam(team.value.filter((p) => p.id !== teamPokemonId)),
+    ])
     exitSwapMode()
     return
   }
@@ -1020,30 +1062,32 @@ function handleTeamToBoxSwap(targetId, inHandPokemon) {
   const newBox = box.value.map((p) =>
     p.id === targetId ? { ...inHandPokemon, id: teamPokemonId } : p,
   )
-  persistBox(newBox)
 
   const newTeamMember = buildPokemonMember(targetPokemon, {
     source: 'team',
     id: targetId,
   })
-  persistTeam(
-    team.value.map((p) => (p.id === teamPokemonId ? newTeamMember : p)),
-  )
+  await Promise.all([
+    persistBox(newBox),
+    persistTeam(
+      team.value.map((p) => (p.id === teamPokemonId ? newTeamMember : p)),
+    ),
+  ])
 
   swapInHandToTarget(targetPokemon)
   draftAction.value.editId = newTeamMember.id
 }
 
 // Handle immediate swap when clicking a slot in swap mode
-function handleImmediateSwap(targetId) {
+async function handleImmediateSwap(targetId) {
   if (!draftAction.value?.pokemon) return
 
   const inHandPokemon = buildPokemonMember(draftAction.value)
 
   if (draftAction.value.isBoxPokemon) {
-    handleBoxToTeamSwap(targetId, inHandPokemon)
+    await handleBoxToTeamSwap(targetId, inHandPokemon)
   } else if (draftAction.value.isTeamPokemon) {
-    handleTeamToBoxSwap(targetId, inHandPokemon)
+    await handleTeamToBoxSwap(targetId, inHandPokemon)
   }
 }
 
@@ -1319,24 +1363,29 @@ onMounted(async () => {
 
   const startupMode = await restoreMostRecentRun(initialRunMode)
 
+  // Init sync session before showing content so session metadata
+  // (e.g. hasSoloRemoteSession) is available on first render
+  if (startupMode === RUN_MODES.SOLO && isSoloSyncAvailable) {
+    try {
+      await initSoloSyncSession(
+        () => buildSoloSnapshot(),
+        (snapshot) => applySoloRemoteSnapshot(snapshot),
+      )
+    } catch (err) {
+      console.error('Failed to init solo sync session:', err)
+    }
+  }
+
+  ready.value = true
+
   if (startupMode === RUN_MODES.SOLO) {
-    if (isSoloSyncAvailable) {
+    if (hasSoloRemoteSession.value) {
       try {
-        await initSoloSyncSession(
-          () => buildSoloSnapshot(),
-          (snapshot) => applySoloRemoteSnapshot(snapshot),
-        )
+        await syncSoloSession()
+        await saveSoloRunToIndex(buildSoloSnapshot())
+        subscribeSolo()
       } catch (err) {
-        console.error('Failed to init solo sync session:', err)
-      }
-      if (hasSoloRemoteSession.value) {
-        try {
-          await syncSoloSession()
-          await saveSoloRunToIndex(buildSoloSnapshot())
-          subscribeSolo()
-        } catch (err) {
-          console.error('Solo auto-sync on mount failed:', err)
-        }
+        console.error('Solo auto-sync on mount failed:', err)
       }
     }
   } else if (soulLinkSessionMetadata.value?.sessionId) {

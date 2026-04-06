@@ -134,7 +134,11 @@ export function useSoloSync() {
       applySnapshot(session.state)
     }
 
-    return { sessionId: session.id, inviteCode: session.inviteCode }
+    return {
+      sessionId: session.id,
+      inviteCode: session.inviteCode,
+      state: session.state ?? null,
+    }
   }
 
   async function leaveSession() {
