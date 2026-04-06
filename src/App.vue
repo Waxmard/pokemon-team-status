@@ -1363,8 +1363,8 @@ onMounted(async () => {
 
   const startupMode = await restoreMostRecentRun(initialRunMode)
 
-  // Init sync session before showing content so session metadata
-  // (e.g. hasSoloRemoteSession) is available on first render
+  // Init sync session and sync before showing content so session metadata
+  // and merged state are final on first render (avoids team reorder flash)
   if (startupMode === RUN_MODES.SOLO && isSoloSyncAvailable) {
     try {
       await initSoloSyncSession(
@@ -1374,11 +1374,6 @@ onMounted(async () => {
     } catch (err) {
       console.error('Failed to init solo sync session:', err)
     }
-  }
-
-  ready.value = true
-
-  if (startupMode === RUN_MODES.SOLO) {
     if (hasSoloRemoteSession.value) {
       try {
         await syncSoloSession()
@@ -1388,7 +1383,14 @@ onMounted(async () => {
         console.error('Solo auto-sync on mount failed:', err)
       }
     }
-  } else if (soulLinkSessionMetadata.value?.sessionId) {
+  }
+
+  ready.value = true
+
+  if (
+    startupMode !== RUN_MODES.SOLO &&
+    soulLinkSessionMetadata.value?.sessionId
+  ) {
     syncSoulLinkSession()
       .then(() => subscribeSoulLink())
       .catch((err) => console.error('Auto-sync on mount failed:', err))
