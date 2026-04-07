@@ -124,8 +124,7 @@
             </button>
           </div>
 
-          <div class="edit-overview-card">
-            <PokemonPreview
+          <PokemonPreview
               :sprite-url="selectedSpriteUrl"
               :sprite-alt="draftAction.pokemon.name"
               :types="previewTypes"
@@ -145,21 +144,6 @@
                 <button v-if="canEvolve" class="evolve-btn" :disabled="isEvolving" @click="handleEvolveClick">
                   ⬆
                 </button>
-              </template>
-              <template #bottom-left>
-                <div class="preview-footer-band">
-                  <div v-if="previewTypes?.length" class="preview-type-list">
-                    <span
-                      v-for="(type, index) in previewTypes"
-                      :key="type"
-                      class="preview-type-label"
-                    >
-                      <span :style="getPreviewTypeTextColor(type)">
-                        {{ capitalize(type) }}<span v-if="index < previewTypes.length - 1">,</span>
-                      </span>
-                    </span>
-                  </div>
-                </div>
               </template>
               <template #bottom-center>
                 <button class="preview-moves-trigger" @click="openField('moves')">
@@ -193,8 +177,6 @@
                 </button>
               </div>
             </PokemonPreview>
-
-          </div>
         </div>
 
         <div v-else-if="activeField === 'catchLocation'" class="editor-view catch-location-view">
@@ -583,12 +565,6 @@ const fieldTitle = computed(() => {
   }
   return titles[activeField.value] ?? name ?? 'Choose Pokemon'
 })
-
-function getPreviewTypeTextColor(type) {
-  return {
-    color: TYPE_COLORS[type]?.bg ?? 'var(--color-text-primary)',
-  }
-}
 
 // Probe for female sprite availability per-Pokemon
 const femaleAvailable = ref(false)
@@ -1302,14 +1278,7 @@ function onSelectPokemon(value) {
   max-width: 140px;
 }
 
-.edit-overview-card {
-  margin-top: var(--space-3);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  background: var(--color-surface);
-}
-
-.edit-overview-card :deep(.pokemon-preview) {
+.overview-view :deep(.pokemon-preview) {
   margin: var(--space-3) 0 calc(var(--space-5) + 1rem);
 }
 
@@ -1323,15 +1292,6 @@ function onSelectPokemon(value) {
   flex: 1;
 }
 
-.preview-footer-band {
-  position: absolute;
-  left: var(--space-3);
-  bottom: -2rem;
-  display: flex;
-  align-items: center;
-  z-index: 1;
-}
-
 .preview-location-trigger {
   position: absolute;
   right: var(--space-3);
@@ -1340,7 +1300,7 @@ function onSelectPokemon(value) {
   background: transparent;
   padding: 0;
   font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
-  font-size: 0.68rem;
+  font-size: 0.92rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.28;
@@ -1364,15 +1324,6 @@ function onSelectPokemon(value) {
   cursor: pointer;
   z-index: 1;
   white-space: nowrap;
-}
-
-.preview-type-label {
-  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
-  font-size: 0.92rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  line-height: 1.28;
-  opacity: 0.92;
 }
 
 .preview-moves-icons {
@@ -1623,7 +1574,7 @@ function onSelectPokemon(value) {
   }
 
   .preview-location-trigger {
-    font-size: 0.85rem;
+    font-size: 1rem;
   }
 }
 </style>
