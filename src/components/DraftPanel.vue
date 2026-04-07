@@ -1,9 +1,9 @@
 <template>
   <div class="draft-panel wizard-mode">
-      <div class="wizard-container">
-        <!-- Shared header with dynamic title -->
-        <div class="wizard-header">
-          <label v-if="wizardStep === 'pokemon' && draftAction.pokemon" class="wizard-title-field">
+    <div class="wizard-container">
+      <div class="wizard-header">
+        <template v-if="activeField === null">
+          <label v-if="draftAction.pokemon" class="wizard-title-field">
             <span v-if="!displayName" class="wizard-title-placeholder">{{ draftAction.pokemon?.name || 'Pokemon Name' }}</span>
             <input
               :value="displayName"
@@ -15,10 +15,9 @@
               @focus="$event.target.select()"
             />
           </label>
-          <h3 v-else class="wizard-title">{{ wizardStepTitle }}</h3>
+          <h3 v-else class="wizard-title">{{ fieldTitle }}</h3>
 
-          <!-- Pokemon step: suggestion button -->
-          <template v-if="wizardStep === 'pokemon' && canShowSuggestion">
+          <template v-if="draftAction.pokemon && canShowSuggestion">
             <span class="suggestion-group">
               <span
                 v-if="showSuggestion && swapSuggestion"
@@ -57,15 +56,18 @@
               </button>
             </span>
           </template>
+        </template>
 
-          <!-- Moves step: inline special move UI -->
-          <template v-if="wizardStep === 'moves'">
-            <!-- Selected special move badge (when not editing) -->
+        <template v-else>
+          <button class="back-btn" @click="closeField" aria-label="Back">
+            ←
+          </button>
+          <h3 class="wizard-title">{{ fieldTitle }}</h3>
+          <div v-if="activeField === 'moves'" class="special-move-header">
             <span v-if="draftAction.specialMove && !showSpecialMoveDropdown" class="special-move-badge-inline">
               {{ draftAction.specialMove }}
               <button class="clear-special-move-inline" @click="clearSpecialMove">✕</button>
             </span>
-            <!-- Autocomplete input (when editing) -->
             <n-auto-complete
               v-if="showSpecialMoveDropdown"
               v-model:value="specialMoveQuery"
@@ -75,7 +77,6 @@
               class="special-move-input-inline"
               size="small"
             />
-            <!-- Star button (bare icon like evolve) -->
             <button
               class="special-move-btn"
               :class="{ active: showSpecialMoveDropdown || draftAction.specialMove }"
@@ -84,12 +85,28 @@
             >
               ✦
             </button>
-          </template>
-        </div>
+          </div>
+          <div v-else class="wizard-header-spacer" />
+        </template>
+      </div>
 
-        <!-- Step: Pokemon -->
-        <div v-if="wizardStep === 'pokemon'" class="wizard-step pokemon-step">
+      <div v-if="!draftAction.pokemon" class="wizard-empty-state">
+        <n-auto-complete
+          v-if="!hideSearch"
+          ref="pokemonInputRef"
+          v-model:value="searchQuery"
+          :options="autocompleteOptions"
+          placeholder="Search Pokemon..."
+          :get-show="() => true"
+          @select="onSelectPokemon"
+          clearable
+        />
+      </div>
+
+      <template v-else>
+        <div v-if="activeField === null" class="overview-view">
           <n-auto-complete
+            v-if="!hideSearch"
             ref="pokemonInputRef"
             v-model:value="searchQuery"
             :options="autocompleteOptions"
@@ -98,45 +115,80 @@
             @select="onSelectPokemon"
             clearable
           />
-          <PokemonPreview
-            v-if="draftAction.pokemon"
-            :sprite-url="selectedSpriteUrl"
-            :sprite-alt="draftAction.pokemon.name"
-            :types="previewTypes"
-            :catch-location="draftAction.catchLocation"
-            :evolving="isEvolving"
-          >
-            <template #top-left>
-              <button
-                class="variant-btn"
-                :class="{ active: draftAction.spriteVariant !== 'default' }"
-                @click="cycleSpriteVariant"
-                aria-label="Switch sprite variant"
-              >
-                ⇄
+
+          <div class="edit-overview-card">
+            <PokemonPreview
+              :sprite-url="selectedSpriteUrl"
+              :sprite-alt="draftAction.pokemon.name"
+              :types="previewTypes"
+              :evolving="isEvolving"
+            >
+              <template #top-left>
+                <button
+                  class="variant-btn"
+                  :class="{ active: draftAction.spriteVariant !== 'default' }"
+                  @click="cycleSpriteVariant"
+                  aria-label="Switch sprite variant"
+                >
+                  ⇄
+                </button>
+              </template>
+              <template #top-right>
+                <button v-if="canEvolve" class="evolve-btn" :disabled="isEvolving" @click="handleEvolveClick">
+                  ⬆
+                </button>
+              </template>
+              <template #bottom-center>
+                <button class="preview-ability-trigger" @click="openField('ability')">
+                  {{ draftAction.ability || 'Ability' }}
+                </button>
+              </template>
+              <template #bottom-right>
+                <button class="preview-location-trigger" @click="openField('catchLocation')">
+                  {{ draftAction.catchLocation || 'Location' }}
+                </button>
+              </template>
+              <div v-if="canEvolve && showEvolveOptions" class="evolve-options">
+                <button
+                  v-for="option in evolutionOptions"
+                  :key="option.isMega ? option.name : option"
+                  class="evolve-option-pill"
+                  :class="{ 'mega-selected': isCurrentMega(option) }"
+                  @click="evolveTo(option)"
+                >
+                  <SpriteImg :src="getEvoSpriteUrl(option)" :alt="option.isMega ? option.name : option" :width="40" :height="40" />
+                </button>
+              </div>
+            </PokemonPreview>
+
+            <div class="loadout-bar">
+              <button class="loadout-segment loadout-moves" @click="openField('moves')">
+                <span class="loadout-label">Moves</span>
+                <span v-if="selectedMoveCount" class="loadout-moves-icons">
+                  <img
+                    v-for="type in limitedMoveTypes"
+                    :key="type"
+                    :src="getTypeIcon(type)"
+                    :alt="type"
+                    class="loadout-type-icon"
+                  />
+                  <span v-if="overflowMoveCount" class="loadout-overflow">+{{ overflowMoveCount }}</span>
+                </span>
+                <span v-else class="loadout-placeholder">Add move types</span>
               </button>
-            </template>
-            <template #top-right>
-              <button v-if="canEvolve" class="evolve-btn" :disabled="isEvolving" @click="handleEvolveClick">
-                ⬆
-              </button>
-            </template>
-            <div v-if="canEvolve && showEvolveOptions" class="evolve-options">
-              <button
-                v-for="option in evolutionOptions"
-                :key="option.isMega ? option.name : option"
-                class="evolve-option-pill"
-                :class="{ 'mega-selected': isCurrentMega(option) }"
-                @click="evolveTo(option)"
-              >
-                <SpriteImg :src="getEvoSpriteUrl(option)" :alt="option.isMega ? option.name : option" :width="40" :height="40" />
+
+              <button class="loadout-segment loadout-item" @click="openField('berry')">
+                <template v-if="draftAction.berry">
+                  <SpriteImg :src="getBerrySprite(draftAction.berry)" :alt="draftAction.berry" :width="20" :height="20" />
+                  <span class="loadout-item-name">{{ draftAction.berry }}</span>
+                </template>
+                <span v-else class="loadout-placeholder">Add item</span>
               </button>
             </div>
-          </PokemonPreview>
+          </div>
         </div>
 
-        <!-- Step: Catch Location -->
-        <div v-if="wizardStep === 'catchLocation'" class="wizard-step catch-location-step">
+        <div v-else-if="activeField === 'catchLocation'" class="editor-view catch-location-view">
           <n-auto-complete
             v-model:value="catchLocationQuery"
             :options="catchLocationOptions"
@@ -161,7 +213,7 @@
             </template>
           </PokemonPreview>
           <PokemonPreview
-            v-else-if="draftAction.pokemon"
+            v-else
             :sprite-url="selectedSpriteUrl"
             :sprite-alt="draftAction.pokemon?.name"
             :types="previewTypes"
@@ -169,8 +221,7 @@
           />
         </div>
 
-        <!-- Step: Ability -->
-        <div v-if="wizardStep === 'ability'" class="wizard-step">
+        <div v-else-if="activeField === 'ability'" class="editor-view">
           <n-auto-complete
             v-model:value="abilityQuery"
             :options="abilityAutocompleteOptions"
@@ -179,15 +230,9 @@
             @update:value="onAbilityInput"
             clearable
           />
-          <PokemonPreview
-            v-if="selectedSpriteUrl"
-            :sprite-url="selectedSpriteUrl"
-            :sprite-alt="draftAction.pokemon?.name"
-          />
         </div>
 
-        <!-- Step: Berry -->
-        <div v-if="wizardStep === 'berry'" class="wizard-step">
+        <div v-else-if="activeField === 'berry'" class="editor-view">
           <div class="berry-type-grid">
             <button
               v-for="berry in relevantBerries"
@@ -203,8 +248,7 @@
           </div>
         </div>
 
-        <!-- Step: Moves -->
-        <div v-if="wizardStep === 'moves'" class="wizard-step">
+        <div v-else-if="activeField === 'moves'" class="editor-view">
           <div class="moves-type-grid">
             <button
               v-for="type in activeTypes"
@@ -219,46 +263,9 @@
             </button>
           </div>
         </div>
-      </div>
+      </template>
+    </div>
 
-      <!-- Persistent wizard actions -->
-      <div class="wizard-actions-fixed">
-        <button
-          class="btn btn-icon btn-icon-cancel"
-          @click="$emit('cancel')"
-          aria-label="Cancel"
-        >
-          ✕
-        </button>
-
-        <div class="wizard-nav-buttons">
-          <button
-            class="btn btn-icon"
-            @click="goToPreviousStep"
-            :disabled="!canGoPrevious"
-            aria-label="Previous step"
-          >
-            ←
-          </button>
-          <button
-            class="btn btn-icon"
-            @click="goToNextStep"
-            :disabled="!canGoNext"
-            aria-label="Next step"
-          >
-            →
-          </button>
-        </div>
-
-        <button
-          class="btn btn-icon btn-icon-success"
-          @click="$emit('confirm')"
-          :disabled="!canConfirm"
-          aria-label="Save"
-        >
-          ✓
-        </button>
-      </div>
   </div>
 </template>
 
@@ -267,7 +274,6 @@ import { NAutoComplete } from 'naive-ui'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { useRunStore } from '../composables/useRunStore.js'
-import { useWizardNavigation } from '../composables/useWizardNavigation.js'
 import { ABILITY_NAMES } from '../data/abilities.js'
 import { BERRY_BY_TYPE } from '../data/berries.js'
 import { getMegaOptions } from '../data/megaEvolutions.js'
@@ -331,7 +337,7 @@ const props = defineProps({
   },
 })
 
-defineEmits(['confirm', 'cancel', 'swapSuggestion'])
+const emit = defineEmits(['confirm', 'cancel', 'swapSuggestion', 'autosave'])
 
 const {
   draftAction,
@@ -442,24 +448,17 @@ function getSuggestionSpriteUrl(pokemonName, spriteVariant, megaSpriteId) {
   })
 }
 
-// Wizard state
-const wizardSteps = computed(() => {
-  return ['pokemon', 'catchLocation', 'moves', 'berry', 'ability']
-})
+const activeField = ref(null)
 
-const {
-  currentStep: wizardStep,
-  canGoPrevious,
-  canGoNext,
-  goToNext: goToNextStep,
-  goToPrevious: goToPreviousStep,
-  reset: resetWizardStep,
-} = useWizardNavigation(wizardSteps, (step) => {
-  if (step === 'pokemon') return !!draftAction.value?.pokemon
-  if (step === 'catchLocation') return !isDuplicateCatchLocation.value
-  if (step === 'ability') return false
-  return true
-})
+function openField(field) {
+  activeField.value = field
+  showEvolveOptions.value = false
+}
+
+function closeField() {
+  activeField.value = null
+  showSpecialMoveDropdown.value = false
+}
 
 // Template refs for auto-focus
 const pokemonInputRef = ref(null)
@@ -554,10 +553,6 @@ watch(
   },
 )
 
-const canConfirm = computed(() => {
-  return !!draftAction.value?.pokemon
-})
-
 const displayName = computed(() => draftAction.value?.nickname || '')
 
 function handleNicknameBlur(event) {
@@ -566,17 +561,15 @@ function handleNicknameBlur(event) {
   updateNickname(trimmed && trimmed !== speciesName ? trimmed : null)
 }
 
-const wizardStepTitle = computed(() => {
+const fieldTitle = computed(() => {
   const name = draftAction.value?.nickname || draftAction.value?.pokemon?.name
-  if (!name) return 'Choose Pokemon'
   const titles = {
-    pokemon: name,
     catchLocation: 'Catch Location',
     ability: `${name}'s Ability`,
     berry: `${name}'s Item`,
     moves: `${name}'s Move Types`,
   }
-  return titles[wizardStep.value]
+  return titles[activeField.value] ?? name ?? 'Choose Pokemon'
 })
 
 // Probe for female sprite availability per-Pokemon
@@ -798,6 +791,14 @@ const selectedMoveCount = computed(() => {
   return draftAction.value?.moves?.length || 0
 })
 
+const limitedMoveTypes = computed(() =>
+  (draftAction.value?.moves || []).slice(0, 4),
+)
+
+const overflowMoveCount = computed(() =>
+  Math.max((draftAction.value?.moves?.length || 0) - 4, 0),
+)
+
 function isMoveSelected(type) {
   return draftAction.value?.moves?.includes(type)
 }
@@ -967,25 +968,6 @@ function onCatchLocationInput(value) {
   updateCatchLocation(trimmed || null)
 }
 
-function unlinkCatchLocation() {
-  catchLocationQuery.value = ''
-  updateCatchLocation(null)
-}
-
-const isDuplicateCatchLocation = computed(() => {
-  if (!props.isSoulLinkMode || !catchLocationQuery.value) return false
-  const query = catchLocationQuery.value.trim().toLowerCase()
-  if (!query) return false
-
-  const editId = draftAction.value?.editId || draftAction.value?.boxPokemonId
-  return [...props.team, ...props.box].some(
-    (m) =>
-      m.id !== editId &&
-      m.catchLocation &&
-      m.catchLocation.toLowerCase() === query,
-  )
-})
-
 function toggleBerry(value) {
   if (draftAction.value?.berry === value) {
     updateBerry(null)
@@ -994,8 +976,51 @@ function toggleBerry(value) {
   }
 }
 
-// Reset wizard step when panel opens
-watch(draftAction, () => resetWizardStep(), { immediate: true })
+watch(
+  draftAction,
+  () => {
+    activeField.value = null
+    showSuggestion.value = false
+    showEvolveOptions.value = false
+    showSpecialMoveDropdown.value = false
+  },
+  { immediate: true },
+)
+
+const autosaveSignature = computed(() => {
+  const action = draftAction.value
+  if (!action?.pokemon) return null
+
+  return JSON.stringify({
+    pokemon: action.pokemon.name,
+    nickname: action.nickname,
+    ability: action.ability,
+    berry: action.berry,
+    moves: action.moves ?? [],
+    specialMove: action.specialMove,
+    catchLocation: action.catchLocation,
+    spriteVariant: action.spriteVariant,
+    megaForm: action.megaForm,
+    megaSpriteId: action.megaSpriteId,
+    megaTypes: action.megaTypes ?? [],
+  })
+})
+
+const lastAutosaveSignature = ref(null)
+
+watch(
+  () => draftAction.value,
+  () => {
+    lastAutosaveSignature.value = autosaveSignature.value
+  },
+  { immediate: true },
+)
+
+watch(autosaveSignature, (signature) => {
+  if (!signature || signature === lastAutosaveSignature.value) return
+  lastAutosaveSignature.value = signature
+  emit('autosave')
+})
 
 function onSelectPokemon(value) {
   const pokemon = getPokemonDataForRules(value, effectiveGenerationRules.value)
@@ -1047,56 +1072,12 @@ function onSelectPokemon(value) {
   flex-direction: column;
   flex: 1;
   min-height: 300px;
-  max-height: 400px;
-  padding-bottom: var(--space-3);
+  max-height: 520px;
 }
 
-.wizard-actions-fixed {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: auto;
-}
-
-.wizard-nav-buttons {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.btn-icon {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  background: var(--color-surface-light);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: transform var(--transition-base), background var(--transition-base);
-}
-
-.btn-icon:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.btn-icon-success {
-  background: var(--color-success);
-  border-color: var(--color-success);
-  color: white;
-}
-
-.btn-icon-danger {
-  background: var(--color-danger, #dc3545);
-  border-color: var(--color-danger, #dc3545);
-  color: white;
-}
-
-.wizard-step {
+.wizard-empty-state,
+.overview-view,
+.editor-view {
   animation: fadeSlideIn var(--transition-base);
   flex: 1;
   overflow-x: hidden;
@@ -1104,7 +1085,8 @@ function onSelectPokemon(value) {
   padding-bottom: var(--space-4);
 }
 
-.pokemon-step {
+.overview-view,
+.catch-location-view {
   overflow: visible;
 }
 
@@ -1112,6 +1094,7 @@ function onSelectPokemon(value) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-2);
   margin-bottom: var(--space-4);
 }
 
@@ -1120,6 +1103,30 @@ function onSelectPokemon(value) {
   margin-bottom: 0;
   text-align: left;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.back-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.special-move-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+
+.wizard-header-spacer {
+  width: 2rem;
 }
 
 .wizard-title-input {
@@ -1252,35 +1259,135 @@ function onSelectPokemon(value) {
   max-width: 140px;
 }
 
-.wizard-options {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  max-height: 50vh;
-  overflow-y: auto;
+.edit-overview-card {
+  margin-top: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--color-surface);
 }
 
-.wizard-option {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  text-align: left;
+.edit-overview-card :deep(.pokemon-preview) {
+  margin: var(--space-3) 0 calc(var(--space-5) + 1rem);
+}
+
+.preview-ability-trigger {
+  position: absolute;
+  bottom: -0.9rem;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 7rem);
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--color-text-primary);
+  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  opacity: 0.92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
+}
+
+.preview-location-trigger {
+  position: absolute;
+  right: var(--space-3);
+  bottom: -2rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.28;
+  opacity: 0.92;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  z-index: 1;
+}
+
+.loadout-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(120px, 1fr);
+  gap: 1px;
+  background: var(--color-border);
+  border-top: 1px solid var(--color-border);
+}
+
+.loadout-segment {
+  min-height: 52px;
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 44px;
-  font-size: 0.95rem;
+  min-width: 0;
+  border: none;
+  background: var(--color-surface);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  cursor: pointer;
 }
 
-.wizard-option:active {
-  transform: scale(0.98);
-}
-
-.wizard-option.wizard-done {
+.loadout-segment:active {
   background: var(--color-surface-light);
-  border-style: dashed;
+}
+
+.loadout-moves {
+  justify-content: flex-start;
+}
+
+.loadout-item {
+  justify-content: flex-start;
+}
+
+.loadout-label {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.loadout-moves-icons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.loadout-type-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.loadout-overflow {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.loadout-placeholder,
+.loadout-item-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loadout-placeholder {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.loadout-item-name {
+  font-size: 0.86rem;
 }
 
 /* Moves type grid (6 rows x 3 columns) */
@@ -1436,21 +1543,6 @@ function onSelectPokemon(value) {
   z-index: 1;
 }
 
-.catch-location-step {
-  overflow: visible;
-}
-
-.unlink-location-btn {
-  background: transparent;
-  border: none;
-  font-size: 1.25rem;
-  font-weight: 900;
-  cursor: pointer;
-  padding: var(--space-1);
-  transition: color var(--transition-base);
-  color: var(--color-danger);
-}
-
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
@@ -1464,8 +1556,8 @@ function onSelectPokemon(value) {
 
 @media (orientation: landscape) and (max-height: 500px) {
   .wizard-container {
-    min-height: 180px;
-    max-height: 260px;
+    min-height: 200px;
+    max-height: 320px;
     padding-bottom: var(--space-2);
   }
 
@@ -1476,8 +1568,8 @@ function onSelectPokemon(value) {
 
 @media (orientation: portrait) {
   .wizard-container {
-    min-height: 220px;
-    max-height: 390px;
+    min-height: 300px;
+    max-height: 520px;
   }
 }
 
@@ -1497,6 +1589,11 @@ function onSelectPokemon(value) {
   }
 
   .preview-partner-nickname {
+    font-size: 0.85rem;
+  }
+
+  .preview-ability-trigger,
+  .preview-location-trigger {
     font-size: 0.85rem;
   }
 }

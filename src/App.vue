@@ -48,7 +48,7 @@
       <template v-if="ready">
       <template v-if="isSoloMode">
         <TeamSection :team="team" :box="box" :dead="dead" :has-death-box="true" :death-box-mode="deathBoxMode"
-          @confirmDraft="confirmDraft" @immediateSwap="handleImmediateSwap" :generation-rules="generationRules"
+          @confirmDraft="confirmDraft" @autosaveDraft="autosaveDraft" @immediateSwap="handleImmediateSwap" :generation-rules="generationRules"
           @deleteTeamPokemon="deleteTeamPokemon" @deleteBoxPokemon="deleteBoxPokemon" @cancelSwap="handleCancelSwap"
           @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion"
           @killPokemon="handleSoloKillPokemon" @revivePokemon="handleSoloRevivePokemon"
@@ -70,6 +70,7 @@
         :player-id="viewedSoulLinkPlayerId"
         :death-box-mode="deathBoxMode"
         @confirmDraft="handleSoulLinkConfirmDraft"
+        @autosaveDraft="handleSoulLinkAutosaveDraft"
         @immediateSwap="handleSoulLinkImmediateSwap"
         @deleteTeamPokemon="handleSoulLinkDeleteTeamPokemon"
         @deleteBoxPokemon="handleSoulLinkDeleteBoxPokemon"
@@ -295,6 +296,7 @@ const {
   loadError,
   persistTeam,
   persistBox,
+  persistDead,
   generationRules,
   persistGenerationRules,
   startNewSoloRun,
@@ -643,6 +645,13 @@ const {
 
 function handleSoulLinkConfirmDraft() {
   const result = confirmSoulLinkDraft()
+  if (result?.placedInDead) {
+    deathBoxMode.value = true
+  }
+}
+
+function handleSoulLinkAutosaveDraft() {
+  const result = confirmSoulLinkDraft({ closeAfterPersist: false })
   if (result?.placedInDead) {
     deathBoxMode.value = true
   }
@@ -1225,7 +1234,7 @@ async function handleSwapSuggestion({ currentId, candidateId, isTeamMember }) {
   enterSwapMode()
 }
 
-function confirmBoxPokemonEdit() {
+async function confirmBoxPokemonEdit() {
   const boxIndex = box.value.findIndex(
     (p) => p.id === draftAction.value.boxPokemonId,
   )
@@ -1235,7 +1244,7 @@ function confirmBoxPokemonEdit() {
 
   const newBox = [...box.value]
   newBox[boxIndex] = updatedPokemon
-  persistBox(newBox)
+  await persistBox(newBox)
 }
 
 function handleDraftDeletion() {
@@ -1264,8 +1273,80 @@ function enterAddReplaceMode() {
   enterSwapMode()
 }
 
+function convertDraftToSoloEdit(rosterKey, memberId) {
+  if (!draftAction.value) return
+
+  draftAction.value = {
+    ...draftAction.value,
+    type: 'edit',
+    isTeamPokemon: rosterKey === 'team',
+    isBoxPokemon: rosterKey === 'box',
+    isDeadPokemon: rosterKey === 'dead',
+    editId: rosterKey === 'team' ? memberId : null,
+    boxPokemonId: rosterKey === 'box' ? memberId : null,
+    deadPokemonId: rosterKey === 'dead' ? memberId : null,
+  }
+}
+
+async function autosaveDraft() {
+  if (!draftAction.value?.pokemon) return
+
+  const action = draftAction.value
+
+  if (action.type === 'add') {
+    const newMember = buildPokemonMember(action, { source: 'team' })
+    if (team.value.length < 6) {
+      await persistTeam([...team.value, newMember])
+      convertDraftToSoloEdit('team', newMember.id)
+    } else {
+      enterAddReplaceMode()
+    }
+    return
+  }
+
+  if (action.type === 'addToBox') {
+    const newMember = buildPokemonMember(action, { source: 'box' })
+    await persistBox([newMember, ...box.value])
+    convertDraftToSoloEdit('box', newMember.id)
+    return
+  }
+
+  if (action.type === 'addToDead') {
+    const newMember = buildPokemonMember(action, { source: 'dead' })
+    await persistDead([newMember, ...dead.value])
+    convertDraftToSoloEdit('dead', newMember.id)
+    return
+  }
+
+  if (action.isDeadPokemon) {
+    const updatedMember = buildPokemonMember(action, {
+      id: action.deadPokemonId,
+      source: 'dead',
+    })
+    await persistDead(
+      dead.value.map((member) =>
+        member.id === action.deadPokemonId ? updatedMember : member,
+      ),
+    )
+    return
+  }
+
+  if (action.isBoxPokemon) {
+    await confirmBoxPokemonEdit()
+    return
+  }
+
+  await persistTeam(
+    team.value.map((member) =>
+      member.id === action.editId
+        ? buildPokemonMember(action, { id: action.editId })
+        : member,
+    ),
+  )
+}
+
 // Methods
-function confirmDraft() {
+async function confirmDraft() {
   if (!draftAction.value) return
 
   if (!draftAction.value.pokemon) {
@@ -1278,19 +1359,32 @@ function confirmDraft() {
 
   if (draftAction.value.type === 'add') {
     if (team.value.length < 6) {
-      persistTeam([...team.value, newMember])
+      await persistTeam([...team.value, newMember])
     } else {
       enterAddReplaceMode()
       return
     }
   } else if (draftAction.value.type === 'addToBox') {
-    persistBox([newMember, ...box.value])
+    await persistBox([newMember, ...box.value])
+  } else if (draftAction.value.type === 'addToDead') {
+    await persistDead([newMember, ...dead.value])
   } else if (draftAction.value.type === 'edit') {
     if (draftAction.value.isBoxPokemon) {
-      confirmBoxPokemonEdit()
+      await confirmBoxPokemonEdit()
+    } else if (draftAction.value.isDeadPokemon) {
+      await persistDead(
+        dead.value.map((member) =>
+          member.id === draftAction.value.deadPokemonId
+            ? buildPokemonMember(draftAction.value, {
+                id: draftAction.value.deadPokemonId,
+                source: 'dead',
+              })
+            : member,
+        ),
+      )
     } else {
       // Editing a team Pokemon
-      persistTeam(
+      await persistTeam(
         team.value.map((p) =>
           p.id === draftAction.value.editId
             ? buildPokemonMember(draftAction.value, {

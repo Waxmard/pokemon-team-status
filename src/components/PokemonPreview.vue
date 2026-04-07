@@ -1,17 +1,19 @@
 <template>
   <div class="pokemon-preview" :class="{ evolving }">
     <slot name="top-left" />
-    <div v-if="types?.length" class="preview-type-list">
-      <span
-        v-for="(type, index) in types"
-        :key="type"
-        class="preview-type-label"
-      >
-        <span :style="getTypeTextColor(type)">
-          {{ capitalize(type) }}<span v-if="index < types.length - 1">,</span>
+    <slot name="bottom-left">
+      <div v-if="types?.length" class="preview-type-list">
+        <span
+          v-for="(type, index) in types"
+          :key="type"
+          class="preview-type-label"
+        >
+          <span :style="getTypeTextColor(type)">
+            {{ capitalize(type) }}<span v-if="index < types.length - 1">,</span>
+          </span>
         </span>
-      </span>
-    </div>
+      </div>
+    </slot>
     <SpriteImg
       v-if="spriteUrl"
       :src="spriteUrl"
@@ -23,9 +25,12 @@
       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     </svg>
-    <span v-if="displayCatchLocation" class="preview-catch-location">
-      {{ displayCatchLocation }}
-    </span>
+    <slot name="bottom-center" />
+    <slot name="bottom-right">
+      <span v-if="displayCatchLocation" class="preview-catch-location">
+        {{ displayCatchLocation }}
+      </span>
+    </slot>
     <slot name="top-right" />
     <slot />
     <div v-if="evolving" class="evo-flash-overlay" />

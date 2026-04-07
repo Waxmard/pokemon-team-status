@@ -193,6 +193,21 @@ export function useSoulLinkHandlers(
     reconcileSoulLinkPairing(pid, memberId, rosterKey)
   }
 
+  function convertDraftToSoulLinkEdit(rosterKey, memberId) {
+    if (!draftAction.value) return
+
+    draftAction.value = {
+      ...draftAction.value,
+      type: 'edit',
+      isTeamPokemon: rosterKey === 'team',
+      isBoxPokemon: rosterKey === 'box',
+      isDeadPokemon: rosterKey === 'dead',
+      editId: rosterKey === 'team' ? memberId : null,
+      boxPokemonId: rosterKey === 'box' ? memberId : null,
+      deadPokemonId: rosterKey === 'dead' ? memberId : null,
+    }
+  }
+
   function enterSoulLinkAddReplaceMode(pid) {
     soulLinkSwapOriginalRoster.value = getSoulLinkRoster()
 
@@ -230,6 +245,7 @@ export function useSoulLinkHandlers(
       )
       addRosterMember(pid, 'dead', deadMember)
       reconcileSoulLinkPairing(pid, deadMember.id, 'dead')
+      convertDraftToSoulLinkEdit('dead', deadMember.id)
       return { placedInDead: true }
     }
 
@@ -241,6 +257,7 @@ export function useSoulLinkHandlers(
 
     addRosterMember(pid, 'team', newMember)
     reconcileSoulLinkPairing(pid, newMember.id, 'team')
+    convertDraftToSoulLinkEdit('team', newMember.id)
     return { placedInDead: false }
   }
 
@@ -259,11 +276,13 @@ export function useSoulLinkHandlers(
       )
       addRosterMember(pid, 'dead', deadMember)
       reconcileSoulLinkPairing(pid, deadMember.id, 'dead')
+      convertDraftToSoulLinkEdit('dead', deadMember.id)
       return { placedInDead: true }
     }
 
     addRosterMember(pid, rosterKey, newMember)
     reconcileSoulLinkPairing(pid, newMember.id, rosterKey)
+    convertDraftToSoulLinkEdit(rosterKey, newMember.id)
     return { placedInDead: rosterKey === 'dead' }
   }
 
@@ -292,12 +311,14 @@ export function useSoulLinkHandlers(
     }
   }
 
-  function handleSoulLinkConfirmDraft() {
+  function handleSoulLinkConfirmDraft({ closeAfterPersist = true } = {}) {
     if (!draftAction.value) return
     const pid = viewedSoulLinkPlayerId.value
 
     if (!draftAction.value.pokemon) {
-      handleSoulLinkDeleteFromDraft()
+      if (closeAfterPersist) {
+        handleSoulLinkDeleteFromDraft()
+      }
       return
     }
 
@@ -310,7 +331,9 @@ export function useSoulLinkHandlers(
     const result = confirmSoulLinkDraftByType(pid, newMember)
     if (!result) return
 
-    cancel()
+    if (closeAfterPersist) {
+      cancel()
+    }
     return result
   }
 

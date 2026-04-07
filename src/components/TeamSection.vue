@@ -118,6 +118,7 @@
             :partner-roster="partnerRoster"
             :is-soul-link-mode="isSoulLinkMode"
             @confirm="$emit('confirmDraft')"
+            @autosave="$emit('autosaveDraft')"
             @cancel="cancel"
             @swapSuggestion="handleSwapSuggestion"
           />
@@ -214,6 +215,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'confirmDraft',
+  'autosaveDraft',
   'immediateSwap',
   'deleteTeamPokemon',
   'deleteBoxPokemon',
