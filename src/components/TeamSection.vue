@@ -107,8 +107,16 @@
       </div>
 
       <!-- Draft Panel -->
-      <div v-else key="panel" class="draft-panel-wrapper" @click.self="cancel">
-        <div class="draft-dialog-container">
+      <div
+        v-else
+        key="panel"
+        ref="draftPanelWrapperRef"
+        class="draft-panel-wrapper"
+        @click.self="cancel"
+        @pointerdown="handleDraftWrapperPointerDown"
+        @pointerup="handleDraftWrapperPointerUp"
+      >
+        <div ref="draftDialogContainerRef" class="draft-dialog-container">
           <DraftPanel
             :team="team"
             :box="box"
@@ -257,6 +265,32 @@ const swapPokemonSpriteUrl = computed(() => {
 })
 
 const viewMode = ref('team')
+const draftPanelWrapperRef = ref(null)
+const draftDialogContainerRef = ref(null)
+const pointerDownOutsideDraft = ref(false)
+
+function isPointerOutsideDraft(event) {
+  const dialogEl = draftDialogContainerRef.value
+  const target = event.target
+
+  if (!dialogEl || !(target instanceof Node)) return false
+  return !dialogEl.contains(target)
+}
+
+function handleDraftWrapperPointerDown(event) {
+  pointerDownOutsideDraft.value = isPointerOutsideDraft(event)
+}
+
+function handleDraftWrapperPointerUp(event) {
+  if (!pointerDownOutsideDraft.value) return
+
+  const endedOutside = isPointerOutsideDraft(event)
+  pointerDownOutsideDraft.value = false
+
+  if (endedOutside) {
+    cancel()
+  }
+}
 
 function handleModeClick() {
   // If in death box, clicking toggle returns to box
@@ -687,6 +721,47 @@ function handleDeleteDeadPokemon(id) {
   .desktop-only {
     display: none;
   }
+
+  .draft-panel-wrapper {
+    padding: var(--space-3);
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .draft-dialog-container {
+    width: 100%;
+    margin: auto 0;
+  }
+
+  .draft-dialog-container :deep(.draft-panel) {
+    width: min(100%, calc(100vw - (var(--space-3) * 2)));
+    max-height: calc(100dvh - (var(--space-3) * 2));
+  }
+}
+
+.draft-panel-wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn var(--transition-base) ease forwards;
+}
+
+.draft-dialog-container {
+  position: relative;
+}
+
+.draft-dialog-container :deep(.draft-panel) {
+  width: min(650px, calc(100vw - (var(--space-4) * 2)));
+  max-height: calc(100dvh - (var(--space-4) * 2));
+  overflow-y: auto;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  animation: scaleIn var(--transition-base) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 @media (min-width: 1024px) {
@@ -739,30 +814,6 @@ function handleDeleteDeadPokemon(id) {
 
   .action-icon {
     font-size: 1.1rem;
-  }
-
-  .draft-panel-wrapper {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn var(--transition-base) ease forwards;
-  }
-
-  .draft-dialog-container {
-    position: relative;
-  }
-
-  .draft-dialog-container :deep(.draft-panel) {
-    width: 650px;
-    max-height: 80vh;
-    overflow-y: auto;
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-xl);
-    animation: scaleIn var(--transition-base) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
   .draft-dialog-container .revive-mode {
