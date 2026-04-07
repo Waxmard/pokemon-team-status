@@ -17,45 +17,47 @@
           </label>
           <h3 v-else class="wizard-title">{{ fieldTitle }}</h3>
 
-          <template v-if="draftAction.pokemon && canShowSuggestion">
-            <span class="suggestion-group">
-              <span
-                v-if="showSuggestion && swapSuggestion"
-                class="suggestion-inline"
-                @click="$emit('swapSuggestion', {
-                  currentId: draftAction.isTeamPokemon ? draftAction.editId : draftAction.boxPokemonId,
-                  candidateId: swapSuggestion.candidate.id,
-                  isTeamMember: !!draftAction.isTeamPokemon,
-                })"
-              >
-                <SpriteImg
-                  :src="getSuggestionSpriteUrl(draftAction.pokemon.name, draftAction.spriteVariant, draftAction.megaSpriteId)"
-                  :alt="draftAction.pokemon.name"
-                  :width="24"
-                  :height="24"
-                />
-                <span class="suggestion-swap-icon">⇄</span>
-                <SpriteImg
-                  :src="getSuggestionSpriteUrl(swapSuggestion.candidate.name, swapSuggestion.candidate.spriteVariant, swapSuggestion.candidate.megaSpriteId)"
-                  :alt="swapSuggestion.candidate.name"
-                  :width="24"
-                  :height="24"
-                />
-                <span v-if="suggestionIndicator" :class="['suggestion-indicator', suggestionIndicator.cls]">
-                  {{ suggestionIndicator.symbol }}
+          <div v-if="draftAction.pokemon" class="header-actions">
+            <template v-if="canShowSuggestion">
+              <span class="suggestion-group">
+                <span
+                  v-if="showSuggestion && swapSuggestion"
+                  class="suggestion-inline"
+                  @click="$emit('swapSuggestion', {
+                    currentId: draftAction.isTeamPokemon ? draftAction.editId : draftAction.boxPokemonId,
+                    candidateId: swapSuggestion.candidate.id,
+                    isTeamMember: !!draftAction.isTeamPokemon,
+                  })"
+                >
+                  <SpriteImg
+                    :src="getSuggestionSpriteUrl(draftAction.pokemon.name, draftAction.spriteVariant, draftAction.megaSpriteId)"
+                    :alt="draftAction.pokemon.name"
+                    :width="24"
+                    :height="24"
+                  />
+                  <span class="suggestion-swap-icon">⇄</span>
+                  <SpriteImg
+                    :src="getSuggestionSpriteUrl(swapSuggestion.candidate.name, swapSuggestion.candidate.spriteVariant, swapSuggestion.candidate.megaSpriteId)"
+                    :alt="swapSuggestion.candidate.name"
+                    :width="24"
+                    :height="24"
+                  />
+                  <span v-if="suggestionIndicator" :class="['suggestion-indicator', suggestionIndicator.cls]">
+                    {{ suggestionIndicator.symbol }}
+                  </span>
                 </span>
+                <button
+                  v-else
+                  class="suggestion-btn"
+                  :class="{ active: showSuggestion }"
+                  @click="toggleSuggestion"
+                  aria-label="Swap suggestion"
+                >
+                  ✦
+                </button>
               </span>
-              <button
-                v-else
-                class="suggestion-btn"
-                :class="{ active: showSuggestion }"
-                @click="toggleSuggestion"
-                aria-label="Swap suggestion"
-              >
-                ✦
-              </button>
-            </span>
-          </template>
+            </template>
+          </div>
         </template>
 
         <template v-else>
@@ -105,16 +107,22 @@
 
       <template v-else>
         <div v-if="activeField === null" class="overview-view">
-          <n-auto-complete
-            v-if="!hideSearch"
-            ref="pokemonInputRef"
-            v-model:value="searchQuery"
-            :options="autocompleteOptions"
-            placeholder="Search Pokemon..."
-            :get-show="() => true"
-            @select="onSelectPokemon"
-            clearable
-          />
+          <div class="overview-search-row">
+            <n-auto-complete
+              v-if="!hideSearch"
+              ref="pokemonInputRef"
+              v-model:value="searchQuery"
+              :options="autocompleteOptions"
+              placeholder="Search Pokemon..."
+              :get-show="() => true"
+              @select="onSelectPokemon"
+              clearable
+              class="overview-search"
+            />
+            <button class="details-icon-btn" @click="openField('details')" aria-label="More details">
+              🔧
+            </button>
+          </div>
 
           <div class="edit-overview-card">
             <PokemonPreview
@@ -138,9 +146,34 @@
                   ⬆
                 </button>
               </template>
+              <template #bottom-left>
+                <div class="preview-footer-band">
+                  <div v-if="previewTypes?.length" class="preview-type-list">
+                    <span
+                      v-for="(type, index) in previewTypes"
+                      :key="type"
+                      class="preview-type-label"
+                    >
+                      <span :style="getPreviewTypeTextColor(type)">
+                        {{ capitalize(type) }}<span v-if="index < previewTypes.length - 1">,</span>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </template>
               <template #bottom-center>
-                <button class="preview-ability-trigger" @click="openField('ability')">
-                  {{ draftAction.ability || 'Ability' }}
+                <button class="preview-moves-trigger" @click="openField('moves')">
+                  <span v-if="selectedMoveCount" class="preview-moves-icons">
+                    <img
+                      v-for="type in limitedMoveTypes"
+                      :key="type"
+                      :src="getTypeIcon(type)"
+                      :alt="type"
+                      class="preview-move-icon"
+                    />
+                    <span v-if="overflowMoveCount" class="preview-moves-overflow">+{{ overflowMoveCount }}</span>
+                  </span>
+                  <span v-else class="preview-moves-placeholder">Add move types</span>
                 </button>
               </template>
               <template #bottom-right>
@@ -161,30 +194,6 @@
               </div>
             </PokemonPreview>
 
-            <div class="loadout-bar">
-              <button class="loadout-segment loadout-moves" @click="openField('moves')">
-                <span class="loadout-label">Moves</span>
-                <span v-if="selectedMoveCount" class="loadout-moves-icons">
-                  <img
-                    v-for="type in limitedMoveTypes"
-                    :key="type"
-                    :src="getTypeIcon(type)"
-                    :alt="type"
-                    class="loadout-type-icon"
-                  />
-                  <span v-if="overflowMoveCount" class="loadout-overflow">+{{ overflowMoveCount }}</span>
-                </span>
-                <span v-else class="loadout-placeholder">Add move types</span>
-              </button>
-
-              <button class="loadout-segment loadout-item" @click="openField('berry')">
-                <template v-if="draftAction.berry">
-                  <SpriteImg :src="getBerrySprite(draftAction.berry)" :alt="draftAction.berry" :width="20" :height="20" />
-                  <span class="loadout-item-name">{{ draftAction.berry }}</span>
-                </template>
-                <span v-else class="loadout-placeholder">Add item</span>
-              </button>
-            </div>
           </div>
         </div>
 
@@ -221,31 +230,35 @@
           />
         </div>
 
-        <div v-else-if="activeField === 'ability'" class="editor-view">
-          <n-auto-complete
-            v-model:value="abilityQuery"
-            :options="abilityAutocompleteOptions"
-            placeholder="Search ability..."
-            @select="onSelectAbility"
-            @update:value="onAbilityInput"
-            clearable
-          />
-        </div>
+        <div v-else-if="activeField === 'details'" class="editor-view details-editor">
+          <section class="details-section">
+            <h4 class="details-section-title">Ability</h4>
+            <n-auto-complete
+              v-model:value="abilityQuery"
+              :options="abilityAutocompleteOptions"
+              placeholder="Search ability..."
+              @select="onSelectAbility"
+              @update:value="onAbilityInput"
+              clearable
+            />
+          </section>
 
-        <div v-else-if="activeField === 'berry'" class="editor-view">
-          <div class="berry-type-grid">
-            <button
-              v-for="berry in relevantBerries"
-              :key="berry.value"
-              @click="toggleBerry(berry.value)"
-              class="berry-type-option"
-              :class="{ selected: draftAction.berry === berry.value }"
-              :style="getTypeBackground(berry.type, draftAction.berry === berry.value)"
-              :title="berry.label"
-            >
-              <SpriteImg :src="getBerrySprite(berry.value)" :alt="berry.label" :width="44" :height="44" />
-            </button>
-          </div>
+          <section class="details-section">
+            <h4 class="details-section-title">Item</h4>
+            <div class="berry-type-grid">
+              <button
+                v-for="berry in relevantBerries"
+                :key="berry.value"
+                @click="toggleBerry(berry.value)"
+                class="berry-type-option"
+                :class="{ selected: draftAction.berry === berry.value }"
+                :style="getTypeBackground(berry.type, draftAction.berry === berry.value)"
+                :title="berry.label"
+              >
+                <SpriteImg :src="getBerrySprite(berry.value)" :alt="berry.label" :width="44" :height="44" />
+              </button>
+            </div>
+          </section>
         </div>
 
         <div v-else-if="activeField === 'moves'" class="editor-view">
@@ -565,12 +578,17 @@ const fieldTitle = computed(() => {
   const name = draftAction.value?.nickname || draftAction.value?.pokemon?.name
   const titles = {
     catchLocation: 'Catch Location',
-    ability: `${name}'s Ability`,
-    berry: `${name}'s Item`,
+    details: `${name}'s Details`,
     moves: `${name}'s Move Types`,
   }
   return titles[activeField.value] ?? name ?? 'Choose Pokemon'
 })
+
+function getPreviewTypeTextColor(type) {
+  return {
+    color: TYPE_COLORS[type]?.bg ?? 'var(--color-text-primary)',
+  }
+}
 
 // Probe for female sprite availability per-Pokemon
 const femaleAvailable = ref(false)
@@ -1098,6 +1116,12 @@ function onSelectPokemon(value) {
   margin-bottom: var(--space-4);
 }
 
+.header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .wizard-title {
   font-size: 1.1rem;
   margin-bottom: 0;
@@ -1175,6 +1199,25 @@ function onSelectPokemon(value) {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+}
+
+.details-icon-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  transition: color var(--transition-base), transform var(--transition-base);
+}
+
+.details-icon-btn:active {
+  transform: scale(0.95);
+}
+
+.details-icon-btn:hover {
+  color: var(--color-text-primary);
 }
 
 .suggestion-btn {
@@ -1261,7 +1304,6 @@ function onSelectPokemon(value) {
 
 .edit-overview-card {
   margin-top: var(--space-3);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   overflow: hidden;
   background: var(--color-surface);
@@ -1271,26 +1313,23 @@ function onSelectPokemon(value) {
   margin: var(--space-3) 0 calc(var(--space-5) + 1rem);
 }
 
-.preview-ability-trigger {
+.overview-search-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.overview-search {
+  flex: 1;
+}
+
+.preview-footer-band {
   position: absolute;
-  bottom: -0.9rem;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: calc(100% - 7rem);
-  border: none;
-  background: transparent;
-  padding: 0;
-  color: var(--color-text-primary);
-  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  line-height: 1.25;
-  opacity: 0.92;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
+  left: var(--space-3);
+  bottom: -2rem;
+  display: flex;
+  align-items: center;
+  z-index: 1;
 }
 
 .preview-location-trigger {
@@ -1311,83 +1350,74 @@ function onSelectPokemon(value) {
   z-index: 1;
 }
 
-.loadout-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(120px, 1fr);
-  gap: 1px;
-  background: var(--color-border);
-  border-top: 1px solid var(--color-border);
+.preview-moves-trigger {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -2rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+  white-space: nowrap;
 }
 
-.loadout-segment {
-  min-height: 52px;
+.preview-type-label {
+  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.28;
+  opacity: 0.92;
+}
+
+.preview-moves-icons {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-width: 0;
-  border: none;
-  background: var(--color-surface);
-  padding: var(--space-2) var(--space-3);
-  text-align: left;
-  cursor: pointer;
+  justify-content: center;
 }
 
-.loadout-segment:active {
-  background: var(--color-surface-light);
-}
-
-.loadout-moves {
-  justify-content: flex-start;
-}
-
-.loadout-item {
-  justify-content: flex-start;
-}
-
-.loadout-label {
-  flex: 0 0 auto;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.loadout-moves-icons {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-.loadout-type-icon {
-  width: 22px;
-  height: 22px;
+.preview-move-icon {
+  width: 24px;
+  height: 24px;
   object-fit: contain;
 }
 
-.loadout-overflow {
+.preview-moves-overflow {
   font-size: 0.75rem;
   color: var(--color-text-muted);
   font-weight: 700;
 }
 
-.loadout-placeholder,
-.loadout-item-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.loadout-placeholder {
+.preview-moves-placeholder {
   color: var(--color-text-muted);
-  font-size: 0.82rem;
+  font-size: 0.92rem;
 }
 
-.loadout-item-name {
-  font-size: 0.86rem;
+.details-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.details-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.details-section-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 /* Moves type grid (6 rows x 3 columns) */
@@ -1592,7 +1622,6 @@ function onSelectPokemon(value) {
     font-size: 0.85rem;
   }
 
-  .preview-ability-trigger,
   .preview-location-trigger {
     font-size: 0.85rem;
   }

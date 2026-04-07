@@ -134,7 +134,7 @@ function getTypeTextColor(type) {
 
 .preview-type-label {
   font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
-  font-size: 0.68rem;
+  font-size: 0.92rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.28;
@@ -146,7 +146,7 @@ function getTypeTextColor(type) {
   bottom: -2rem;
   right: var(--space-3);
   font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
-  font-size: 0.68rem;
+  font-size: 0.92rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.28;
@@ -187,7 +187,7 @@ function getTypeTextColor(type) {
 @media (min-width: 1024px) {
   .preview-type-label,
   .preview-catch-location {
-    font-size: 0.85rem;
+    font-size: 1rem;
   }
 }
 </style>
