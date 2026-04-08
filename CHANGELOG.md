@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.4.2...v1.5.0) (2026-04-08)
+
+
+### Features
+
+* redesign draft panel editing with autosave and smarter move defaults ([#76](https://github.com/Waxmard/pokemon-team-status/issues/76)) ([9106495](https://github.com/Waxmard/pokemon-team-status/commit/910649580ecd5009f8069e92c50caac916f30edd))
+
 ## [1.4.2](https://github.com/Waxmard/pokemon-team-status/compare/v1.4.1...v1.4.2) (2026-04-06)
 
 
