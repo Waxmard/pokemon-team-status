@@ -29,69 +29,70 @@
     </button>
 
     <div class="team-section">
-    <!-- Single transition for grid/panel switching -->
-    <Transition name="content-fade" mode="out-in">
-      <!-- Grid view -->
-      <div v-if="!showDraftPanel || swapMode" :key="'grid-' + viewMode">
-        <!-- Team Grid -->
-        <div v-if="viewMode === 'team'" class="slot-grid">
-          <TeamSlot
-            v-for="pokemon in team"
-            :key="pokemon.id"
-            :pokemon="pokemon"
-            :generation-rules="generationRules"
-            :interactive="!readOnly"
-            @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
-            @delete="handleDeleteTeamPokemon"
-          />
-          <!-- Empty slots for swap mode -->
-          <TeamSlot
-            v-for="i in emptyTeamSlotCount"
-            :key="'team-empty-' + i"
-            :pokemon="null"
-            :interactive="!readOnly"
-            @add="swapMode ? handleSwapSelect(null) : startAdd()"
-          />
-        </div>
-
-        <!-- Box Grid -->
-        <div v-else-if="viewMode === 'box'" class="slot-grid slot-grid-scrollable">
-          <TeamSlot
-            v-for="pokemon in box"
-            :key="pokemon.id"
-            :pokemon="pokemon"
-            :generation-rules="generationRules"
-            :interactive="!readOnly"
-            @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditBoxPokemon(pokemon.id)"
-            @delete="handleDeleteBoxPokemon"
-          />
-          <TeamSlot
-            v-for="i in emptyBoxSlotCount"
-            :key="'box-empty-' + i"
-            :pokemon="null"
-            :interactive="!readOnly"
-            @add="swapMode ? handleSwapSelect(null) : startAddToBox()"
-          />
-        </div>
-
-        <!-- Dead Grid -->
-        <div v-else-if="viewMode === 'dead'" class="slot-grid slot-grid-scrollable">
-          <div v-for="pokemon in dead" :key="pokemon.id" class="dead-slot">
+      <!-- Grid view transitions -->
+      <Transition name="content-fade" mode="out-in">
+        <div :key="'grid-' + viewMode">
+          <!-- Team Grid -->
+          <div v-if="viewMode === 'team'" class="slot-grid">
             <TeamSlot
+              v-for="pokemon in team"
+              :key="pokemon.id"
               :pokemon="pokemon"
               :generation-rules="generationRules"
               :interactive="!readOnly"
-              @edit="handleEditDeadPokemon(pokemon.id)"
-              @delete="handleDeleteDeadPokemon(pokemon.id)"
+              @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
+              @delete="handleDeleteTeamPokemon"
+            />
+            <!-- Empty slots for swap mode -->
+            <TeamSlot
+              v-for="i in emptyTeamSlotCount"
+              :key="'team-empty-' + i"
+              :pokemon="null"
+              :interactive="!readOnly"
+              @add="swapMode ? handleSwapSelect(null) : startAdd()"
             />
           </div>
-        </div>
-      </div>
 
-      <!-- Draft Panel -->
+          <!-- Box Grid -->
+          <div v-else-if="viewMode === 'box'" class="slot-grid slot-grid-scrollable">
+            <TeamSlot
+              v-for="pokemon in box"
+              :key="pokemon.id"
+              :pokemon="pokemon"
+              :generation-rules="generationRules"
+              :interactive="!readOnly"
+              @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditBoxPokemon(pokemon.id)"
+              @delete="handleDeleteBoxPokemon"
+            />
+            <TeamSlot
+              v-for="i in emptyBoxSlotCount"
+              :key="'box-empty-' + i"
+              :pokemon="null"
+              :interactive="!readOnly"
+              @add="swapMode ? handleSwapSelect(null) : startAddToBox()"
+            />
+          </div>
+
+          <!-- Dead Grid -->
+          <div v-else-if="viewMode === 'dead'" class="slot-grid slot-grid-scrollable">
+            <div v-for="pokemon in dead" :key="pokemon.id" class="dead-slot">
+              <TeamSlot
+                :pokemon="pokemon"
+                :generation-rules="generationRules"
+                :interactive="!readOnly"
+                @edit="handleEditDeadPokemon(pokemon.id)"
+                @delete="handleDeleteDeadPokemon(pokemon.id)"
+              />
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </div>
+
+    <!-- Draft Panel: independent fixed overlay -->
+    <Transition name="panel-fade">
       <div
-        v-else
-        key="panel"
+        v-if="showDraftPanel"
         ref="draftPanelWrapperRef"
         class="draft-panel-wrapper"
         @click.self="cancel"
@@ -159,7 +160,6 @@
         </div>
       </div>
     </Transition>
-    </div>
   </div>
 </template>
 
@@ -778,7 +778,17 @@ function handleDeleteDeadPokemon(id) {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: fadeIn var(--transition-base) ease forwards;
+}
+
+.panel-fade-enter-active,
+.panel-fade-leave-active {
+  transition: opacity var(--transition-base), transform var(--transition-base);
+}
+
+.panel-fade-enter-from,
+.panel-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
 }
 
 .draft-dialog-container {
