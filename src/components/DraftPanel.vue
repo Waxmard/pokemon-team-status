@@ -157,7 +157,7 @@
                     />
                     <span v-if="overflowMoveCount" class="preview-moves-overflow">+{{ overflowMoveCount }}</span>
                   </span>
-                  <span v-else class="preview-moves-placeholder">Add move types</span>
+                  <span v-else class="preview-moves-placeholder">Move Types</span>
                 </button>
               </template>
               <template #bottom-right>
@@ -1020,6 +1020,9 @@ function onSelectPokemon(value) {
   const pokemon = getPokemonDataForRules(value, effectiveGenerationRules.value)
   if (pokemon) {
     updatePokemon(pokemon)
+    if (draftAction.value?.type === 'add' && !draftAction.value.moves?.length) {
+      draftAction.value.moves = [...pokemon.types]
+    }
     searchQuery.value = pokemon.name
     pokemonInputRef.value?.blur()
   }
@@ -1361,7 +1364,7 @@ function onSelectPokemon(value) {
 
 .preview-moves-placeholder {
   color: var(--color-text-muted);
-  font-size: 0.92rem;
+  font-size: 0.75rem;
 }
 
 .details-editor {
