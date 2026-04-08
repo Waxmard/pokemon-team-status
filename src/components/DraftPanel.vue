@@ -523,11 +523,15 @@ watch(effectiveGenerationRules, (ruleset) => {
   abilityQuery.value = sanitizedDraft.ability || ''
 })
 
+const isTouchDevice = window.matchMedia('(pointer: coarse)').matches
+
 // Auto-focus Pokemon name field on open only if empty
 onMounted(() => {
   nextTick(() => {
-    // Scroll page to top
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Scroll page to top (mobile only — avoids jarring jumps on desktop)
+    if (isTouchDevice) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
 
     // Existing focus logic
     if (!draftAction.value?.pokemon) {
@@ -961,7 +965,9 @@ function focusLocationInput(event) {
   if (document.activeElement !== event.currentTarget) {
     event.preventDefault()
     event.currentTarget.focus({ preventScroll: true })
-    window.scrollBy({ top: 150, behavior: 'smooth' })
+    if (isTouchDevice) {
+      window.scrollBy({ top: 150, behavior: 'smooth' })
+    }
   }
 }
 
