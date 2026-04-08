@@ -138,7 +138,7 @@
             class="add-button revive-mode"
             @click="handleReviveFromDraft"
           >
-            <span class="add-icon">❤️</span>
+            <span class="add-icon">💓</span>
           </button>
           <!-- Delete/Kill Button -->
           <button
