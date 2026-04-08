@@ -15,24 +15,6 @@
       <span class="add-icon">+</span>
     </button>
 
-    <!-- Revive Button - mobile only (when editing a dead Pokemon) -->
-    <button
-      v-if="!readOnly && isEditingDead && showDraftPanel"
-      class="add-button revive-mode mobile-only"
-      @click="handleReviveFromDraft"
-    >
-      <span class="add-icon">❤️</span>
-    </button>
-
-    <!-- Delete/Kill Button - mobile only (when editing a Pokemon) -->
-    <button
-      v-if="!readOnly && isEditing && showDraftPanel"
-      class="add-button delete-mode mobile-only"
-      @click="handleDeleteClick"
-    >
-      <span class="add-icon">{{ deleteActionIcon }}</span>
-    </button>
-
     <!-- Mode Toggle Button (long-press to collapse) -->
     <button
       class="mode-toggle"
@@ -118,6 +100,7 @@
       >
         <div ref="draftDialogContainerRef" class="draft-dialog-container">
           <DraftPanel
+            ref="draftPanelRef"
             :team="team"
             :box="box"
             :defeated-gyms="defeatedGyms"
@@ -130,26 +113,44 @@
             @cancel="cancel"
             @swapSuggestion="handleSwapSuggestion"
           />
-          <!-- Revive Button - desktop only (when editing a dead Pokemon) -->
+          <!-- Moves Button -->
+          <button
+            v-if="draftAction?.pokemon"
+            class="add-button moves-btn"
+            @click="openMovesField"
+          >
+            <span v-if="draftAction.moves?.length" class="moves-btn-icons">
+              <img
+                v-for="type in (draftAction.moves || []).slice(0, 4)"
+                :key="type"
+                :src="getTypeIcon(type)"
+                :alt="type"
+                class="moves-btn-icon"
+              />
+              <span v-if="(draftAction.moves?.length || 0) > 4" class="moves-btn-overflow">+{{ draftAction.moves.length - 4 }}</span>
+            </span>
+            <span v-else class="moves-btn-placeholder">Moves</span>
+          </button>
+          <!-- Revive Button (when editing a dead Pokemon) -->
           <button
             v-if="!readOnly && isEditingDead"
-            class="add-button revive-mode desktop-only"
+            class="add-button revive-mode"
             @click="handleReviveFromDraft"
           >
             <span class="add-icon">❤️</span>
           </button>
-          <!-- Delete/Kill Button - desktop only -->
+          <!-- Delete/Kill Button -->
           <button
             v-if="!readOnly && isEditing"
-            class="add-button delete-mode desktop-only"
+            class="add-button delete-mode"
             @click="handleDeleteClick"
           >
             <span class="add-icon">{{ deleteActionIcon }}</span>
           </button>
-          <!-- Swap Button - desktop only -->
+          <!-- Swap Button -->
           <button
             v-if="isEditingForSwap"
-            class="add-button swap-mode-btn desktop-only"
+            class="add-button swap-mode-btn"
             @click="enterSwapMode()"
           >
             <span class="add-icon">⇄</span>
@@ -165,6 +166,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { getPokemonDataForRules } from '../data/pokemon.js'
+import { getTypeIcon } from '../data/types.js'
 import { resolveSpriteUrl } from '../utils/pokemon.js'
 import DraftPanel from './DraftPanel.vue'
 import SpriteImg from './SpriteImg.vue'
@@ -265,8 +267,13 @@ const swapPokemonSpriteUrl = computed(() => {
 })
 
 const viewMode = ref('team')
+const draftPanelRef = ref(null)
 const draftPanelWrapperRef = ref(null)
 const draftDialogContainerRef = ref(null)
+
+function openMovesField() {
+  draftPanelRef.value?.openField('moves')
+}
 const pointerDownOutsideDraft = ref(false)
 
 function isPointerOutsideDraft(event) {
@@ -718,12 +725,8 @@ function handleDeleteDeadPokemon(id) {
 }
 
 @media (max-width: 1023px) {
-  .desktop-only {
-    display: none;
-  }
-
   .draft-panel-wrapper {
-    padding: var(--space-3);
+    padding: var(--space-10) var(--space-3) calc(var(--space-10) + var(--space-2));
     align-items: flex-start;
     overflow-y: auto;
   }
@@ -735,7 +738,32 @@ function handleDeleteDeadPokemon(id) {
 
   .draft-dialog-container :deep(.draft-panel) {
     width: min(100%, calc(100vw - (var(--space-3) * 2)));
-    max-height: calc(100dvh - (var(--space-3) * 2));
+    max-height: calc(100dvh - var(--space-10) - (var(--space-10) + var(--space-2)));
+  }
+
+  .draft-dialog-container .swap-mode-btn {
+    position: absolute;
+    top: calc(-1 * var(--space-8));
+    right: var(--space-4);
+  }
+
+  .draft-dialog-container .revive-mode {
+    position: absolute;
+    bottom: calc(-1 * (var(--space-8) + var(--space-3)));
+    left: var(--space-4);
+  }
+
+  .draft-dialog-container .delete-mode {
+    position: absolute;
+    bottom: calc(-1 * (var(--space-8) + var(--space-3)));
+    right: var(--space-4);
+  }
+
+  .draft-dialog-container .moves-btn {
+    position: absolute;
+    bottom: calc(-1 * (var(--space-8) + var(--space-3)));
+    left: 50%;
+    transform: translateX(-50%);
   }
 }
 
@@ -765,10 +793,6 @@ function handleDeleteDeadPokemon(id) {
 }
 
 @media (min-width: 1024px) {
-  .mobile-only {
-    display: none;
-  }
-
   .slot-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -833,10 +857,43 @@ function handleDeleteDeadPokemon(id) {
     top: calc(-1 * var(--space-8));
     right: var(--space-4);
   }
+
+  .draft-dialog-container .moves-btn {
+    position: absolute;
+    bottom: calc(-1 * var(--space-8) - var(--space-4));
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
 
-.revive-mode {
-  left: var(--space-4);
-  right: auto;
+.moves-btn {
+  width: auto;
+  padding: 0 var(--space-1);
 }
+
+.moves-btn-icons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.moves-btn-icon {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: var(--drop-shadow-icon);
+}
+
+.moves-btn-overflow {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.moves-btn-placeholder {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
 </style>

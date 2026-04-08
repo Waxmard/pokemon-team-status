@@ -145,21 +145,6 @@
                   ⬆
                 </button>
               </template>
-              <template #bottom-center>
-                <button class="preview-moves-trigger" @click="openField('moves')">
-                  <span v-if="selectedMoveCount" class="preview-moves-icons">
-                    <img
-                      v-for="type in limitedMoveTypes"
-                      :key="type"
-                      :src="getTypeIcon(type)"
-                      :alt="type"
-                      class="preview-move-icon"
-                    />
-                    <span v-if="overflowMoveCount" class="preview-moves-overflow">+{{ overflowMoveCount }}</span>
-                  </span>
-                  <span v-else class="preview-moves-placeholder">Move Types</span>
-                </button>
-              </template>
               <template #bottom-right>
                 <button class="preview-location-trigger" @click="openField('catchLocation')">
                   {{ draftAction.catchLocation || 'Location' }}
@@ -1027,6 +1012,8 @@ function onSelectPokemon(value) {
     pokemonInputRef.value?.blur()
   }
 }
+
+defineExpose({ openField })
 </script>
 
 <style scoped>
@@ -1327,45 +1314,6 @@ function onSelectPokemon(value) {
   z-index: 1;
 }
 
-.preview-moves-trigger {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: -2.5rem;
-  border: none;
-  background: transparent;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 1;
-  white-space: nowrap;
-}
-
-.preview-moves-icons {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  justify-content: center;
-}
-
-.preview-move-icon {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
-.preview-moves-overflow {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  font-weight: 700;
-}
-
-.preview-moves-placeholder {
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-}
 
 .details-editor {
   display: flex;
