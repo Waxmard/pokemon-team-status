@@ -1,17 +1,19 @@
 <template>
   <div class="pokemon-preview" :class="{ evolving }">
     <slot name="top-left" />
-    <div v-if="types?.length" class="preview-type-list">
-      <span
-        v-for="(type, index) in types"
-        :key="type"
-        class="preview-type-label"
-      >
-        <span :style="getTypeTextColor(type)">
-          {{ capitalize(type) }}<span v-if="index < types.length - 1">,</span>
+    <slot name="bottom-left">
+      <div v-if="types?.length" class="preview-type-list">
+        <span
+          v-for="(type, index) in types"
+          :key="type"
+          class="preview-type-label"
+        >
+          <span :style="getTypeTextColor(type)">
+            {{ capitalize(type) }}<span v-if="index < types.length - 1">,</span>
+          </span>
         </span>
-      </span>
-    </div>
+      </div>
+    </slot>
     <SpriteImg
       v-if="spriteUrl"
       :src="spriteUrl"
@@ -23,9 +25,12 @@
       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     </svg>
-    <span v-if="displayCatchLocation" class="preview-catch-location">
-      {{ displayCatchLocation }}
-    </span>
+    <slot name="bottom-center" />
+    <slot name="bottom-right">
+      <span v-if="displayCatchLocation" class="preview-catch-location">
+        {{ displayCatchLocation }}
+      </span>
+    </slot>
     <slot name="top-right" />
     <slot />
     <div v-if="evolving" class="evo-flash-overlay" />
@@ -129,7 +134,7 @@ function getTypeTextColor(type) {
 
 .preview-type-label {
   font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
-  font-size: 0.68rem;
+  font-size: 0.92rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.28;
@@ -141,7 +146,7 @@ function getTypeTextColor(type) {
   bottom: -2rem;
   right: var(--space-3);
   font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
-  font-size: 0.68rem;
+  font-size: 0.92rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.28;
@@ -182,7 +187,7 @@ function getTypeTextColor(type) {
 @media (min-width: 1024px) {
   .preview-type-label,
   .preview-catch-location {
-    font-size: 0.85rem;
+    font-size: 1rem;
   }
 }
 </style>

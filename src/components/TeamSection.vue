@@ -15,24 +15,6 @@
       <span class="add-icon">+</span>
     </button>
 
-    <!-- Revive Button - mobile only (when editing a dead Pokemon) -->
-    <button
-      v-if="!readOnly && isEditingDead && showDraftPanel"
-      class="add-button revive-mode mobile-only"
-      @click="handleReviveFromDraft"
-    >
-      <span class="add-icon">❤️</span>
-    </button>
-
-    <!-- Delete/Kill Button - mobile only (when editing a Pokemon) -->
-    <button
-      v-if="!readOnly && isEditing && showDraftPanel"
-      class="add-button delete-mode mobile-only"
-      @click="handleDeleteClick"
-    >
-      <span class="add-icon">{{ deleteActionIcon }}</span>
-    </button>
-
     <!-- Mode Toggle Button (long-press to collapse) -->
     <button
       class="mode-toggle"
@@ -47,69 +29,79 @@
     </button>
 
     <div class="team-section">
-    <!-- Single transition for grid/panel switching -->
-    <Transition name="content-fade" mode="out-in">
-      <!-- Grid view -->
-      <div v-if="!showDraftPanel || swapMode" :key="'grid-' + viewMode">
-        <!-- Team Grid -->
-        <div v-if="viewMode === 'team'" class="slot-grid">
-          <TeamSlot
-            v-for="pokemon in team"
-            :key="pokemon.id"
-            :pokemon="pokemon"
-            :generation-rules="generationRules"
-            :interactive="!readOnly"
-            @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
-            @delete="handleDeleteTeamPokemon"
-          />
-          <!-- Empty slots for swap mode -->
-          <TeamSlot
-            v-for="i in emptyTeamSlotCount"
-            :key="'team-empty-' + i"
-            :pokemon="null"
-            :interactive="!readOnly"
-            @add="swapMode ? handleSwapSelect(null) : startAdd()"
-          />
-        </div>
-
-        <!-- Box Grid -->
-        <div v-else-if="viewMode === 'box'" class="slot-grid slot-grid-scrollable">
-          <TeamSlot
-            v-for="pokemon in box"
-            :key="pokemon.id"
-            :pokemon="pokemon"
-            :generation-rules="generationRules"
-            :interactive="!readOnly"
-            @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditBoxPokemon(pokemon.id)"
-            @delete="handleDeleteBoxPokemon"
-          />
-          <TeamSlot
-            v-for="i in emptyBoxSlotCount"
-            :key="'box-empty-' + i"
-            :pokemon="null"
-            :interactive="!readOnly"
-            @add="swapMode ? handleSwapSelect(null) : startAddToBox()"
-          />
-        </div>
-
-        <!-- Dead Grid -->
-        <div v-else-if="viewMode === 'dead'" class="slot-grid slot-grid-scrollable">
-          <div v-for="pokemon in dead" :key="pokemon.id" class="dead-slot">
+      <!-- Grid view transitions -->
+      <Transition name="content-fade" mode="out-in">
+        <div :key="'grid-' + viewMode">
+          <!-- Team Grid -->
+          <div v-if="viewMode === 'team'" class="slot-grid">
             <TeamSlot
+              v-for="pokemon in team"
+              :key="pokemon.id"
               :pokemon="pokemon"
               :generation-rules="generationRules"
               :interactive="!readOnly"
-              @edit="handleEditDeadPokemon(pokemon.id)"
-              @delete="handleDeleteDeadPokemon(pokemon.id)"
+              @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
+              @delete="handleDeleteTeamPokemon"
+            />
+            <!-- Empty slots for swap mode -->
+            <TeamSlot
+              v-for="i in emptyTeamSlotCount"
+              :key="'team-empty-' + i"
+              :pokemon="null"
+              :interactive="!readOnly"
+              @add="swapMode ? handleSwapSelect(null) : startAdd()"
             />
           </div>
-        </div>
-      </div>
 
-      <!-- Draft Panel -->
-      <div v-else key="panel" class="draft-panel-wrapper" @click.self="cancel">
-        <div class="draft-dialog-container">
+          <!-- Box Grid -->
+          <div v-else-if="viewMode === 'box'" class="slot-grid slot-grid-scrollable">
+            <TeamSlot
+              v-for="pokemon in box"
+              :key="pokemon.id"
+              :pokemon="pokemon"
+              :generation-rules="generationRules"
+              :interactive="!readOnly"
+              @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditBoxPokemon(pokemon.id)"
+              @delete="handleDeleteBoxPokemon"
+            />
+            <TeamSlot
+              v-for="i in emptyBoxSlotCount"
+              :key="'box-empty-' + i"
+              :pokemon="null"
+              :interactive="!readOnly"
+              @add="swapMode ? handleSwapSelect(null) : startAddToBox()"
+            />
+          </div>
+
+          <!-- Dead Grid -->
+          <div v-else-if="viewMode === 'dead'" class="slot-grid slot-grid-scrollable">
+            <div v-for="pokemon in dead" :key="pokemon.id" class="dead-slot">
+              <TeamSlot
+                :pokemon="pokemon"
+                :generation-rules="generationRules"
+                :interactive="!readOnly"
+                @edit="handleEditDeadPokemon(pokemon.id)"
+                @delete="handleDeleteDeadPokemon(pokemon.id)"
+              />
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </div>
+
+    <!-- Draft Panel: independent fixed overlay -->
+    <Transition name="panel-fade">
+      <div
+        v-if="showDraftPanel"
+        ref="draftPanelWrapperRef"
+        class="draft-panel-wrapper"
+        @click.self="cancel"
+        @pointerdown="handleDraftWrapperPointerDown"
+        @pointerup="handleDraftWrapperPointerUp"
+      >
+        <div ref="draftDialogContainerRef" class="draft-dialog-container">
           <DraftPanel
+            ref="draftPanelRef"
             :team="team"
             :box="box"
             :defeated-gyms="defeatedGyms"
@@ -118,29 +110,49 @@
             :partner-roster="partnerRoster"
             :is-soul-link-mode="isSoulLinkMode"
             @confirm="$emit('confirmDraft')"
+            @autosave="$emit('autosaveDraft')"
             @cancel="cancel"
             @swapSuggestion="handleSwapSuggestion"
           />
-          <!-- Revive Button - desktop only (when editing a dead Pokemon) -->
+          <!-- Moves Button -->
+          <button
+            v-if="draftAction?.pokemon"
+            class="add-button moves-btn"
+            :class="{ 'moves-btn-centered': !readOnly && isEditingDead }"
+            @click="openMovesField"
+          >
+            <span v-if="draftAction.moves?.length" class="moves-btn-icons">
+              <img
+                v-for="type in (draftAction.moves || []).slice(0, 4)"
+                :key="type"
+                :src="getTypeIcon(type)"
+                :alt="type"
+                class="moves-btn-icon"
+              />
+              <span v-if="(draftAction.moves?.length || 0) > 4" class="moves-btn-overflow">+{{ draftAction.moves.length - 4 }}</span>
+            </span>
+            <span v-else class="moves-btn-placeholder">Moves</span>
+          </button>
+          <!-- Revive Button (when editing a dead Pokemon) -->
           <button
             v-if="!readOnly && isEditingDead"
-            class="add-button revive-mode desktop-only"
+            class="add-button revive-mode"
             @click="handleReviveFromDraft"
           >
-            <span class="add-icon">❤️</span>
+            <span class="add-icon">💓</span>
           </button>
-          <!-- Delete/Kill Button - desktop only -->
+          <!-- Delete/Kill Button -->
           <button
             v-if="!readOnly && isEditing"
-            class="add-button delete-mode desktop-only"
+            class="add-button delete-mode"
             @click="handleDeleteClick"
           >
             <span class="add-icon">{{ deleteActionIcon }}</span>
           </button>
-          <!-- Swap Button - desktop only -->
+          <!-- Swap Button -->
           <button
             v-if="isEditingForSwap"
-            class="add-button swap-mode-btn desktop-only"
+            class="add-button swap-mode-btn"
             @click="enterSwapMode()"
           >
             <span class="add-icon">⇄</span>
@@ -148,7 +160,6 @@
         </div>
       </div>
     </Transition>
-    </div>
   </div>
 </template>
 
@@ -156,6 +167,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useDraftAction } from '../composables/useDraftAction.js'
 import { getPokemonDataForRules } from '../data/pokemon.js'
+import { getTypeIcon } from '../data/types.js'
 import { resolveSpriteUrl } from '../utils/pokemon.js'
 import DraftPanel from './DraftPanel.vue'
 import SpriteImg from './SpriteImg.vue'
@@ -214,6 +226,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'confirmDraft',
+  'autosaveDraft',
   'immediateSwap',
   'deleteTeamPokemon',
   'deleteBoxPokemon',
@@ -255,6 +268,37 @@ const swapPokemonSpriteUrl = computed(() => {
 })
 
 const viewMode = ref('team')
+const draftPanelRef = ref(null)
+const draftPanelWrapperRef = ref(null)
+const draftDialogContainerRef = ref(null)
+
+function openMovesField() {
+  draftPanelRef.value?.openField('moves')
+}
+const pointerDownOutsideDraft = ref(false)
+
+function isPointerOutsideDraft(event) {
+  const dialogEl = draftDialogContainerRef.value
+  const target = event.target
+
+  if (!dialogEl || !(target instanceof Node)) return false
+  return !dialogEl.contains(target)
+}
+
+function handleDraftWrapperPointerDown(event) {
+  pointerDownOutsideDraft.value = isPointerOutsideDraft(event)
+}
+
+function handleDraftWrapperPointerUp(event) {
+  if (!pointerDownOutsideDraft.value) return
+
+  const endedOutside = isPointerOutsideDraft(event)
+  pointerDownOutsideDraft.value = false
+
+  if (endedOutside) {
+    cancel()
+  }
+}
 
 function handleModeClick() {
   // If in death box, clicking toggle returns to box
@@ -682,16 +726,85 @@ function handleDeleteDeadPokemon(id) {
 }
 
 @media (max-width: 1023px) {
-  .desktop-only {
-    display: none;
+  .draft-panel-wrapper {
+    padding: calc(var(--space-10) + var(--space-3)) var(--space-3) calc(var(--space-10) + var(--space-2));
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .draft-dialog-container {
+    --btn-offset: calc(var(--space-8) + var(--space-3));
+    width: 100%;
+    margin: auto 0;
+  }
+
+  .draft-dialog-container :deep(.draft-panel) {
+    width: min(100%, calc(100vw - (var(--space-3) * 2)));
+    max-height: calc(100dvh - 2 * var(--space-10) - var(--space-5));
+    margin-top: 0;
+  }
+
+  .draft-dialog-container .swap-mode-btn {
+    position: absolute;
+    top: calc(-1 * var(--btn-offset));
+    right: var(--space-4);
+  }
+
+  .draft-dialog-container .revive-mode {
+    position: absolute;
+    bottom: calc(-1 * var(--btn-offset));
+    left: var(--space-4);
+  }
+
+  .draft-dialog-container .delete-mode {
+    position: absolute;
+    bottom: calc(-1 * var(--btn-offset));
+    right: var(--space-4);
+  }
+
+  .draft-dialog-container .moves-btn {
+    position: absolute;
+    bottom: calc(-1 * var(--btn-offset));
+    left: var(--space-4);
   }
 }
 
-@media (min-width: 1024px) {
-  .mobile-only {
-    display: none;
-  }
+.draft-panel-wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
+.panel-fade-enter-active,
+.panel-fade-leave-active {
+  transition: opacity var(--transition-base), transform var(--transition-base);
+}
+
+.panel-fade-enter-from,
+.panel-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.draft-dialog-container {
+  position: relative;
+}
+
+.draft-dialog-container :deep(.draft-panel) {
+  width: min(650px, calc(100vw - (var(--space-4) * 2)));
+  max-height: calc(100dvh - (var(--space-4) * 2));
+  overflow-y: auto;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  animation: scaleIn var(--transition-base) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@media (min-width: 1024px) {
   .slot-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -739,30 +852,6 @@ function handleDeleteDeadPokemon(id) {
     font-size: 1.1rem;
   }
 
-  .draft-panel-wrapper {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn var(--transition-base) ease forwards;
-  }
-
-  .draft-dialog-container {
-    position: relative;
-  }
-
-  .draft-dialog-container :deep(.draft-panel) {
-    width: 650px;
-    max-height: 80vh;
-    overflow-y: auto;
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-xl);
-    animation: scaleIn var(--transition-base) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  }
-
   .draft-dialog-container .revive-mode {
     position: absolute;
     bottom: calc(-1 * var(--space-8) - var(--space-4));
@@ -780,10 +869,102 @@ function handleDeleteDeadPokemon(id) {
     top: calc(-1 * var(--space-8));
     right: var(--space-4);
   }
+
+  .draft-dialog-container .moves-btn {
+    position: absolute;
+    bottom: calc(-1 * var(--space-8) - var(--space-4));
+    left: var(--space-4);
+  }
 }
 
-.revive-mode {
-  left: var(--space-4);
-  right: auto;
+.draft-dialog-container .moves-btn.moves-btn-centered {
+  left: 50%;
+  transform: translateX(-50%);
 }
+
+@media (orientation: landscape) and (max-height: 500px) {
+  /* No 2-column grid — TeamSection is only half the viewport in landscape split */
+  .slot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Center the dialog; remove wrapper scroll so click-outside works reliably */
+  .draft-panel-wrapper {
+    padding: var(--space-3);
+    align-items: center;
+    overflow-y: unset;
+  }
+
+  /* Undo mobile full-width dialog */
+  .draft-dialog-container {
+    width: auto;
+    margin: 0;
+  }
+
+  .draft-dialog-container :deep(.draft-panel) {
+    width: min(520px, calc(100vw - var(--space-6)));
+    max-height: calc(100dvh - var(--space-3) * 2);
+    margin-top: 0;
+  }
+
+  /* Action buttons at dialog corners (--space-5 = 20px ≈ half of 36px button) */
+  .draft-dialog-container .swap-mode-btn {
+    top: calc(-1 * var(--space-5));
+    right: calc(-1 * var(--space-5));
+  }
+
+  .draft-dialog-container .delete-mode {
+    bottom: calc(-1 * var(--space-5));
+    right: calc(-1 * var(--space-5));
+  }
+
+  .draft-dialog-container .revive-mode {
+    bottom: calc(-1 * var(--space-5));
+    left: calc(-1 * var(--space-5));
+  }
+
+  .draft-dialog-container .moves-btn {
+    bottom: calc(-1 * var(--space-5));
+    left: calc(-1 * var(--space-5));
+  }
+
+  /* When editing a dead Pokemon (revive + moves both visible), center moves */
+  .draft-dialog-container .moves-btn.moves-btn-centered {
+    bottom: calc(-1 * var(--space-5));
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+.moves-btn {
+  width: auto;
+  right: auto;
+  padding: 0 var(--space-1);
+}
+
+.moves-btn-icons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.moves-btn-icon {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: var(--drop-shadow-icon);
+}
+
+.moves-btn-overflow {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.moves-btn-placeholder {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
 </style>

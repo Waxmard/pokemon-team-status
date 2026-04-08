@@ -58,6 +58,7 @@ const {
   runList,
   activeRunId,
   activeRunSummary,
+  deduplicateIndex,
   registerNewRun,
   deleteRun,
 } = createRunIndexManager({
@@ -145,6 +146,8 @@ export function useSoloRunManager() {
       return
     }
 
+    await deduplicateIndex()
+
     // Ensure activeRunId points to an entry in runs
     const hasActiveEntry = runIndex.value.runs.some(
       (r) => r.id === runIndex.value.activeRunId,
@@ -208,8 +211,13 @@ export function useSoloRunManager() {
     _switching = true
 
     try {
-      if (currentSnapshot && runIndex.value?.activeRunId) {
-        await saveCurrentRunToIndex(currentSnapshot)
+      const previousRunId = runIndex.value?.activeRunId
+      if (currentSnapshot && previousRunId) {
+        if (isEmptySoloRun(currentSnapshot)) {
+          await deleteRun(previousRunId)
+        } else {
+          await saveCurrentRunToIndex(currentSnapshot)
+        }
       }
 
       const targetSnapshot = await repository.loadSoloRun(targetRunId)

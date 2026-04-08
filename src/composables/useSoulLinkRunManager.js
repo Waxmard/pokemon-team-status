@@ -22,6 +22,7 @@ const {
   runList,
   activeRunId,
   activeRunSummary,
+  deduplicateIndex,
   registerNewRun,
   deleteRun,
 } = createRunIndexManager({
@@ -37,6 +38,7 @@ export function useSoulLinkRunManager() {
     const index = await repository.loadSoulLinkRunIndex()
     if (index) {
       runIndex.value = index
+      await deduplicateIndex()
       return
     }
 

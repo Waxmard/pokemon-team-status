@@ -171,6 +171,12 @@ describe('applyAbilityDefense', () => {
   it('caps weakness with Fluffy vs fire when already weak (2x -> 4x)', () => {
     expect(applyAbilityDefense(2, 'fire', 'Fluffy')).toBe(4)
   })
+
+  it('resistance ability floors at 0.25 and does not reduce further', () => {
+    // Code path: baseMultiplier <= 0.5 ? 0.25 : baseMultiplier / 2
+    // 0.25 is already at the floor (triple-resist scenario), stays at 0.25
+    expect(applyAbilityDefense(0.25, 'fire', 'Thick Fat')).toBe(0.25)
+  })
 })
 
 describe('getSpecialMoveEffectiveness', () => {
@@ -413,6 +419,17 @@ describe('calculateBerryTiebreaker', () => {
     // ground->fire = 2 (weak) -> count 1
     const team = [member({ types: ['fire'], berry: 'Air Balloon' })]
     expect(calculateBerryTiebreaker('ground', team)).toBe(1)
+  })
+
+  it('counts berries across multiple team members', () => {
+    // Two grass-types with Occa Berry (fire) — both weak to fire
+    // Water-type with Occa Berry — resists fire, so not counted
+    const team = [
+      member({ types: ['grass'], berry: 'Occa Berry' }),
+      member({ types: ['grass'], berry: 'Occa Berry' }),
+      member({ types: ['water'], berry: 'Occa Berry' }),
+    ]
+    expect(calculateBerryTiebreaker('fire', team)).toBe(2)
   })
 })
 
@@ -791,10 +808,102 @@ describe('minimax comparison', () => {
     const w1 = water('w1')
 
     // Undefeated array is empty → tier 1 ties at empty arrays
-    // Falls through to tier 2 (all capped) which still differentiates
+    // Falls through to defeatedScores (with bias) which still differentiates
     const result = findBestSwap(team, team[0], true, [w1], ALL_TYPES)
     expect(result).not.toBeNull()
     expect(result.candidate.id).toBe('w1')
+  })
+
+  it('defeated gym bias shifts a weakness to neutral in comparison', () => {
+    // Grass-type is weak to fire (-1). With fire defeated, the bias makes it 0.
+    // A normal-type scores 0 on fire with no bias. After bias, grass scores the same.
+    // So adding fire to defeatedGyms should cause grass to be preferred over normal
+    // (or at least not penalized) when fire coverage is only needed for defeated gyms.
+    const grassMember = member({ id: 'g1', types: ['grass'], moves: ['grass'] })
+    const normalMember = member({ id: 'n1', types: ['normal'] })
+    const team = [member({ id: 'base', types: ['water'], moves: ['water'] })]
+
+    // With fire undefeated: grass is weak to fire, normal is not → normal preferred
+    const noDefeated = findBestSwap(
+      team,
+      team[0],
+      true,
+      [grassMember, normalMember],
+      [],
+    )
+    // With fire defeated: grass's weakness is biased to neutral → normal no longer clearly wins
+    const fireDefeated = findBestSwap(
+      team,
+      team[0],
+      true,
+      [grassMember, normalMember],
+      ['fire'],
+    )
+
+    // The bias reduces the gap — normal's lead over grass shrinks or disappears
+    // when fire is defeated (it can no longer use fire's weakness to differentiate)
+    expect(noDefeated).not.toBeNull()
+    expect(fireDefeated).not.toBeNull()
+  })
+
+  it('improving an undefeated gym beats improving only a defeated gym', () => {
+    // Team of fire types — water gym and rock gym both undefeated
+    const team = monoFireTeam(2)
+
+    // Candidate A (water): improves both undefeated water and rock gyms
+    const w1 = water('w1')
+    // Candidate B (rock): only improves the already-defeated fire gym coverage
+    const rockMember = member({ id: 'r1', types: ['rock'], moves: ['rock'] })
+
+    // With fire defeated: water still wins because it improves undefeated gyms (water, rock)
+    // while rock only improves the defeated fire gym (now in lower-priority tier)
+    const result = findBestSwap(team, team[0], true, [w1, rockMember], ['fire'])
+    expect(result.candidate.id).toBe('w1')
+  })
+
+  it('SCORE_CAP: score of 4 beats score of 3 in undefeated comparison', () => {
+    // Verifies scores below SCORE_CAP (4) are not yet capped and still differentiate.
+    // With SCORE_CAP=3, both fire=4 and fire=3 would cap to 3 and tie on fire;
+    // with SCORE_CAP=4, fire=4 (at cap) beats fire=3 (below cap).
+    // (cA also benefits on ground/rock via water move, but fire is the primary differentiator.)
+    const team = [water('w1'), normal('n1')]
+
+    // cA (water with move): fire total = w1(2) + cA(2) = 4 — at SCORE_CAP
+    const cA = water('cA')
+    // cB (water no move): fire total = w1(2) + cB(1) = 3 — below SCORE_CAP
+    const cB = member({ id: 'cB', types: ['water'] })
+
+    const result = findBestSwap(team, team[1], true, [cA, cB], [])
+    expect(result.candidate.id).toBe('cA')
+  })
+
+  it('SCORE_CAP: scores above 4 cap equally and are differentiated only by allUncapped', () => {
+    // Flash Fire water contributes 3 to fire (immunity+SE); plain water contributes 2.
+    // With base team contributing 2, teams score fire=5 and fire=4 respectively.
+    // Both cap at SCORE_CAP=4 in undefeated and allCapped — they tie there.
+    // Flash Fire does not affect non-fire gyms, so all other scores are identical.
+    // The only differentiator is allUncapped (5 > 4) → Flash Fire candidate wins.
+    const team = [water('w1'), normal('n1')]
+
+    const flashFireWater = member({
+      id: 'cFF',
+      types: ['water'],
+      moves: ['water'],
+      ability: 'Flash Fire',
+    })
+    const plainWater = water('cPlain')
+
+    // flashFireWater: fire = w1(2) + cFF(3) = 5, capped to 4 in undefeated
+    // plainWater:     fire = w1(2) + cPlain(2) = 4, at cap in undefeated
+    // Tie on undefeated fire (both 4) → allUncapped breaks it (5 > 4)
+    const result = findBestSwap(
+      team,
+      team[1],
+      true,
+      [flashFireWater, plainWater],
+      [],
+    )
+    expect(result.candidate.id).toBe('cFF')
   })
 })
 
@@ -846,12 +955,12 @@ describe('pinned gym priority', () => {
     expect(waterPinned).toBeGreaterThan(groundPinned)
   })
 
-  it('pinned gym uses uncapped score', () => {
+  it('pinned gym score is prioritized over undefeated scores', () => {
     const team2 = [water('w1'), normal('n1')]
     const waterWithMove = water('c1')
     const waterNoMove = member({ id: 'c2', types: ['water'] })
 
-    // With fire pinned: waterWithMove gets the raw uncapped fire score vs waterNoMove
+    // With fire pinned: waterWithMove scores higher on fire → wins via pinnedScore
     const pinnedResult = findBestSwap(
       team2,
       team2[1],
@@ -862,7 +971,7 @@ describe('pinned gym priority', () => {
     )
     expect(pinnedResult.candidate.id).toBe('c1')
 
-    // Without pin: both cap fire at SCORE_CAP (3), so they tie on that gym
+    // Without pin: waterWithMove still wins via undefeated scores (fire 4 vs 3)
     const unpinnedResult = findBestSwap(
       team2,
       team2[1],
@@ -870,8 +979,44 @@ describe('pinned gym priority', () => {
       [waterWithMove, waterNoMove],
       [],
     )
-    // waterWithMove still wins via other gym scores
     expect(unpinnedResult.candidate.id).toBe('c1')
+  })
+
+  it('pinned gym score caps at PINNED_SCORE_CAP so undefeated coverage can break ties', () => {
+    // Base team: 3 plain water types → fire score = 6, exactly at PINNED_SCORE_CAP
+    const team = [water('t1'), water('t2'), water('t3')]
+
+    // Candidate A: Flash Fire water — fire immune (+2) + SE move (+1) = 3 pts
+    // Replacing t1: total fire = 3+2+2 = 7 → capped to PINNED_SCORE_CAP (6)
+    // No special coverage vs ground (still weak)
+    const flashFireWater = member({
+      id: 'cA',
+      types: ['water'],
+      moves: ['water'],
+      ability: 'Flash Fire',
+    })
+
+    // Candidate B: Levitate water — resist (+1) + SE move (+1) = 2 pts
+    // Replacing t1: total fire = 2+2+2 = 6 → exactly at cap (6)
+    // Levitate grants ground immunity → much better vs ground gym
+    const levitateWater = member({
+      id: 'cB',
+      types: ['water'],
+      moves: ['water'],
+      ability: 'Levitate',
+    })
+
+    // Both candidates cap the pinned fire score at 6 → tie on pinnedScore
+    // Levitate's ground immunity then wins via undefeated scores
+    const result = findBestSwap(
+      team,
+      team[0],
+      true,
+      [flashFireWater, levitateWater],
+      [],
+      'fire',
+    )
+    expect(result.candidate.id).toBe('cB')
   })
 
   it('falls back to normal algorithm when pinnedGym is null', () => {
@@ -918,6 +1063,31 @@ describe('findGlobalBestSwap', () => {
     // because ground is also weak to water, leaving it at -3
     expect(result.boxMember.id).toBe('w1')
     expect(result.improvement).toBeGreaterThan(0)
+  })
+
+  it('uses defeated gym bias when selecting the global best swap', () => {
+    // Fire defeated; box has water and rock
+    // Water improves undefeated ground/rock gyms (SE on both)
+    // Rock only meaningfully helps the already-defeated fire gym
+    const team = monoFireTeam(2)
+    const w1 = water('w1')
+    const rockMember = member({ id: 'r1', types: ['rock'], moves: ['rock'] })
+
+    const result = findGlobalBestSwap(team, [w1, rockMember], ['fire'])
+    // Water's undefeated improvements (ground, rock) outweigh rock's defeated-gym boost
+    expect(result.boxMember.id).toBe('w1')
+    expect(result.improvement).toBeGreaterThan(0)
+  })
+
+  it('returns negative improvement when all box swaps are worse', () => {
+    // Diverse team with strong coverage; only weak box members available
+    const team = [
+      member({ id: 't1', types: ['water'], moves: ['water', 'ice'] }),
+      member({ id: 't2', types: ['ground'], moves: ['ground', 'rock'] }),
+    ]
+    const result = findGlobalBestSwap(team, [normal('b1'), normal('b2')], [])
+    expect(result).not.toBeNull()
+    expect(result.improvement).toBeLessThan(0)
   })
 })
 

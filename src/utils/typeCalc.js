@@ -199,7 +199,9 @@ export function calculateScoreChanges(
     .filter((c) => c.diff !== 0)
 }
 
-const SCORE_CAP = 3
+const SCORE_CAP = 4
+const PINNED_SCORE_CAP = 6
+const DEFEATED_GYM_BIAS = 1
 
 function teamScoreProfile(
   team,
@@ -209,6 +211,7 @@ function teamScoreProfile(
 ) {
   const pinnedScore = []
   const undefeatedScores = []
+  const defeatedScores = []
   const allCapped = []
   const allUncapped = []
 
@@ -216,9 +219,11 @@ function teamScoreProfile(
     const raw = calculateScore(type, team, ruleset)
     const capped = Math.min(raw, SCORE_CAP)
     if (type === pinnedGym) {
-      pinnedScore.push(raw)
+      pinnedScore.push(Math.min(raw, PINNED_SCORE_CAP))
     }
-    if (!defeatedGyms.includes(type)) {
+    if (defeatedGyms.includes(type)) {
+      defeatedScores.push(Math.min(raw + DEFEATED_GYM_BIAS, SCORE_CAP))
+    } else {
       undefeatedScores.push(capped)
     }
     allCapped.push(capped)
@@ -226,10 +231,17 @@ function teamScoreProfile(
   }
 
   undefeatedScores.sort((a, b) => a - b)
+  defeatedScores.sort((a, b) => a - b)
   allCapped.sort((a, b) => a - b)
   allUncapped.sort((a, b) => a - b)
 
-  return { pinnedScore, undefeatedScores, allCapped, allUncapped }
+  return {
+    pinnedScore,
+    undefeatedScores,
+    defeatedScores,
+    allCapped,
+    allUncapped,
+  }
 }
 
 function compareArrays(a, b) {
@@ -245,8 +257,10 @@ function compareProfiles(a, b) {
   if (c0 !== 0) return c0
   const c1 = compareArrays(a.undefeatedScores, b.undefeatedScores)
   if (c1 !== 0) return c1
-  const c2 = compareArrays(a.allCapped, b.allCapped)
+  const c2 = compareArrays(a.defeatedScores, b.defeatedScores)
   if (c2 !== 0) return c2
+  const c3 = compareArrays(a.allCapped, b.allCapped)
+  if (c3 !== 0) return c3
   return compareArrays(a.allUncapped, b.allUncapped)
 }
 
