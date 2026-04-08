@@ -882,6 +882,60 @@ function handleDeleteDeadPokemon(id) {
   transform: translateX(-50%);
 }
 
+@media (orientation: landscape) and (max-height: 500px) {
+  /* No 2-column grid — TeamSection is only half the viewport in landscape split */
+  .slot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Center the dialog; remove wrapper scroll so click-outside works reliably */
+  .draft-panel-wrapper {
+    padding: var(--space-3);
+    align-items: center;
+    overflow-y: unset;
+  }
+
+  /* Undo mobile full-width dialog */
+  .draft-dialog-container {
+    width: auto;
+    margin: 0;
+  }
+
+  .draft-dialog-container :deep(.draft-panel) {
+    width: min(520px, calc(100vw - var(--space-6)));
+    max-height: calc(100dvh - var(--space-3) * 2);
+    margin-top: 0;
+  }
+
+  /* Action buttons at dialog corners (--space-5 = 20px ≈ half of 36px button) */
+  .draft-dialog-container .swap-mode-btn {
+    top: calc(-1 * var(--space-5));
+    right: calc(-1 * var(--space-5));
+  }
+
+  .draft-dialog-container .delete-mode {
+    bottom: calc(-1 * var(--space-5));
+    right: calc(-1 * var(--space-5));
+  }
+
+  .draft-dialog-container .revive-mode {
+    bottom: calc(-1 * var(--space-5));
+    left: calc(-1 * var(--space-5));
+  }
+
+  .draft-dialog-container .moves-btn {
+    bottom: calc(-1 * var(--space-5));
+    left: calc(-1 * var(--space-5));
+  }
+
+  /* When editing a dead Pokemon (revive + moves both visible), center moves */
+  .draft-dialog-container .moves-btn.moves-btn-centered {
+    bottom: calc(-1 * var(--space-5));
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
 .moves-btn {
   width: auto;
   right: auto;
