@@ -1560,6 +1560,29 @@ defineExpose({ openField })
   .wizard-header {
     margin-bottom: var(--space-2);
   }
+
+  .moves-type-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--space-1);
+  }
+
+  .move-type-option {
+    padding: var(--space-1);
+  }
+
+  .move-type-option .type-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .berry-type-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--space-1);
+  }
+
+  .berry-type-option {
+    padding: var(--space-1);
+  }
 }
 
 @media (orientation: portrait) {
