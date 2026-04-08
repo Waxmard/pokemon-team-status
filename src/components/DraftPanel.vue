@@ -146,7 +146,22 @@
                 </button>
               </template>
               <template #bottom-right>
-                <button class="preview-location-trigger" @click="openField('catchLocation')">
+                <input
+                  v-if="!isSoulLinkMode"
+                  class="preview-location-input"
+                  type="text"
+                  :value="catchLocationQuery"
+                  :size="Math.max((catchLocationQuery.length || 8) + 1, 3)"
+                  placeholder="Location"
+                  @focus="() => { const y = window.scrollY; requestAnimationFrame(() => window.scrollTo(0, y)) }"
+                  @input="onCatchLocationInput($event.target.value)"
+                  @blur="onCatchLocationInput($event.target.value)"
+                />
+                <button
+                  v-else
+                  class="preview-location-trigger"
+                  @click="openField('catchLocation')"
+                >
                   {{ draftAction.catchLocation || 'Location' }}
                 </button>
               </template>
@@ -1296,7 +1311,8 @@ defineExpose({ openField })
   flex: 1;
 }
 
-.preview-location-trigger {
+.preview-location-trigger,
+.preview-location-input {
   position: absolute;
   right: var(--space-3);
   bottom: -2.5rem;
@@ -1310,8 +1326,28 @@ defineExpose({ openField })
   line-height: 1.28;
   opacity: 0.92;
   color: var(--color-text-primary);
-  cursor: pointer;
   z-index: 1;
+}
+
+.preview-location-trigger {
+  cursor: pointer;
+}
+
+.preview-location-input {
+  cursor: text;
+  text-align: right;
+  font-size: 16px; /* prevents iOS auto-zoom on focus */
+}
+
+.preview-location-input:focus {
+  outline: none;
+  opacity: 1;
+}
+
+.preview-location-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.7;
+  font-weight: 600;
 }
 
 
@@ -1538,7 +1574,8 @@ defineExpose({ openField })
     font-size: 0.85rem;
   }
 
-  .preview-location-trigger {
+  .preview-location-trigger,
+  .preview-location-input {
     font-size: 1rem;
   }
 }
