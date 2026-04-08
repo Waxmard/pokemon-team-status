@@ -153,7 +153,8 @@
                   :value="catchLocationQuery"
                   :size="Math.max((catchLocationQuery.length || 8) + 1, 3)"
                   placeholder="Location"
-                  @focus="() => { const y = window.scrollY; requestAnimationFrame(() => window.scrollTo(0, y)) }"
+                  @mousedown="focusLocationInput"
+                  @touchend="focusLocationInput"
                   @input="onCatchLocationInput($event.target.value)"
                   @blur="onCatchLocationInput($event.target.value)"
                 />
@@ -956,6 +957,14 @@ function onSelectCatchLocation(value) {
   updateCatchLocation(value)
 }
 
+function focusLocationInput(event) {
+  if (document.activeElement !== event.currentTarget) {
+    event.preventDefault()
+    event.currentTarget.focus({ preventScroll: true })
+    window.scrollBy({ top: 150, behavior: 'smooth' })
+  }
+}
+
 function onCatchLocationInput(value) {
   catchLocationQuery.value = value ?? ''
   const trimmed = (value ?? '').trim()
@@ -1336,7 +1345,6 @@ defineExpose({ openField })
 .preview-location-input {
   cursor: text;
   text-align: right;
-  font-size: 16px; /* prevents iOS auto-zoom on focus */
 }
 
 .preview-location-input:focus {
