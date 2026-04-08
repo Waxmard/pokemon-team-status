@@ -117,6 +117,7 @@
           <button
             v-if="draftAction?.pokemon"
             class="add-button moves-btn"
+            :class="{ 'moves-btn-centered': !readOnly && isEditingDead }"
             @click="openMovesField"
           >
             <span v-if="draftAction.moves?.length" class="moves-btn-icons">
@@ -726,44 +727,45 @@ function handleDeleteDeadPokemon(id) {
 
 @media (max-width: 1023px) {
   .draft-panel-wrapper {
-    padding: var(--space-10) var(--space-3) calc(var(--space-10) + var(--space-2));
+    padding: calc(var(--space-10) + var(--space-3)) var(--space-3) calc(var(--space-10) + var(--space-2));
     align-items: flex-start;
     overflow-y: auto;
   }
 
   .draft-dialog-container {
+    --btn-offset: calc(var(--space-8) + var(--space-3));
     width: 100%;
     margin: auto 0;
   }
 
   .draft-dialog-container :deep(.draft-panel) {
     width: min(100%, calc(100vw - (var(--space-3) * 2)));
-    max-height: calc(100dvh - var(--space-10) - (var(--space-10) + var(--space-2)));
+    max-height: calc(100dvh - 2 * var(--space-10) - var(--space-5));
+    margin-top: 0;
   }
 
   .draft-dialog-container .swap-mode-btn {
     position: absolute;
-    top: calc(-1 * var(--space-8));
+    top: calc(-1 * var(--btn-offset));
     right: var(--space-4);
   }
 
   .draft-dialog-container .revive-mode {
     position: absolute;
-    bottom: calc(-1 * (var(--space-8) + var(--space-3)));
+    bottom: calc(-1 * var(--btn-offset));
     left: var(--space-4);
   }
 
   .draft-dialog-container .delete-mode {
     position: absolute;
-    bottom: calc(-1 * (var(--space-8) + var(--space-3)));
+    bottom: calc(-1 * var(--btn-offset));
     right: var(--space-4);
   }
 
   .draft-dialog-container .moves-btn {
     position: absolute;
-    bottom: calc(-1 * (var(--space-8) + var(--space-3)));
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: calc(-1 * var(--btn-offset));
+    left: var(--space-4);
   }
 }
 
@@ -861,13 +863,18 @@ function handleDeleteDeadPokemon(id) {
   .draft-dialog-container .moves-btn {
     position: absolute;
     bottom: calc(-1 * var(--space-8) - var(--space-4));
-    left: 50%;
-    transform: translateX(-50%);
+    left: var(--space-4);
   }
+}
+
+.draft-dialog-container .moves-btn.moves-btn-centered {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .moves-btn {
   width: auto;
+  right: auto;
   padding: 0 var(--space-1);
 }
 
