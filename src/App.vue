@@ -995,7 +995,12 @@ async function startNewRun(mode) {
   if (mode === RUN_MODES.SOLO) {
     // Save current solo run before starting a new one
     if (isSoloMode.value && soloActiveRunId.value) {
-      await saveSoloRunToIndex(buildSoloSnapshot())
+      const currentSnapshot = buildSoloSnapshot()
+      if (isEmptySoloRun(currentSnapshot)) {
+        await deleteSoloRun(soloActiveRunId.value)
+      } else {
+        await saveSoloRunToIndex(currentSnapshot)
+      }
     }
     await startNewSoloRun()
     setCurrentRunMode(RUN_MODES.SOLO)

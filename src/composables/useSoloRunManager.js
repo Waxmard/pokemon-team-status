@@ -211,8 +211,13 @@ export function useSoloRunManager() {
     _switching = true
 
     try {
-      if (currentSnapshot && runIndex.value?.activeRunId) {
-        await saveCurrentRunToIndex(currentSnapshot)
+      const previousRunId = runIndex.value?.activeRunId
+      if (currentSnapshot && previousRunId) {
+        if (isEmptySoloRun(currentSnapshot)) {
+          await deleteRun(previousRunId)
+        } else {
+          await saveCurrentRunToIndex(currentSnapshot)
+        }
       }
 
       const targetSnapshot = await repository.loadSoloRun(targetRunId)
