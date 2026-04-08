@@ -1084,6 +1084,10 @@ function onSelectPokemon(value) {
   overflow: visible;
 }
 
+.overview-view {
+  padding-bottom: 0;
+}
+
 .wizard-header {
   display: flex;
   align-items: center;
@@ -1279,7 +1283,17 @@ function onSelectPokemon(value) {
 }
 
 .overview-view :deep(.pokemon-preview) {
-  margin: var(--space-3) 0 calc(var(--space-5) + 1rem);
+  filter: none;
+  margin: var(--space-3) 0 calc(var(--space-5) + 1.5rem);
+}
+
+.overview-view :deep(.sprite-wrapper) {
+  filter: var(--drop-shadow-icon);
+  margin-top: 1rem;
+}
+
+.overview-view :deep(.preview-type-list) {
+  bottom: -2.5rem;
 }
 
 .overview-search-row {
@@ -1295,7 +1309,7 @@ function onSelectPokemon(value) {
 .preview-location-trigger {
   position: absolute;
   right: var(--space-3);
-  bottom: -2rem;
+  bottom: -2.5rem;
   border: none;
   background: transparent;
   padding: 0;
@@ -1314,7 +1328,7 @@ function onSelectPokemon(value) {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: -2rem;
+  bottom: -2.5rem;
   border: none;
   background: transparent;
   padding: 0;
