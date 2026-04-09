@@ -1035,7 +1035,10 @@ function onSelectPokemon(value) {
   const pokemon = getPokemonDataForRules(value, effectiveGenerationRules.value)
   if (pokemon) {
     updatePokemon(pokemon)
-    if (draftAction.value?.type === 'add' && !draftAction.value.moves?.length) {
+    const isNewAdd = ['add', 'addToBox', 'addToDead'].includes(
+      draftAction.value?.type,
+    )
+    if (isNewAdd && !draftAction.value.moves?.length) {
       draftAction.value.moves = [...pokemon.types]
     }
     searchQuery.value = pokemon.name
