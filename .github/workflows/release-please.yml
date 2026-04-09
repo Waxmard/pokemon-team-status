@@ -20,6 +20,6 @@ jobs:
 
       - name: Auto-merge release PR
         if: ${{ steps.release.outputs.pr != '' }}
-        run: gh pr merge --rebase "${{ fromJSON(steps.release.outputs.pr).number }}"
+        run: gh pr merge --rebase --auto --repo "${{ github.repository }}" "${{ fromJSON(steps.release.outputs.pr).number }}"
         env:
           GH_TOKEN: ${{ secrets.POKEMON_RELEASE_PLEASE_TOKEN }}
