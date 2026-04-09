@@ -1,5 +1,5 @@
 const DB_NAME = 'pokemon-team-calculator'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 function openDBOnce() {
   return new Promise((resolve, reject) => {
@@ -10,14 +10,31 @@ function openDBOnce() {
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result
-      if (!db.objectStoreNames.contains('team')) {
-        db.createObjectStore('team', { keyPath: 'id' })
-      }
+      const tx = event.target.transaction
+
       if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings', { keyPath: 'name' })
       }
-      if (!db.objectStoreNames.contains('box')) {
-        db.createObjectStore('box', { keyPath: 'id' })
+
+      // v3 migration: move team and box from object stores → settings JSON blobs
+      if (event.oldVersion >= 1) {
+        const settingsStore = tx.objectStore('settings')
+
+        if (db.objectStoreNames.contains('team')) {
+          const req = tx.objectStore('team').getAll()
+          req.onsuccess = () => {
+            settingsStore.put({ name: 'soloTeam', value: req.result || [] })
+            db.deleteObjectStore('team')
+          }
+        }
+
+        if (db.objectStoreNames.contains('box')) {
+          const req = tx.objectStore('box').getAll()
+          req.onsuccess = () => {
+            settingsStore.put({ name: 'soloBox', value: req.result || [] })
+            db.deleteObjectStore('box')
+          }
+        }
       }
     }
   })
@@ -34,35 +51,6 @@ async function openDB() {
 
 function toPlainData(value) {
   return JSON.parse(JSON.stringify(value))
-}
-
-async function saveArrayToStore(storeName, items) {
-  const db = await openDB()
-  const tx = db.transaction(storeName, 'readwrite')
-  const store = tx.objectStore(storeName)
-
-  store.clear()
-  const plainItems = toPlainData(items)
-  for (const item of plainItems) {
-    store.add(item)
-  }
-
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
-}
-
-async function loadArrayFromStore(storeName) {
-  const db = await openDB()
-  const tx = db.transaction(storeName, 'readonly')
-  const store = tx.objectStore(storeName)
-  const request = store.getAll()
-
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result || [])
-    request.onerror = () => reject(request.error)
-  })
 }
 
 async function saveSetting(name, value) {
@@ -95,9 +83,9 @@ export function createLocalSoloRunRepository() {
     async loadSoloRunSnapshot(defaultGenerationRules) {
       const [team, defeatedGyms, box, dead, pinnedGym, generationRules] =
         await Promise.all([
-          loadArrayFromStore('team'),
+          loadSetting('soloTeam', []),
           loadSetting('defeatedGyms', []),
-          loadArrayFromStore('box'),
+          loadSetting('soloBox', []),
           loadSetting('soloDead', []),
           loadSetting('pinnedGym', null),
           loadSetting('generationRules', defaultGenerationRules),
@@ -114,11 +102,11 @@ export function createLocalSoloRunRepository() {
     },
 
     persistSoloTeam(team) {
-      return saveArrayToStore('team', team)
+      return saveSetting('soloTeam', team)
     },
 
     persistSoloBox(box) {
-      return saveArrayToStore('box', box)
+      return saveSetting('soloBox', box)
     },
 
     persistSoloDefeatedGyms(defeatedGyms) {

@@ -276,7 +276,7 @@ export function useRunStore() {
     const stamped = { ...pokemon, updatedAt: Date.now() }
     await Promise.all([
       persistTeam(team.value.filter((p) => p.id !== id)),
-      persistDead([...dead.value, stamped]),
+      persistDead([stamped, ...dead.value]),
     ])
   }
 
@@ -286,7 +286,7 @@ export function useRunStore() {
     const stamped = { ...pokemon, updatedAt: Date.now() }
     await Promise.all([
       persistBox(box.value.filter((p) => p.id !== id)),
-      persistDead([...dead.value, stamped]),
+      persistDead([stamped, ...dead.value]),
     ])
   }
 
