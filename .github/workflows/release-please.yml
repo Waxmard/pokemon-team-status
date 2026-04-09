@@ -19,7 +19,14 @@ jobs:
           token: ${{ secrets.POKEMON_RELEASE_PLEASE_TOKEN }}
 
       - name: Auto-merge release PR
-        if: ${{ steps.release.outputs.pr != '' }}
-        run: gh pr merge --rebase --auto --repo "${{ github.repository }}" "${{ fromJSON(steps.release.outputs.pr).number }}"
+        run: |
+          PR_NUMBER=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --label "autorelease: pending" \
+            --json number \
+            --jq '.[0].number')
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr merge --rebase --auto --repo "${{ github.repository }}" "$PR_NUMBER"
+          fi
         env:
           GH_TOKEN: ${{ secrets.POKEMON_RELEASE_PLEASE_TOKEN }}
