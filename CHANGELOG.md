@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/Waxmard/pokemon-team-status/compare/v1.5.0...v1.5.1) (2026-04-09)
+
+
+### Bug Fixes
+
+* stabilize draft additions and dead list ordering ([#78](https://github.com/Waxmard/pokemon-team-status/issues/78)) ([085852c](https://github.com/Waxmard/pokemon-team-status/commit/085852cd10c7a5e418f098fe2e715e61db7671a0))
+
 ## [1.5.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.4.2...v1.5.0) (2026-04-08)
 
 
