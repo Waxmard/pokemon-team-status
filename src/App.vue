@@ -1536,26 +1536,35 @@ onMounted(async () => {
   const startupMode = await restoreMostRecentRun(initialRunMode)
 
   // Init sync session and sync before showing content so session metadata
-  // and merged state are final on first render (avoids team reorder flash)
+  // and merged state are final on first render (avoids team reorder flash).
+  // Race against a timeout so offline users aren't blocked waiting for
+  // Supabase calls that will never resolve.
   if (startupMode === RUN_MODES.SOLO && isSoloSyncAvailable) {
-    try {
-      await initSoloSyncSession(
-        () => buildSoloSnapshot(),
-        (snapshot) => applySoloRemoteSnapshot(snapshot),
-        buildSoloSessionCallbacks(),
-      )
-    } catch (err) {
-      console.error('Failed to init solo sync session:', err)
-    }
-    if (hasSoloRemoteSession.value) {
+    const syncPromise = (async () => {
       try {
-        await syncSoloSession()
-        await saveSoloRunToIndex(buildSoloSnapshot())
-        subscribeSolo()
+        await initSoloSyncSession(
+          () => buildSoloSnapshot(),
+          (snapshot) => applySoloRemoteSnapshot(snapshot),
+          buildSoloSessionCallbacks(),
+        )
       } catch (err) {
-        console.error('Solo auto-sync on mount failed:', err)
+        console.error('Failed to init solo sync session:', err)
       }
-    }
+      if (hasSoloRemoteSession.value) {
+        try {
+          await syncSoloSession()
+          await saveSoloRunToIndex(buildSoloSnapshot())
+          subscribeSolo()
+        } catch (err) {
+          console.error('Solo auto-sync on mount failed:', err)
+        }
+      }
+    })()
+
+    await Promise.race([
+      syncPromise,
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ])
   }
 
   ready.value = true
