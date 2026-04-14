@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.2](https://github.com/Waxmard/pokemon-team-status/compare/v1.5.1...v1.5.2) (2026-04-14)
+
+
+### Bug Fixes
+
+* avoid blocking solo startup on sync calls ([e871b74](https://github.com/Waxmard/pokemon-team-status/commit/e871b743e2446e4c0ebebe45ed5c14a529c08c5b))
+* parse release PR number before auto-merge ([44cd92a](https://github.com/Waxmard/pokemon-team-status/commit/44cd92a320b2d5127d15d27dea80976593d4996d))
+
 ## [1.5.1](https://github.com/Waxmard/pokemon-team-status/compare/v1.5.0...v1.5.1) (2026-04-09)
 
 
