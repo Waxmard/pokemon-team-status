@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.12",
-    "@vitejs/plugin-vue": "^6.0.5",
+    "@vitejs/plugin-vue": "^6.0.6",
     "@vitest/coverage-v8": "^4.1.0",
     "eslint": "^10.2.0",
     "eslint-plugin-sonarjs": "^4.0.2",
