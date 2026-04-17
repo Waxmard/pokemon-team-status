@@ -30,7 +30,7 @@
     "@vitejs/plugin-vue": "^6.0.6",
     "@vitest/coverage-v8": "^4.1.0",
     "eslint": "^10.2.0",
-    "eslint-plugin-sonarjs": "^4.0.2",
+    "eslint-plugin-sonarjs": "^4.0.3",
     "husky": "^9.1.7",
     "jscpd": "^4.0.9",
     "lint-staged": "^16.4.0",
