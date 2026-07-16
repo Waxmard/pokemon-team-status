@@ -13,7 +13,7 @@ jobs:
     name: Release Please
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v5
+      - uses: googleapis/release-please-action@0dfd8538845b8e92600d271a895a5372865d4062 # v5
         id: release
         with:
           token: ${{ secrets.POKEMON_RELEASE_PLEASE_TOKEN }}
