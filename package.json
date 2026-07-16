@@ -30,7 +30,7 @@
     "@biomejs/biome": "2.4.14",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vitest/coverage-v8": "^4.1.0",
-    "eslint": "^10.2.1",
+    "eslint": "^10.3.0",
     "eslint-plugin-sonarjs": "^4.0.3",
     "jscpd": "^4.0.9",
     "lefthook": "^1.0.0",
