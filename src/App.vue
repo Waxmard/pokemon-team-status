@@ -586,7 +586,7 @@ function toggleTeraTypes() {
 }
 
 const teraTypesLabel = computed(() => {
-  return activeTeraEnabled.value ? 'Tera Types: On' : 'Tera Types: Off'
+  return activeTeraEnabled.value ? 'Disable Tera Types' : 'Enable Tera Types'
 })
 
 const activeTypes = computed(() => getAllTypesForRules(generationRules.value))
