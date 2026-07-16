@@ -9,7 +9,9 @@ const { repository } = vi.hoisted(() => ({
     persistSoloDefeatedGyms: vi.fn(),
     persistSoloPinnedGym: vi.fn(),
     persistSoloGenerationRules: vi.fn(),
+    persistSoloGenerationRulesUpdatedAt: vi.fn(),
     persistSoloTeraEnabled: vi.fn(),
+    persistSoloTeraEnabledUpdatedAt: vi.fn(),
   },
 }))
 
@@ -69,7 +71,9 @@ describe('useRunStore', () => {
     repository.persistSoloDefeatedGyms.mockResolvedValue(undefined)
     repository.persistSoloPinnedGym.mockResolvedValue(undefined)
     repository.persistSoloGenerationRules.mockResolvedValue(undefined)
+    repository.persistSoloGenerationRulesUpdatedAt.mockResolvedValue(undefined)
     repository.persistSoloTeraEnabled.mockResolvedValue(undefined)
+    repository.persistSoloTeraEnabledUpdatedAt.mockResolvedValue(undefined)
     soloRunManager.persistActiveRunSnapshot.mockResolvedValue(undefined)
     soloRunManager.activeRunId.value = 'test-run-1'
 

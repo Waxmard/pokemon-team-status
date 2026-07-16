@@ -38,6 +38,13 @@ async function applySnapshotToStores(snapshot, generationRulesFallback = null) {
     repository.persistSoloGenerationRules(
       snapshot.generationRules ?? generationRulesFallback,
     ),
+    repository.persistSoloGenerationRulesUpdatedAt(
+      snapshot.generationRulesUpdatedAt ?? null,
+    ),
+    repository.persistSoloTeraEnabled(!!snapshot.teraEnabled),
+    repository.persistSoloTeraEnabledUpdatedAt(
+      snapshot.teraEnabledUpdatedAt ?? null,
+    ),
   ])
 }
 
@@ -50,8 +57,12 @@ function toPlainPersistedSnapshot(snapshot) {
         dead: snapshot?.dead ?? [],
         defeatedGyms: snapshot?.defeatedGyms ?? [],
         pinnedGym: snapshot?.pinnedGym ?? null,
+        progressUpdatedAt: snapshot?.progressUpdatedAt ?? null,
         generationRules:
           snapshot?.generationRules ?? DEFAULT_GENERATION_RULESET,
+        generationRulesUpdatedAt: snapshot?.generationRulesUpdatedAt ?? null,
+        teraEnabled: snapshot?.teraEnabled ?? false,
+        teraEnabledUpdatedAt: snapshot?.teraEnabledUpdatedAt ?? null,
       }),
     ),
   )

@@ -103,11 +103,17 @@ function getSanitizedSnapshotPersistOperations(
   if (loadedSnapshot.generationRules !== sanitizedSnapshot.generationRules) {
     persistOperations.push(
       repository.persistSoloGenerationRules(sanitizedSnapshot.generationRules),
+      repository.persistSoloGenerationRulesUpdatedAt(
+        sanitizedSnapshot.generationRulesUpdatedAt,
+      ),
     )
   }
   if (!!loadedSnapshot.teraEnabled !== sanitizedSnapshot.teraEnabled) {
     persistOperations.push(
       repository.persistSoloTeraEnabled(sanitizedSnapshot.teraEnabled),
+      repository.persistSoloTeraEnabledUpdatedAt(
+        sanitizedSnapshot.teraEnabledUpdatedAt,
+      ),
     )
   }
 
@@ -156,6 +162,9 @@ async function persistGenerationRules(newRules) {
     () =>
       Promise.all([
         repository.persistSoloGenerationRules(nextRules),
+        repository.persistSoloGenerationRulesUpdatedAt(
+          sanitizedSnapshot.generationRulesUpdatedAt,
+        ),
         repository.persistSoloTeam(sanitizedSnapshot.team),
         repository.persistSoloBox(sanitizedSnapshot.box),
         repository.persistSoloDead(sanitizedSnapshot.dead),
@@ -182,6 +191,9 @@ async function persistTeraEnabled(nextEnabled) {
     () =>
       Promise.all([
         repository.persistSoloTeraEnabled(nextTeraEnabled),
+        repository.persistSoloTeraEnabledUpdatedAt(
+          sanitizedSnapshot.teraEnabledUpdatedAt,
+        ),
         repository.persistSoloTeam(sanitizedSnapshot.team),
         repository.persistSoloBox(sanitizedSnapshot.box),
         repository.persistSoloDead(sanitizedSnapshot.dead),
@@ -268,8 +280,9 @@ export function useRunStore() {
     nextGenerationRules = generationRules.value,
     nextTeraEnabled = teraEnabled.value,
   ) {
+    const now = Date.now()
     const snapshot = mapSoloRunStateToPersistedSnapshot(
-      createDefaultSoloRunState(nextGenerationRules, nextTeraEnabled),
+      createDefaultSoloRunState(nextGenerationRules, nextTeraEnabled, now, now),
     )
 
     setRunState(snapshot)
@@ -282,7 +295,13 @@ export function useRunStore() {
         repository.persistSoloDefeatedGyms(snapshot.defeatedGyms),
         repository.persistSoloPinnedGym(snapshot.pinnedGym),
         repository.persistSoloGenerationRules(snapshot.generationRules),
+        repository.persistSoloGenerationRulesUpdatedAt(
+          snapshot.generationRulesUpdatedAt,
+        ),
         repository.persistSoloTeraEnabled(snapshot.teraEnabled),
+        repository.persistSoloTeraEnabledUpdatedAt(
+          snapshot.teraEnabledUpdatedAt,
+        ),
       ]),
     )
   }
@@ -363,7 +382,13 @@ export function useRunStore() {
           repository.persistSoloDefeatedGyms(sanitized.defeatedGyms),
           repository.persistSoloPinnedGym(sanitized.pinnedGym),
           repository.persistSoloGenerationRules(sanitized.generationRules),
+          repository.persistSoloGenerationRulesUpdatedAt(
+            sanitized.generationRulesUpdatedAt,
+          ),
           repository.persistSoloTeraEnabled(sanitized.teraEnabled),
+          repository.persistSoloTeraEnabledUpdatedAt(
+            sanitized.teraEnabledUpdatedAt,
+          ),
         ]),
       sanitized,
     ).catch((err) => console.error('Failed to persist remote snapshot:', err))

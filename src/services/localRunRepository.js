@@ -88,7 +88,9 @@ export function createLocalSoloRunRepository() {
         dead,
         pinnedGym,
         generationRules,
+        generationRulesUpdatedAt,
         teraEnabled,
+        teraEnabledUpdatedAt,
       ] = await Promise.all([
         loadSetting('soloTeam', []),
         loadSetting('defeatedGyms', []),
@@ -96,7 +98,9 @@ export function createLocalSoloRunRepository() {
         loadSetting('soloDead', []),
         loadSetting('pinnedGym', null),
         loadSetting('generationRules', defaultGenerationRules),
+        loadSetting('generationRulesUpdatedAt', null),
         loadSetting('teraEnabled', false),
+        loadSetting('teraEnabledUpdatedAt', null),
       ])
 
       return {
@@ -106,7 +110,9 @@ export function createLocalSoloRunRepository() {
         defeatedGyms,
         pinnedGym,
         generationRules,
+        generationRulesUpdatedAt,
         teraEnabled,
+        teraEnabledUpdatedAt,
       }
     },
 
@@ -130,8 +136,16 @@ export function createLocalSoloRunRepository() {
       return saveSetting('generationRules', generationRules)
     },
 
+    persistSoloGenerationRulesUpdatedAt(updatedAt) {
+      return saveSetting('generationRulesUpdatedAt', updatedAt)
+    },
+
     persistSoloTeraEnabled(teraEnabled) {
       return saveSetting('teraEnabled', teraEnabled)
+    },
+
+    persistSoloTeraEnabledUpdatedAt(updatedAt) {
+      return saveSetting('teraEnabledUpdatedAt', updatedAt)
     },
 
     persistSoloDead(dead) {

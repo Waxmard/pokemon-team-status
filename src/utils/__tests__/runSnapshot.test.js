@@ -30,6 +30,8 @@ describe('runSnapshot helpers', () => {
       rules: {
         generation: DEFAULT_GENERATION_RULESET,
         teraEnabled: false,
+        generationRulesUpdatedAt: null,
+        teraEnabledUpdatedAt: null,
       },
     })
   })
@@ -111,6 +113,8 @@ describe('runSnapshot helpers', () => {
       rules: {
         generation: DEFAULT_GENERATION_RULESET,
         teraEnabled: false,
+        generationRulesUpdatedAt: null,
+        teraEnabledUpdatedAt: null,
       },
     })
 

@@ -31,6 +31,8 @@ export function normalizeGenerationRules(ruleset) {
 export function createDefaultSoloRunState(
   generationRules = DEFAULT_GENERATION_RULESET,
   teraEnabled = false,
+  generationRulesUpdatedAt = null,
+  teraEnabledUpdatedAt = null,
 ) {
   return {
     mode: RUN_MODES.SOLO,
@@ -42,6 +44,8 @@ export function createDefaultSoloRunState(
     rules: {
       generation: normalizeGenerationRules(generationRules),
       teraEnabled: !!teraEnabled,
+      generationRulesUpdatedAt,
+      teraEnabledUpdatedAt,
     },
   }
 }
@@ -142,6 +146,8 @@ export function mapPersistedSoloSnapshotToRunState(snapshot) {
     ...createDefaultSoloRunState(
       sanitizedSnapshot.generationRules,
       sanitizedSnapshot.teraEnabled,
+      sanitizedSnapshot.generationRulesUpdatedAt,
+      sanitizedSnapshot.teraEnabledUpdatedAt,
     ),
     team: sanitizedSnapshot.team,
     box: sanitizedSnapshot.box,
@@ -170,7 +176,8 @@ export function mapSoloRunStateToPersistedSnapshot(runState) {
     pinnedGym: soloRunState.progress.pinnedGym,
     progressUpdatedAt: soloRunState.progress.updatedAt ?? null,
     generationRules: soloRunState.rules.generation,
-    generationRulesUpdatedAt: soloRunState.rules.generationUpdatedAt ?? null,
+    generationRulesUpdatedAt:
+      soloRunState.rules.generationRulesUpdatedAt ?? null,
     teraEnabled: soloRunState.rules.teraEnabled,
     teraEnabledUpdatedAt: soloRunState.rules.teraEnabledUpdatedAt ?? null,
   }
