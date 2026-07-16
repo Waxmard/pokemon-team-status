@@ -105,6 +105,11 @@ function getSanitizedSnapshotPersistOperations(
       repository.persistSoloGenerationRules(sanitizedSnapshot.generationRules),
     )
   }
+  if (!!loadedSnapshot.teraEnabled !== sanitizedSnapshot.teraEnabled) {
+    persistOperations.push(
+      repository.persistSoloTeraEnabled(sanitizedSnapshot.teraEnabled),
+    )
+  }
 
   return persistOperations
 }
@@ -126,6 +131,9 @@ const tombstones = computed(
 )
 const generationRules = computed(
   () => getSoloRunState('Accessing generation rules').rules.generation,
+)
+const teraEnabled = computed(
+  () => getSoloRunState('Accessing Tera Types setting').rules.teraEnabled,
 )
 
 const persistDead = createPersistField(
@@ -153,6 +161,30 @@ async function persistGenerationRules(newRules) {
         repository.persistSoloDead(sanitizedSnapshot.dead),
         repository.persistSoloDefeatedGyms(sanitizedSnapshot.defeatedGyms),
         repository.persistSoloPinnedGym(sanitizedSnapshot.pinnedGym),
+      ]),
+    sanitizedSnapshot,
+  )
+  scheduleSync()
+}
+
+async function persistTeraEnabled(nextEnabled) {
+  const soloRunState = getSoloRunState('Persisting Tera Types setting')
+  const nextTeraEnabled = !!nextEnabled
+  const sanitizedSnapshot = sanitizePersistedSoloRunSnapshot({
+    ...mapSoloRunStateToPersistedSnapshot(soloRunState),
+    teraEnabled: nextTeraEnabled,
+    teraEnabledUpdatedAt: Date.now(),
+  })
+
+  setRunState(sanitizedSnapshot)
+
+  await enqueueSoloPersistWithSnapshot(
+    () =>
+      Promise.all([
+        repository.persistSoloTeraEnabled(nextTeraEnabled),
+        repository.persistSoloTeam(sanitizedSnapshot.team),
+        repository.persistSoloBox(sanitizedSnapshot.box),
+        repository.persistSoloDead(sanitizedSnapshot.dead),
       ]),
     sanitizedSnapshot,
   )
@@ -232,9 +264,12 @@ export function useRunStore() {
     await persistDefeatedGyms([])
   }
 
-  async function startNewSoloRun(nextGenerationRules = generationRules.value) {
+  async function startNewSoloRun(
+    nextGenerationRules = generationRules.value,
+    nextTeraEnabled = teraEnabled.value,
+  ) {
     const snapshot = mapSoloRunStateToPersistedSnapshot(
-      createDefaultSoloRunState(nextGenerationRules),
+      createDefaultSoloRunState(nextGenerationRules, nextTeraEnabled),
     )
 
     setRunState(snapshot)
@@ -247,6 +282,7 @@ export function useRunStore() {
         repository.persistSoloDefeatedGyms(snapshot.defeatedGyms),
         repository.persistSoloPinnedGym(snapshot.pinnedGym),
         repository.persistSoloGenerationRules(snapshot.generationRules),
+        repository.persistSoloTeraEnabled(snapshot.teraEnabled),
       ]),
     )
   }
@@ -327,6 +363,7 @@ export function useRunStore() {
           repository.persistSoloDefeatedGyms(sanitized.defeatedGyms),
           repository.persistSoloPinnedGym(sanitized.pinnedGym),
           repository.persistSoloGenerationRules(sanitized.generationRules),
+          repository.persistSoloTeraEnabled(sanitized.teraEnabled),
         ]),
       sanitized,
     ).catch((err) => console.error('Failed to persist remote snapshot:', err))
@@ -340,6 +377,7 @@ export function useRunStore() {
     defeatedGyms,
     pinnedGym,
     generationRules,
+    teraEnabled,
     loadError,
     loadData,
     persistTeam,
@@ -348,6 +386,7 @@ export function useRunStore() {
     persistDefeatedGyms,
     persistPinnedGym,
     persistGenerationRules,
+    persistTeraEnabled,
     startNewSoloRun,
     resetTeamAndBox,
     resetGyms,

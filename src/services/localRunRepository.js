@@ -81,15 +81,23 @@ async function loadSetting(name, defaultValue = null) {
 export function createLocalSoloRunRepository() {
   return {
     async loadSoloRunSnapshot(defaultGenerationRules) {
-      const [team, defeatedGyms, box, dead, pinnedGym, generationRules] =
-        await Promise.all([
-          loadSetting('soloTeam', []),
-          loadSetting('defeatedGyms', []),
-          loadSetting('soloBox', []),
-          loadSetting('soloDead', []),
-          loadSetting('pinnedGym', null),
-          loadSetting('generationRules', defaultGenerationRules),
-        ])
+      const [
+        team,
+        defeatedGyms,
+        box,
+        dead,
+        pinnedGym,
+        generationRules,
+        teraEnabled,
+      ] = await Promise.all([
+        loadSetting('soloTeam', []),
+        loadSetting('defeatedGyms', []),
+        loadSetting('soloBox', []),
+        loadSetting('soloDead', []),
+        loadSetting('pinnedGym', null),
+        loadSetting('generationRules', defaultGenerationRules),
+        loadSetting('teraEnabled', false),
+      ])
 
       return {
         team,
@@ -98,6 +106,7 @@ export function createLocalSoloRunRepository() {
         defeatedGyms,
         pinnedGym,
         generationRules,
+        teraEnabled,
       }
     },
 
@@ -119,6 +128,10 @@ export function createLocalSoloRunRepository() {
 
     persistSoloGenerationRules(generationRules) {
       return saveSetting('generationRules', generationRules)
+    },
+
+    persistSoloTeraEnabled(teraEnabled) {
+      return saveSetting('teraEnabled', teraEnabled)
     },
 
     persistSoloDead(dead) {

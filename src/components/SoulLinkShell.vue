@@ -3,6 +3,7 @@
     <SoulLinkPlayerView
       :board="viewedPlayerBoard"
       :generation-rules="generationRules"
+      :tera-enabled="teraEnabled"
       :draft-active="draftActive"
       :persist-pinned-gym="persistPinnedGym"
       :partner-roster="partnerRoster"
@@ -34,6 +35,10 @@ defineProps({
   generationRules: {
     type: String,
     required: true,
+  },
+  teraEnabled: {
+    type: Boolean,
+    default: null,
   },
   viewedPlayerBoard: {
     type: Object,

@@ -145,6 +145,20 @@
                   ⬆
                 </button>
               </template>
+              <template v-if="effectiveTeraEnabled" #bottom-center>
+                <button
+                  class="tera-type-btn"
+                  :style="getTypeBackground(draftAction.teraType || previewTypes[0], true)"
+                  @click="openField('tera')"
+                  aria-label="Tera Type"
+                >
+                  <img
+                    :src="getTypeIcon(draftAction.teraType || previewTypes[0])"
+                    :alt="draftAction.teraType || previewTypes[0]"
+                    class="type-icon"
+                  />
+                </button>
+              </template>
               <template #bottom-right>
                 <input
                   v-if="!isSoulLinkMode"
@@ -259,6 +273,22 @@
             </button>
           </div>
         </div>
+
+        <div v-else-if="activeField === 'tera'" class="editor-view">
+          <div class="moves-type-grid">
+            <button
+              v-for="type in activeTypes"
+              :key="type"
+              @click="toggleTeraType(type)"
+              class="move-type-option"
+              :class="{ selected: isTeraTypeSelected(type) }"
+              :style="getTypeBackground(type, isTeraTypeSelected(type))"
+              :title="capitalize(type)"
+            >
+              <img :src="getTypeIcon(type)" :alt="type" class="type-icon" />
+            </button>
+          </div>
+        </div>
       </template>
     </div>
 
@@ -331,6 +361,10 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  teraEnabled: {
+    type: Boolean,
+    default: null,
+  },
 })
 
 const emit = defineEmits(['confirm', 'cancel', 'swapSuggestion', 'autosave'])
@@ -345,6 +379,7 @@ const {
   updateCatchLocation,
   updateNickname,
   updateMegaForm,
+  updateTeraType,
   updateSpriteVariant,
 } = useDraftAction()
 
@@ -354,6 +389,7 @@ const {
   defeatedGyms: storageDefeatedGyms,
   pinnedGym: storagePinnedGym,
   generationRules: storageGenerationRules,
+  teraEnabled: storageTeraEnabled,
 } = useRunStore()
 
 // Use props when provided, fall back to solo store
@@ -366,6 +402,9 @@ const effectivePinnedGym = computed(
 )
 const effectiveGenerationRules = computed(
   () => props.generationRules ?? storageGenerationRules.value,
+)
+const effectiveTeraEnabled = computed(
+  () => props.teraEnabled ?? storageTeraEnabled.value,
 )
 
 // Suggestion state
@@ -560,6 +599,7 @@ const fieldTitle = computed(() => {
     catchLocation: 'Catch Location',
     details: `${name}'s Details`,
     moves: `${name}'s Move Types`,
+    tera: `${name}'s Tera Type`,
   }
   return titles[activeField.value] ?? name ?? 'Choose Pokemon'
 })
@@ -803,6 +843,25 @@ function toggleMoveType(type) {
   updateMoves(moves)
 }
 
+function isTeraTypeSelected(type) {
+  return draftAction.value?.teraType === type
+}
+
+function toggleTeraType(type) {
+  updateTeraType(draftAction.value?.teraType === type ? null : type)
+}
+
+watch(
+  () => draftAction.value?.pokemon,
+  (pokemon) => {
+    if (!pokemon || !effectiveTeraEnabled.value) return
+    if (!draftAction.value.teraType) {
+      updateTeraType(pokemon.types[0])
+    }
+  },
+  { immediate: true },
+)
+
 const specialMoveOptions = computed(() =>
   filterOptions(SPECIAL_MOVE_NAMES, specialMoveQuery.value),
 )
@@ -996,6 +1055,7 @@ const autosaveSignature = computed(() => {
     megaForm: action.megaForm,
     megaSpriteId: action.megaSpriteId,
     megaTypes: action.megaTypes ?? [],
+    teraType: action.teraType,
   })
 })
 
@@ -1300,6 +1360,45 @@ defineExpose({ openField })
 
 .overview-view :deep(.preview-type-list) {
   bottom: -2.5rem;
+}
+
+.tera-type-btn {
+  position: absolute;
+  bottom: -2.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  filter: var(--drop-shadow-icon);
+  transition: transform var(--transition-base);
+}
+
+.tera-type-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 45%, rgba(255, 255, 255, 0) 55%, rgba(255, 255, 255, 0.25) 100%);
+  pointer-events: none;
+}
+
+.tera-type-btn:active {
+  transform: translateX(-50%) scale(0.94);
+}
+
+.tera-type-btn .type-icon {
+  position: relative;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
 }
 
 .overview-search-row {

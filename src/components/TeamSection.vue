@@ -107,6 +107,7 @@
             :defeated-gyms="defeatedGyms"
             :pinned-gym="pinnedGym"
             :generation-rules="generationRules"
+            :tera-enabled="teraEnabled"
             :partner-roster="partnerRoster"
             :is-soul-link-mode="isSoulLinkMode"
             @confirm="$emit('confirmDraft')"
@@ -185,6 +186,10 @@ const props = defineProps({
   generationRules: {
     type: String,
     required: true,
+  },
+  teraEnabled: {
+    type: Boolean,
+    default: null,
   },
   readOnly: {
     type: Boolean,
@@ -418,6 +423,7 @@ function buildEditPayload(pokemon) {
     megaForm: pokemon.megaForm || null,
     megaTypes: pokemon.megaTypes || null,
     megaSpriteId: pokemon.megaSpriteId || null,
+    teraType: pokemon.teraType || null,
     spriteVariant: pokemon.spriteVariant || 'default',
     catchLocation: pokemon.catchLocation || null,
     nickname: pokemon.nickname || null,

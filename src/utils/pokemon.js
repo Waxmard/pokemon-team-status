@@ -67,6 +67,7 @@ const MEMBER_FIELD_DEFAULTS = {
   megaForm: null,
   megaTypes: null,
   megaSpriteId: null,
+  teraType: null,
   spriteVariant: 'default',
   nickname: null,
   catchLocation: null,
