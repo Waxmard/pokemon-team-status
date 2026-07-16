@@ -1,0 +1,7 @@
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      glob: "*.{js,vue}"
+      run: npm run check:staged -- {staged_files}
+      stage_fixed: true

@@ -1,0 +1,8 @@
+User POV: a player planning a Pokemon run (solo or Soul Link). "User-facing" = what changes
+for someone using the team-status app — team/box management, gym weakness scoring, swap and
+type suggestions, Soul Link sync.
+
+- Data-only changes to Pokemon/ability/berry/move definitions (src/data/*) → fix if correcting
+  wrong data, feat if adding new entries not yet supported
+- Changes to the type-calc scoring algorithm (src/utils/typeCalc.js) → fix if correcting a
+  scoring bug, feat if adding a new mechanic

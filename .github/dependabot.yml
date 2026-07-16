@@ -4,8 +4,14 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     target-branch: "main"
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
     ignore:
       - dependency-name: "vite"
         versions: [">=8"]
@@ -15,3 +21,8 @@ updates:
     schedule:
       interval: "weekly"
     target-branch: "main"
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
