@@ -5,7 +5,6 @@ import {
   isEmptySoloRun,
   mapPersistedSoloSnapshotToRunState,
   mapSoloRunStateToPersistedSnapshot,
-  sanitizePersistedSoloRunSnapshot,
 } from '../utils/runSnapshot.js'
 import { createRunIndexManager } from './createRunIndexManager.js'
 
@@ -48,23 +47,20 @@ async function applySnapshotToStores(snapshot, generationRulesFallback = null) {
   ])
 }
 
+// mapPersistedSoloSnapshotToRunState sanitizes internally — pass fields
+// through as-is (rather than re-listing each one) so new snapshot fields
+// don't silently get dropped on their way into per-run storage.
 function toPlainPersistedSnapshot(snapshot) {
   const normalizedSnapshot = mapSoloRunStateToPersistedSnapshot(
-    mapPersistedSoloSnapshotToRunState(
-      sanitizePersistedSoloRunSnapshot({
-        team: snapshot?.team ?? [],
-        box: snapshot?.box ?? [],
-        dead: snapshot?.dead ?? [],
-        defeatedGyms: snapshot?.defeatedGyms ?? [],
-        pinnedGym: snapshot?.pinnedGym ?? null,
-        progressUpdatedAt: snapshot?.progressUpdatedAt ?? null,
-        generationRules:
-          snapshot?.generationRules ?? DEFAULT_GENERATION_RULESET,
-        generationRulesUpdatedAt: snapshot?.generationRulesUpdatedAt ?? null,
-        teraEnabled: snapshot?.teraEnabled ?? false,
-        teraEnabledUpdatedAt: snapshot?.teraEnabledUpdatedAt ?? null,
-      }),
-    ),
+    mapPersistedSoloSnapshotToRunState({
+      ...snapshot,
+      team: snapshot?.team ?? [],
+      box: snapshot?.box ?? [],
+      dead: snapshot?.dead ?? [],
+      defeatedGyms: snapshot?.defeatedGyms ?? [],
+      pinnedGym: snapshot?.pinnedGym ?? null,
+      generationRules: snapshot?.generationRules ?? DEFAULT_GENERATION_RULESET,
+    }),
   )
 
   return JSON.parse(
