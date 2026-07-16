@@ -28,6 +28,19 @@ function createDefaultSnapshot() {
   )
 }
 
+async function applySnapshotToStores(snapshot, generationRulesFallback = null) {
+  await Promise.all([
+    repository.persistSoloTeam(snapshot.team ?? []),
+    repository.persistSoloBox(snapshot.box ?? []),
+    repository.persistSoloDead(snapshot.dead ?? []),
+    repository.persistSoloDefeatedGyms(snapshot.defeatedGyms ?? []),
+    repository.persistSoloPinnedGym(snapshot.pinnedGym ?? null),
+    repository.persistSoloGenerationRules(
+      snapshot.generationRules ?? generationRulesFallback,
+    ),
+  ])
+}
+
 function toPlainPersistedSnapshot(snapshot) {
   const normalizedSnapshot = mapSoloRunStateToPersistedSnapshot(
     mapPersistedSoloSnapshotToRunState(
@@ -108,16 +121,7 @@ export function useSoloRunManager() {
   async function initializeRun(snapshot) {
     const snapshotWithMeta = mergeSnapshotWithRunMeta(snapshot, null)
 
-    await Promise.all([
-      repository.persistSoloTeam(snapshotWithMeta.team ?? []),
-      repository.persistSoloBox(snapshotWithMeta.box ?? []),
-      repository.persistSoloDead(snapshotWithMeta.dead ?? []),
-      repository.persistSoloDefeatedGyms(snapshotWithMeta.defeatedGyms ?? []),
-      repository.persistSoloPinnedGym(snapshotWithMeta.pinnedGym ?? null),
-      repository.persistSoloGenerationRules(
-        snapshotWithMeta.generationRules ?? DEFAULT_GENERATION_RULESET,
-      ),
-    ])
+    await applySnapshotToStores(snapshotWithMeta, DEFAULT_GENERATION_RULESET)
 
     await registerNewRun(snapshotWithMeta)
   }
@@ -206,36 +210,28 @@ export function useSoloRunManager() {
     await persistRunSnapshot(currentId, snapshot)
   }
 
+  async function retirePreviousRun(previousRunId, currentSnapshot) {
+    if (!currentSnapshot || !previousRunId) return
+    if (isEmptySoloRun(currentSnapshot)) {
+      await deleteRun(previousRunId)
+    } else {
+      await saveCurrentRunToIndex(currentSnapshot)
+    }
+  }
+
   async function switchToRun(targetRunId, currentSnapshot) {
     if (_switching) return null
     _switching = true
 
     try {
-      const previousRunId = runIndex.value?.activeRunId
-      if (currentSnapshot && previousRunId) {
-        if (isEmptySoloRun(currentSnapshot)) {
-          await deleteRun(previousRunId)
-        } else {
-          await saveCurrentRunToIndex(currentSnapshot)
-        }
-      }
+      await retirePreviousRun(runIndex.value?.activeRunId, currentSnapshot)
 
       const targetSnapshot = await repository.loadSoloRun(targetRunId)
       if (!targetSnapshot) {
         throw new Error(`Run not found: ${targetRunId}`)
       }
 
-      // Write target snapshot to the main solo stores so loadData() picks it up
-      await Promise.all([
-        repository.persistSoloTeam(targetSnapshot.team ?? []),
-        repository.persistSoloBox(targetSnapshot.box ?? []),
-        repository.persistSoloDead(targetSnapshot.dead ?? []),
-        repository.persistSoloDefeatedGyms(targetSnapshot.defeatedGyms ?? []),
-        repository.persistSoloPinnedGym(targetSnapshot.pinnedGym ?? null),
-        repository.persistSoloGenerationRules(
-          targetSnapshot.generationRules ?? null,
-        ),
-      ])
+      await applySnapshotToStores(targetSnapshot)
 
       runIndex.value = {
         ...runIndex.value,

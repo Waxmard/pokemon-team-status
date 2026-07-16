@@ -5,7 +5,6 @@ export function getSpriteUrl(pokemonName, variant = 'default') {
   if (index === -1) return null
 
   const pokemon = POKEMON_DATA[index]
-  // Use spriteId if present (for alternate forms), otherwise use array index + 1
   const id = pokemon.spriteId ?? index + 1
   // Female variants have no HD artwork — return small sprite directly
   if (variant === 'female')
@@ -23,10 +22,8 @@ export function getSmallSpriteUrl(pokemonName, variant = 'default') {
   const pokemon = POKEMON_DATA[index]
   const id = pokemon.spriteId ?? index + 1
 
-  // Default variant: use bundled local sprite
   if (variant === 'default') return `/sprites/${id}.png`
 
-  // Other variants: use remote sprites (not bundled)
   const variantSegment =
     { shiny: 'shiny/', female: 'female/', 'shiny-female': 'shiny/female/' }[
       variant
@@ -40,7 +37,6 @@ export function getBerrySprite(berryName) {
   if (berryName === 'Nevermelt Ice') {
     return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/never-melt-ice.png'
   }
-  // "Occa Berry" → "occa-berry"
   const slug = berryName.toLowerCase().replace(' ', '-')
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${slug}.png`
 }
@@ -56,10 +52,7 @@ export function getMegaSpriteUrl(spriteId, variant = 'default') {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${shinySegment}${spriteId}.png`
 }
 
-/**
- * Generate a unique Pokemon ID with an optional suffix for source identification
- * @param {'team' | 'box' | 'temp'} source - The source/destination of the Pokemon
- */
+/** @param {'team' | 'box' | 'temp'} source */
 export function generatePokemonId(source = 'team') {
   const base = Date.now().toString()
   if (source === 'team') return base
@@ -89,11 +82,7 @@ export function pickMemberFields(source) {
   return result
 }
 
-/**
- * Build a Pokemon member object from draft action state or an existing Pokemon
- * @param {Object} source - Either draftAction.value or an existing Pokemon object
- * @param {Object} options - Optional overrides (id, etc.)
- */
+/** @param {Object} source - draftAction.value or an existing Pokemon object */
 export function buildPokemonMember(source, options = {}) {
   const isDraft = !!source.pokemon
   return {

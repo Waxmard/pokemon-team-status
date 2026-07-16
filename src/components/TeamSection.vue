@@ -258,7 +258,6 @@ function getRulesetPokemonData(name) {
   return getPokemonDataForRules(name, props.generationRules)
 }
 
-// Sprite URL for the pokemon "in hand" during swap mode
 const swapPokemonSpriteUrl = computed(() => {
   if (!swapMode.value || !draftAction.value?.pokemon) return null
   return resolveSpriteUrl(draftAction.value.pokemon.name, {
@@ -301,25 +300,21 @@ function handleDraftWrapperPointerUp(event) {
 }
 
 function handleModeClick() {
-  // If in death box, clicking toggle returns to box
   if (viewMode.value === 'dead') {
     viewMode.value = 'box'
     emit('exitDeathBox')
     return
   }
-  // If in swap mode, clicking toggle cancels swap
   if (swapMode.value) {
     if (props.readOnly) return
     emit('cancelSwap')
     return
   }
-  // If editing a team or box Pokemon, start swap mode
   if (isEditingForSwap.value) {
     if (props.readOnly) return
     enterSwapMode()
     return
   }
-  // Normal toggle behavior
   toggleViewMode()
 }
 
@@ -333,7 +328,6 @@ function handleConfirmSwap() {
   exitSwapMode()
 }
 
-// Reset to team view when switching players
 watch(
   () => props.playerId,
   () => {
@@ -341,7 +335,6 @@ watch(
   },
 )
 
-// Enter/exit death box view from external control
 watch(
   () => props.deathBoxMode,
   (isDeathBox) => {
@@ -349,7 +342,6 @@ watch(
   },
 )
 
-// Switch to opposite view when entering swap mode, reset to team view when exiting
 watch(swapMode, (isSwapMode) => {
   if (isSwapMode) {
     // Show opposite view: editing team → show box, editing box → show team
@@ -359,7 +351,6 @@ watch(swapMode, (isSwapMode) => {
   }
 })
 
-// Number of empty box slots to show in swap mode (when editing a team Pokemon)
 const emptyBoxSlotCount = computed(() => {
   // Show 1 empty slot when box is empty (so there's something to interact with)
   if (viewMode.value === 'box' && !swapMode.value && props.box.length === 0)
@@ -376,29 +367,24 @@ const emptyBoxSlotCount = computed(() => {
   return 0
 })
 
-// Number of empty team slots to show in swap mode (max 1)
 const emptyTeamSlotCount = computed(() => {
   // Always show 1 empty slot if team is empty (so there's something to interact with)
   if (props.team.length === 0 && viewMode.value === 'team' && !swapMode.value)
     return 1
-  // In swap mode, show empty slot if team has room
   if (!swapMode.value || viewMode.value !== 'team') return 0
   return props.team.length < 6 ? 1 : 0
 })
 
-// Handle clicking a team slot in swap mode - perform immediate swap
 function handleSwapSelect(targetId) {
   if (!props.readOnly && swapMode.value) {
     emit('immediateSwap', targetId)
   }
 }
 
-// Show draft panel for add/edit modes (but not in swap mode)
 const showDraftPanel = computed(() => {
   return !!draftAction.value && !swapMode.value && !props.readOnly
 })
 
-// Detect when editing a team or box Pokemon (for showing swap icon in mode toggle)
 const isEditingForSwap = computed(() => {
   return (
     showDraftPanel.value &&
@@ -406,12 +392,10 @@ const isEditingForSwap = computed(() => {
   )
 })
 
-// Detect when editing (for showing delete button)
 const isEditing = computed(() => {
   return draftAction.value?.type === 'edit' && !swapMode.value
 })
 
-// Detect when editing a dead Pokemon (for showing revive button)
 const isEditingDead = computed(() => {
   return draftAction.value?.isDeadPokemon && !swapMode.value
 })
@@ -643,7 +627,6 @@ function handleDeleteDeadPokemon(id) {
   margin: 0 calc(-1 * var(--space-3));
 }
 
-/* Content fade out/in (grid and panel transitions) */
 .content-fade-enter-active,
 .content-fade-leave-active {
   transition: opacity var(--transition-base), transform var(--transition-base);

@@ -391,7 +391,6 @@ const swapSuggestion = computed(() => {
   })
 
   if (isTeamMember) {
-    // Editing team member: find best box member to swap in
     // Build a draft team reflecting the user's current edits
     const draftTeam = props.team.map((p) =>
       p.id === currentMember.id ? currentMember : p,
@@ -406,7 +405,6 @@ const swapSuggestion = computed(() => {
       effectiveGenerationRules.value,
     )
   } else {
-    // Editing box member: find best team member to replace
     return findBestSwap(
       props.team,
       currentMember,
@@ -456,7 +454,6 @@ function closeField() {
   showSpecialMoveDropdown.value = false
 }
 
-// Template refs for auto-focus
 const pokemonInputRef = ref(null)
 
 function focusPokemonInput() {
@@ -503,7 +500,6 @@ const previewTypes = computed(() => {
   return effectiveDraftPokemon.value?.types || []
 })
 
-// Initialize form state when draftAction changes
 watch(
   draftAction,
   (action) => {
@@ -525,7 +521,6 @@ watch(effectiveGenerationRules, (ruleset) => {
 
 const isTouchDevice = window.matchMedia('(pointer: coarse)').matches
 
-// Auto-focus Pokemon name field on open only if empty
 onMounted(() => {
   nextTick(() => {
     // Scroll page to top (mobile only — avoids jarring jumps on desktop)
@@ -533,14 +528,12 @@ onMounted(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    // Existing focus logic
     if (!draftAction.value?.pokemon) {
       focusPokemonInput()
     }
   })
 })
 
-// Focus Pokemon input when starting a new add action
 watch(
   () => draftAction.value?.pokemon,
   (newPokemon, oldPokemon) => {
@@ -571,7 +564,6 @@ const fieldTitle = computed(() => {
   return titles[activeField.value] ?? name ?? 'Choose Pokemon'
 })
 
-// Probe for female sprite availability per-Pokemon
 const femaleAvailable = ref(false)
 
 watch(
@@ -652,7 +644,6 @@ const canEvolve = computed(() => {
 const evolutionOptions = computed(() => {
   const evo = effectiveDraftPokemon.value?.evolvesTo
   const evoList = evo ? [evo].flat() : []
-  // Add mega options as special entries
   const megas = megaOptions.value.map((mega) => ({
     isMega: true,
     form: mega.form,
@@ -685,7 +676,6 @@ function isCurrentMega(option) {
 }
 
 function evolveTo(option) {
-  // Handle mega evolution option
   if (option.isMega) {
     // Toggle mega: if already selected, deselect (no animation)
     if (draftAction.value?.megaForm === option.form) {
@@ -715,7 +705,7 @@ function evolveTo(option) {
     return
   }
 
-  // Handle regular evolution (option is just a string name)
+  // option is a plain string name here (mega options are objects, handled above)
   const pokemon = getPokemonDataForRules(option, effectiveGenerationRules.value)
   if (pokemon) {
     showEvolveOptions.value = false
@@ -743,7 +733,6 @@ function getTypeBackground(type, selected = false) {
   }
 }
 
-// Wizard-related computed properties
 const relevantBerries = computed(() => {
   if (!effectiveDraftPokemon.value) return []
   const weakTypes = activeTypes.value.filter((attackType) => {
@@ -785,7 +774,6 @@ const relevantBerries = computed(() => {
   return berries
 })
 
-// Move selection helpers for wizard
 const selectedMoveCount = computed(() => {
   return draftAction.value?.moves?.length || 0
 })
@@ -807,21 +795,18 @@ function toggleMoveType(type) {
   const existingIndex = moves.indexOf(type)
 
   if (existingIndex === -1) {
-    // Add the move (no limit)
+    // No cap on move count
     moves.push(type)
   } else {
-    // Remove the move
     moves.splice(existingIndex, 1)
   }
   updateMoves(moves)
 }
 
-// Special move helpers
 const specialMoveOptions = computed(() =>
   filterOptions(SPECIAL_MOVE_NAMES, specialMoveQuery.value),
 )
 
-// Ability autocomplete helpers
 const abilityAutocompleteOptions = computed(() =>
   filterOptions(ABILITY_NAMES, abilityQuery.value),
 )
@@ -860,7 +845,6 @@ function clearSpecialMove() {
   updateSpecialMove(null)
 }
 
-// Catch location state
 const catchLocationQuery = ref('')
 
 function locationMatchesQuery(location, query) {
@@ -1078,7 +1062,6 @@ defineExpose({ openField })
   cursor: not-allowed;
 }
 
-/* Wizard mode styles */
 .wizard-mode {
   display: flex;
   flex-direction: column;

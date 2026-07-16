@@ -737,8 +737,6 @@ function selectPlayerNameInput() {
   playerNameInput.value?.select()
 }
 
-// --- Session management ---
-
 async function joinSessionFlow({
   saveCurrentRun,
   unsubscribe,
@@ -906,7 +904,6 @@ function getRulesetPokemonData(name) {
   return getPokemonDataForRules(name, generationRules.value)
 }
 
-// Store original state when swap mode starts
 const swapOriginalState = ref(null)
 
 watch(swapMode, (isSwapMode) => {
@@ -993,7 +990,6 @@ async function startNewRun(mode) {
   unsubscribeSolo()
 
   if (mode === RUN_MODES.SOLO) {
-    // Save current solo run before starting a new one
     if (isSoloMode.value && soloActiveRunId.value) {
       const currentSnapshot = buildSoloSnapshot()
       if (isEmptySoloRun(currentSnapshot)) {
@@ -1031,7 +1027,6 @@ async function startNewRun(mode) {
   dismissAllDialogs()
 }
 
-// Helper to construct the hypothetical draft team
 function getDraftTeam() {
   if (!draftAction.value?.pokemon) return team.value
 
@@ -1043,7 +1038,6 @@ function getDraftTeam() {
     draftAction.value.type === 'edit' &&
     !draftAction.value.isBoxPokemon
   ) {
-    // Editing a team Pokemon
     return team.value.map((p) =>
       p.id === draftAction.value.editId ? draft : p,
     )
@@ -1051,7 +1045,6 @@ function getDraftTeam() {
   return team.value
 }
 
-// Computed
 const hasDraft = computed(() => {
   return (
     draftAction.value?.pokemon &&
@@ -1178,7 +1171,6 @@ async function handleTeamToBoxSwap(targetId, inHandPokemon) {
   updateEditId(newTeamMember.id)
 }
 
-// Handle immediate swap when clicking a slot in swap mode
 async function handleImmediateSwap(targetId) {
   if (!draftAction.value?.pokemon) return
 
@@ -1350,7 +1342,6 @@ async function autosaveDraft() {
   )
 }
 
-// Methods
 async function confirmDraft() {
   if (!draftAction.value) return
 
@@ -1388,7 +1379,6 @@ async function confirmDraft() {
         ),
       )
     } else {
-      // Editing a team Pokemon
       await persistTeam(
         team.value.map((p) =>
           p.id === draftAction.value.editId
@@ -1535,10 +1525,8 @@ onMounted(async () => {
 
   const startupMode = await restoreMostRecentRun(initialRunMode)
 
-  // Init sync session and sync before showing content so session metadata
-  // and merged state are final on first render (avoids team reorder flash).
-  // Race against a timeout so offline users aren't blocked waiting for
-  // Supabase calls that will never resolve.
+  // Sync must settle before first render to avoid a team-reorder flash;
+  // race a timeout so offline users aren't stuck waiting on Supabase.
   if (startupMode === RUN_MODES.SOLO && isSoloSyncAvailable) {
     const syncPromise = (async () => {
       try {

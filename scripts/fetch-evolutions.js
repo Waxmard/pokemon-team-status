@@ -1,13 +1,5 @@
-/**
- * Fetches evolution data from PokeAPI and updates pokemon.js with evolvesTo fields.
- *
- * For each Pokemon in POKEMON_DATA, adds evolvesTo field:
- * - String for single evolution (e.g., "Ivysaur")
- * - Array for branching evolutions (e.g., ["Vaporeon", "Jolteon", ...])
- * - Omitted for final forms (no evolution)
- *
- * Usage: node scripts/fetch-evolutions.js
- */
+// Fetches PokeAPI evolution data, writes evolvesTo into pokemon.js entries (string | array | omitted).
+// Usage: node scripts/fetch-evolutions.js
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -18,9 +10,8 @@ const __dirname = path.dirname(__filename)
 
 const POKEMON_FILE = path.join(__dirname, '../src/data/pokemon.js')
 
-// Rate limiting helper
 function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 async function fetchWithRetry(url, retries = 3) {
@@ -38,10 +29,8 @@ async function fetchWithRetry(url, retries = 3) {
   }
 }
 
-// Capitalize first letter of each word, handle special cases
 function formatName(name) {
   // PokeAPI uses lowercase hyphenated names
-  // Map special cases
   const specialCases = {
     'nidoran-f': 'Nidoran\u2640',
     'nidoran-m': 'Nidoran\u2642',
@@ -57,25 +46,27 @@ function formatName(name) {
     'jangmo-o': 'Jangmo-o',
     'hakamo-o': 'Hakamo-o',
     'kommo-o': 'Kommo-o',
-    'farfetchd': "Farfetch'd",
+    farfetchd: "Farfetch'd",
   }
 
   if (specialCases[name]) {
     return specialCases[name]
   }
 
-  // Standard capitalization
-  return name.split('-').map(word =>
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ').trim()
+  return name
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+    .trim()
 }
 
-// Build evolution map from chain data
 function parseEvolutionChain(chain, evolutionMap) {
   const pokemonName = formatName(chain.species.name)
 
   if (chain.evolves_to && chain.evolves_to.length > 0) {
-    const evolutions = chain.evolves_to.map(evo => formatName(evo.species.name))
+    const evolutions = chain.evolves_to.map((evo) =>
+      formatName(evo.species.name),
+    )
 
     if (evolutions.length === 1) {
       evolutionMap[pokemonName] = evolutions[0]
@@ -83,7 +74,6 @@ function parseEvolutionChain(chain, evolutionMap) {
       evolutionMap[pokemonName] = evolutions
     }
 
-    // Recursively process each evolution branch
     for (const evo of chain.evolves_to) {
       parseEvolutionChain(evo, evolutionMap)
     }
@@ -124,19 +114,18 @@ function updatePokemonFile(evolutionMap) {
   console.log('Reading pokemon.js...')
   const content = fs.readFileSync(POKEMON_FILE, 'utf-8')
 
-  // Parse the existing POKEMON_DATA array
   const dataMatch = content.match(/export const POKEMON_DATA = \[([\s\S]*?)\]/)
   if (!dataMatch) {
     throw new Error('Could not find POKEMON_DATA in pokemon.js')
   }
 
-  // Extract all Pokemon entries
-  const entriesRegex = /\{ name: "([^"]+)", types: \[([^\]]*)](?:, evolvesTo: (?:"[^"]+"|\[[^\]]*]))? \}/g
+  const entriesRegex =
+    /\{ name: "([^"]+)", types: \[([^\]]*)](?:, evolvesTo: (?:"[^"]+"|\[[^\]]*]))? \}/g
 
   let newContent = content
-  let match
+  let match = entriesRegex.exec(content)
 
-  while ((match = entriesRegex.exec(content)) !== null) {
+  while (match !== null) {
     const fullMatch = match[0]
     const pokemonName = match[1]
     const typesStr = match[2]
@@ -152,11 +141,11 @@ function updatePokemonFile(evolutionMap) {
         newEntry = `{ name: "${pokemonName}", types: [${typesStr}], evolvesTo: "${evolution}" }`
       }
     } else {
-      // No evolution - keep just name and types
       newEntry = `{ name: "${pokemonName}", types: [${typesStr}] }`
     }
 
     newContent = newContent.replace(fullMatch, newEntry)
+    match = entriesRegex.exec(content)
   }
 
   console.log('Writing updated pokemon.js...')
@@ -166,9 +155,10 @@ function updatePokemonFile(evolutionMap) {
 try {
   const evolutionMap = await fetchAllEvolutionChains()
 
-  console.log(`\nFound evolutions for ${Object.keys(evolutionMap).length} Pokemon`)
+  console.log(
+    `\nFound evolutions for ${Object.keys(evolutionMap).length} Pokemon`,
+  )
 
-  // Log some examples
   console.log('\nExamples:')
   console.log('  Bulbasaur ->', evolutionMap['Bulbasaur'])
   console.log('  Eevee ->', evolutionMap['Eevee'])
