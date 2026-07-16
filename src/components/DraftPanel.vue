@@ -1196,7 +1196,7 @@ defineExpose({ openField })
 }
 
 .wizard-header-spacer {
-  width: 2rem;
+  flex: 1;
 }
 
 .wizard-title-input {
