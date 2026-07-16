@@ -113,6 +113,7 @@ describe('useSoulLinkStore', () => {
         mode: RUN_MODES.SOUL_LINK,
         rules: {
           generation: DEFAULT_GENERATION_RULESET,
+          teraEnabled: false,
         },
       }),
     )
