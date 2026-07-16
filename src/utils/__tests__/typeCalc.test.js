@@ -25,6 +25,7 @@ function member(overrides = {}) {
     berry: null,
     specialMove: null,
     megaTypes: [],
+    teraType: null,
     ...overrides,
   }
 }
@@ -338,6 +339,35 @@ describe('calculateScore', () => {
     const team = [member({ types: ['steel'], megaTypes: ['steel'] })]
     // normal->steel = 0.5 -> +1, mega steel skipped (already base)
     expect(calculateScore('normal', team)).toBe(1)
+  })
+
+  it('adds tera type resistance-only points', () => {
+    // Normal-type with teraType: 'steel' vs normal gym
+    // Base: normal->normal = 1 -> 0
+    // Tera: normal->steel = 0.5 -> +1
+    // Total: 1
+    const team = [member({ teraType: 'steel' })]
+    expect(calculateScore('normal', team)).toBe(1)
+  })
+
+  it('tera type skips base types', () => {
+    const team = [member({ types: ['steel'], teraType: 'steel' })]
+    // normal->steel = 0.5 -> +1, tera steel skipped (already base)
+    expect(calculateScore('normal', team)).toBe(1)
+  })
+
+  it('a different tera type changes the score against the same gym', () => {
+    // Same base Pokemon and gym — only the tera type differs
+    const teraSteel = [member({ types: ['normal'], teraType: 'steel' })]
+    const teraGrass = [member({ types: ['normal'], teraType: 'grass' })]
+
+    // normal->steel = 0.5 -> +1 bonus resistance point from tera
+    // normal->grass = 1 -> neutral, no bonus
+    expect(calculateScore('normal', teraSteel)).toBe(1)
+    expect(calculateScore('normal', teraGrass)).toBe(0)
+    expect(calculateScore('normal', teraSteel)).toBeGreaterThan(
+      calculateScore('normal', teraGrass),
+    )
   })
 
   it('sums scores across multiple team members', () => {

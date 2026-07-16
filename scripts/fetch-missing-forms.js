@@ -1,12 +1,5 @@
-/**
- * Fetches missing Pokemon forms from PokeAPI and outputs entries for pokemon.js.
- *
- * Forms include: Rotom, Alolan, Galarian, Paldean, Oricorio, Wormadam, Shaymin, Castform
- *
- * Usage: node scripts/fetch-missing-forms.js
- */
-
-// API names to fetch
+// Fetches missing Pokemon forms (Rotom, regional, Oricorio, Wormadam, Shaymin, Castform)
+// from PokeAPI; prints entries for pokemon.js. Usage: node scripts/fetch-missing-forms.js
 const MISSING_FORMS = [
   // Rotom forms
   'rotom-heat',
@@ -67,7 +60,6 @@ const MISSING_FORMS = [
   'castform-snowy',
 ]
 
-// Rate limiting helper
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -87,7 +79,6 @@ async function fetchWithRetry(url, retries = 3) {
   }
 }
 
-// Format API name to display name
 function formatDisplayName(apiName) {
   // Regional forms: suffix becomes prefix
   if (apiName.endsWith('-alola')) {
@@ -103,18 +94,15 @@ function formatDisplayName(apiName) {
     return 'Paldean ' + capitalize(base)
   }
 
-  // Special handling for darmanitan-standard-galar
   if (apiName === 'darmanitan-standard-galar') {
     return 'Galarian Darmanitan'
   }
 
-  // Rotom forms: Rotom-Heat, Rotom-Wash, etc.
   if (apiName.startsWith('rotom-')) {
     const form = apiName.replace('rotom-', '')
     return 'Rotom-' + capitalize(form)
   }
 
-  // Oricorio styles: Oricorio Pom-Pom, Oricorio Pa'u, Oricorio Sensu
   if (apiName.startsWith('oricorio-')) {
     const style = apiName.replace('oricorio-', '')
     if (style === 'pom-pom') return 'Oricorio Pom-Pom'
@@ -122,24 +110,20 @@ function formatDisplayName(apiName) {
     if (style === 'sensu') return 'Oricorio Sensu'
   }
 
-  // Wormadam forms: Wormadam-Sandy, Wormadam-Trash
   if (apiName.startsWith('wormadam-')) {
     const form = apiName.replace('wormadam-', '')
     return 'Wormadam-' + capitalize(form)
   }
 
-  // Shaymin: Shaymin-Sky
   if (apiName === 'shaymin-sky') {
     return 'Shaymin-Sky'
   }
 
-  // Castform: Castform-Sunny, Castform-Rainy, Castform-Snowy
   if (apiName.startsWith('castform-')) {
     const form = apiName.replace('castform-', '')
     return 'Castform-' + capitalize(form)
   }
 
-  // Fallback
   return apiName
     .split('-')
     .map((w) => capitalize(w))
@@ -147,7 +131,6 @@ function formatDisplayName(apiName) {
 }
 
 function capitalize(str) {
-  // Handle special cases
   const specialCases = {
     farfetchd: "Farfetch'd",
     'mr-mime': 'Mr. Mime',

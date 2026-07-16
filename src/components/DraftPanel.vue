@@ -145,6 +145,20 @@
                   ⬆
                 </button>
               </template>
+              <template v-if="effectiveTeraEnabled" #bottom-center>
+                <button
+                  class="tera-type-btn"
+                  :style="getTypeBackground(draftAction.teraType || previewTypes[0], true)"
+                  @click="openField('tera')"
+                  aria-label="Tera Type"
+                >
+                  <img
+                    :src="getTypeIcon(draftAction.teraType || previewTypes[0])"
+                    :alt="draftAction.teraType || previewTypes[0]"
+                    class="type-icon"
+                  />
+                </button>
+              </template>
               <template #bottom-right>
                 <input
                   v-if="!isSoulLinkMode"
@@ -259,6 +273,22 @@
             </button>
           </div>
         </div>
+
+        <div v-else-if="activeField === 'tera'" class="editor-view">
+          <div class="moves-type-grid">
+            <button
+              v-for="type in activeTypes"
+              :key="type"
+              @click="toggleTeraType(type)"
+              class="move-type-option"
+              :class="{ selected: isTeraTypeSelected(type) }"
+              :style="getTypeBackground(type, isTeraTypeSelected(type))"
+              :title="capitalize(type)"
+            >
+              <img :src="getTypeIcon(type)" :alt="type" class="type-icon" />
+            </button>
+          </div>
+        </div>
       </template>
     </div>
 
@@ -331,6 +361,10 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  teraEnabled: {
+    type: Boolean,
+    default: null,
+  },
 })
 
 const emit = defineEmits(['confirm', 'cancel', 'swapSuggestion', 'autosave'])
@@ -345,6 +379,7 @@ const {
   updateCatchLocation,
   updateNickname,
   updateMegaForm,
+  updateTeraType,
   updateSpriteVariant,
 } = useDraftAction()
 
@@ -354,6 +389,7 @@ const {
   defeatedGyms: storageDefeatedGyms,
   pinnedGym: storagePinnedGym,
   generationRules: storageGenerationRules,
+  teraEnabled: storageTeraEnabled,
 } = useRunStore()
 
 // Use props when provided, fall back to solo store
@@ -366,6 +402,9 @@ const effectivePinnedGym = computed(
 )
 const effectiveGenerationRules = computed(
   () => props.generationRules ?? storageGenerationRules.value,
+)
+const effectiveTeraEnabled = computed(
+  () => props.teraEnabled ?? storageTeraEnabled.value,
 )
 
 // Suggestion state
@@ -391,7 +430,6 @@ const swapSuggestion = computed(() => {
   })
 
   if (isTeamMember) {
-    // Editing team member: find best box member to swap in
     // Build a draft team reflecting the user's current edits
     const draftTeam = props.team.map((p) =>
       p.id === currentMember.id ? currentMember : p,
@@ -406,7 +444,6 @@ const swapSuggestion = computed(() => {
       effectiveGenerationRules.value,
     )
   } else {
-    // Editing box member: find best team member to replace
     return findBestSwap(
       props.team,
       currentMember,
@@ -456,7 +493,6 @@ function closeField() {
   showSpecialMoveDropdown.value = false
 }
 
-// Template refs for auto-focus
 const pokemonInputRef = ref(null)
 
 function focusPokemonInput() {
@@ -503,7 +539,6 @@ const previewTypes = computed(() => {
   return effectiveDraftPokemon.value?.types || []
 })
 
-// Initialize form state when draftAction changes
 watch(
   draftAction,
   (action) => {
@@ -525,7 +560,6 @@ watch(effectiveGenerationRules, (ruleset) => {
 
 const isTouchDevice = window.matchMedia('(pointer: coarse)').matches
 
-// Auto-focus Pokemon name field on open only if empty
 onMounted(() => {
   nextTick(() => {
     // Scroll page to top (mobile only — avoids jarring jumps on desktop)
@@ -533,14 +567,12 @@ onMounted(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    // Existing focus logic
     if (!draftAction.value?.pokemon) {
       focusPokemonInput()
     }
   })
 })
 
-// Focus Pokemon input when starting a new add action
 watch(
   () => draftAction.value?.pokemon,
   (newPokemon, oldPokemon) => {
@@ -567,11 +599,11 @@ const fieldTitle = computed(() => {
     catchLocation: 'Catch Location',
     details: `${name}'s Details`,
     moves: `${name}'s Move Types`,
+    tera: `${name}'s Tera Type`,
   }
   return titles[activeField.value] ?? name ?? 'Choose Pokemon'
 })
 
-// Probe for female sprite availability per-Pokemon
 const femaleAvailable = ref(false)
 
 watch(
@@ -652,7 +684,6 @@ const canEvolve = computed(() => {
 const evolutionOptions = computed(() => {
   const evo = effectiveDraftPokemon.value?.evolvesTo
   const evoList = evo ? [evo].flat() : []
-  // Add mega options as special entries
   const megas = megaOptions.value.map((mega) => ({
     isMega: true,
     form: mega.form,
@@ -685,7 +716,6 @@ function isCurrentMega(option) {
 }
 
 function evolveTo(option) {
-  // Handle mega evolution option
   if (option.isMega) {
     // Toggle mega: if already selected, deselect (no animation)
     if (draftAction.value?.megaForm === option.form) {
@@ -715,7 +745,7 @@ function evolveTo(option) {
     return
   }
 
-  // Handle regular evolution (option is just a string name)
+  // option is a plain string name here (mega options are objects, handled above)
   const pokemon = getPokemonDataForRules(option, effectiveGenerationRules.value)
   if (pokemon) {
     showEvolveOptions.value = false
@@ -743,7 +773,6 @@ function getTypeBackground(type, selected = false) {
   }
 }
 
-// Wizard-related computed properties
 const relevantBerries = computed(() => {
   if (!effectiveDraftPokemon.value) return []
   const weakTypes = activeTypes.value.filter((attackType) => {
@@ -785,7 +814,6 @@ const relevantBerries = computed(() => {
   return berries
 })
 
-// Move selection helpers for wizard
 const selectedMoveCount = computed(() => {
   return draftAction.value?.moves?.length || 0
 })
@@ -807,21 +835,37 @@ function toggleMoveType(type) {
   const existingIndex = moves.indexOf(type)
 
   if (existingIndex === -1) {
-    // Add the move (no limit)
+    // No cap on move count
     moves.push(type)
   } else {
-    // Remove the move
     moves.splice(existingIndex, 1)
   }
   updateMoves(moves)
 }
 
-// Special move helpers
+function isTeraTypeSelected(type) {
+  return draftAction.value?.teraType === type
+}
+
+function toggleTeraType(type) {
+  updateTeraType(draftAction.value?.teraType === type ? null : type)
+}
+
+watch(
+  () => draftAction.value?.pokemon,
+  (pokemon) => {
+    if (!pokemon || !effectiveTeraEnabled.value) return
+    if (!draftAction.value.teraType) {
+      updateTeraType(pokemon.types[0])
+    }
+  },
+  { immediate: true },
+)
+
 const specialMoveOptions = computed(() =>
   filterOptions(SPECIAL_MOVE_NAMES, specialMoveQuery.value),
 )
 
-// Ability autocomplete helpers
 const abilityAutocompleteOptions = computed(() =>
   filterOptions(ABILITY_NAMES, abilityQuery.value),
 )
@@ -860,7 +904,6 @@ function clearSpecialMove() {
   updateSpecialMove(null)
 }
 
-// Catch location state
 const catchLocationQuery = ref('')
 
 function locationMatchesQuery(location, query) {
@@ -1012,6 +1055,7 @@ const autosaveSignature = computed(() => {
     megaForm: action.megaForm,
     megaSpriteId: action.megaSpriteId,
     megaTypes: action.megaTypes ?? [],
+    teraType: action.teraType,
   })
 })
 
@@ -1078,7 +1122,6 @@ defineExpose({ openField })
   cursor: not-allowed;
 }
 
-/* Wizard mode styles */
 .wizard-mode {
   display: flex;
   flex-direction: column;
@@ -1153,7 +1196,7 @@ defineExpose({ openField })
 }
 
 .wizard-header-spacer {
-  width: 2rem;
+  flex: 1;
 }
 
 .wizard-title-input {
@@ -1317,6 +1360,45 @@ defineExpose({ openField })
 
 .overview-view :deep(.preview-type-list) {
   bottom: -2.5rem;
+}
+
+.tera-type-btn {
+  position: absolute;
+  bottom: -2.8rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  filter: var(--drop-shadow-icon);
+  transition: transform var(--transition-base);
+}
+
+.tera-type-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 45%, rgba(255, 255, 255, 0) 55%, rgba(255, 255, 255, 0.25) 100%);
+  pointer-events: none;
+}
+
+.tera-type-btn:active {
+  transform: translateX(-50%) scale(0.94);
+}
+
+.tera-type-btn .type-icon {
+  position: relative;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
 }
 
 .overview-search-row {

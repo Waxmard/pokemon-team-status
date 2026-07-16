@@ -49,7 +49,6 @@ const error = ref(false)
 const currentSrc = ref('')
 const hdLoaded = ref(false)
 
-// Convert high-res URL to small sprite URL
 function getSmallSpriteUrl(hdUrl) {
   // Default variant HD: .../official-artwork/25.png → /sprites/25.png (bundled)
   const defaultMatch = hdUrl.match(/\/other\/official-artwork\/(\d+\.png)$/)
@@ -65,7 +64,6 @@ function getSmallSpriteUrl(hdUrl) {
   return null
 }
 
-// Load HD sprite in background and swap when ready
 function loadHdSprite(hdUrl) {
   const img = new Image()
   img.onload = () => {
@@ -76,7 +74,6 @@ function loadHdSprite(hdUrl) {
   img.src = hdUrl
 }
 
-// Initialize with small sprite, then load HD in background
 function initSprite(hdUrl) {
   const smallUrl = getSmallSpriteUrl(hdUrl)
   hdLoaded.value = false
@@ -84,10 +81,8 @@ function initSprite(hdUrl) {
   if (smallUrl) {
     // Start with small sprite (likely pre-cached)
     currentSrc.value = smallUrl
-    // Load HD in background
     loadHdSprite(hdUrl)
   } else {
-    // No small sprite available, load HD directly
     currentSrc.value = hdUrl
   }
 }
@@ -102,7 +97,6 @@ function onError() {
     currentSrc.value = props.src
     return
   }
-  // Both failed, show error
   error.value = true
 }
 

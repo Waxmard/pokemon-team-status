@@ -29,6 +29,7 @@ import {
   normalizeRosterMembers,
   sanitizeSoulLinkProgressForRules,
   sanitizeSoulLinkRostersForRules,
+  sanitizeSoulLinkRostersForTera,
 } from '../utils/soulLinkNormalization.js'
 import { generateUUID } from '../utils/uuid.js'
 import { createSessionSync } from './useSessionSync.js'
@@ -68,6 +69,7 @@ function buildPersistableSnapshot() {
   return JSON.parse(
     JSON.stringify({
       generationRules: runState.rules.generation,
+      teraEnabled: runState.rules.teraEnabled,
       metadata: sl.metadata,
       players: sl.players,
       rosters: sl.rosters,
@@ -81,6 +83,7 @@ function buildPersistableSnapshot() {
 
 // Forward-declared so sync config can reference it before full definition
 let _setGenerationRules = null
+let _setTeraEnabled = null
 
 const sync = createSessionSync({
   getSessionId: () =>
@@ -93,11 +96,15 @@ const sync = createSessionSync({
     buildRemoteState(
       getSoulLinkState('Sync: building remote payload'),
       getSoulLinkRunState('Sync: building remote payload').rules.generation,
+      getSoulLinkRunState('Sync: building remote payload').rules.teraEnabled,
     ),
   mergeRemote: (local, remote) => mergeRemoteState(local, remote),
   onRemoteUpdate: (session) => {
     if (session.state?.generationRules) {
       _setGenerationRules?.(session.state.generationRules)
+    }
+    if (session.state?.teraEnabled != null) {
+      _setTeraEnabled?.(session.state.teraEnabled)
     }
   },
 })
@@ -151,6 +158,11 @@ const generationRules = computed(
     getSoulLinkRunState('Accessing Soul Link generation rules').rules
       .generation,
 )
+const teraEnabled = computed(
+  () =>
+    getSoulLinkRunState('Accessing Soul Link Tera Types setting').rules
+      .teraEnabled,
+)
 const localPreferences = computed(() =>
   cloneValue(getSoulLinkState('Accessing local Soul Link preferences').local),
 )
@@ -201,6 +213,33 @@ function setGenerationRules(nextGenerationRules) {
 }
 
 _setGenerationRules = setGenerationRules
+
+function setTeraEnabled(nextEnabled) {
+  const soulLinkRunState = getSoulLinkRunState(
+    'Setting Soul Link Tera Types setting',
+  )
+  const nextTeraEnabled = !!nextEnabled
+
+  internalRunState.value = {
+    ...soulLinkRunState,
+    rules: {
+      ...soulLinkRunState.rules,
+      teraEnabled: nextTeraEnabled,
+    },
+    soulLink: {
+      ...soulLinkRunState.soulLink,
+      rosters: sanitizeSoulLinkRostersForTera(
+        soulLinkRunState.soulLink.rosters,
+        nextTeraEnabled,
+      ),
+    },
+  }
+
+  repository.persistSoulLinkSnapshot(buildPersistableSnapshot()).catch(() => {})
+  sync.scheduleAutoSync()
+}
+
+_setTeraEnabled = setTeraEnabled
 
 function updatePlayer(playerId, updates) {
   const nextPlayerId = assertKnownPlayerId(
@@ -533,6 +572,7 @@ export function useSoulLinkStore() {
     const normalizedOptions = normalizeCreateLocalRunOptions(options)
     const baseRunState = createDefaultSoulLinkRunState(
       normalizedOptions.generationRules,
+      normalizedOptions.teraEnabled,
     )
 
     internalRunState.value = {
@@ -560,8 +600,14 @@ export function useSoulLinkStore() {
     return createLocalRun({ generationRules: generation })
   }
 
-  function startNewLocalSoulLinkRun(generation = generationRules.value) {
-    return createLocalRun({ generationRules: generation })
+  function startNewLocalSoulLinkRun(
+    generation = generationRules.value,
+    nextTeraEnabled = teraEnabled.value,
+  ) {
+    return createLocalRun({
+      generationRules: generation,
+      teraEnabled: nextTeraEnabled,
+    })
   }
 
   async function loadSoulLinkData() {
@@ -574,6 +620,7 @@ export function useSoulLinkStore() {
       }
       createLocalRun({
         generationRules: snapshot.generationRules,
+        teraEnabled: snapshot.teraEnabled,
         metadata: snapshot.metadata,
         players: snapshot.players,
         rosters: snapshot.rosters,
@@ -597,6 +644,7 @@ export function useSoulLinkStore() {
     const remoteState = buildRemoteState(
       soulLinkState,
       currentRunState.rules.generation,
+      currentRunState.rules.teraEnabled,
     )
 
     let lastError = null
@@ -658,6 +706,7 @@ export function useSoulLinkStore() {
 
     createLocalRun({
       generationRules: remoteState.generationRules,
+      teraEnabled: remoteState.teraEnabled,
       metadata: {
         sessionId: session.id,
         inviteCode: session.inviteCode,
@@ -721,6 +770,7 @@ export function useSoulLinkStore() {
     rosters,
     gymProgress,
     generationRules,
+    teraEnabled,
     localPreferences,
     activity,
     sync: syncData,
@@ -731,6 +781,7 @@ export function useSoulLinkStore() {
     startNewLocalSoulLinkRun,
     updateSessionMetadata,
     setGenerationRules,
+    setTeraEnabled,
     updatePlayer,
     setCachedPlayerSlot,
     setLocalPreferences,

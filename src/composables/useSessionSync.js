@@ -8,8 +8,7 @@ function getSupabaseRepository() {
 }
 
 /**
- * Create a session sync instance that handles realtime bidirectional sync
- * with Supabase. Both solo and soul link modes consume this.
+ * Realtime bidirectional session sync with Supabase; shared by solo and soul link modes.
  *
  * @param {Object} config
  * @param {() => string|null} config.getSessionId

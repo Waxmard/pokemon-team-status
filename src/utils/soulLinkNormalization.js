@@ -185,6 +185,28 @@ export function sanitizeSoulLinkRostersForRules(rosters, ruleset) {
   )
 }
 
+export function sanitizeSoulLinkRostersForTera(rosters, teraEnabled) {
+  if (teraEnabled) return rosters
+
+  return Object.fromEntries(
+    Object.entries(rosters).map(([playerId, roster]) => [
+      playerId,
+      {
+        ...roster,
+        team: roster.team.map((member) =>
+          member.teraType ? { ...member, teraType: null } : member,
+        ),
+        box: roster.box.map((member) =>
+          member.teraType ? { ...member, teraType: null } : member,
+        ),
+        dead: (roster.dead ?? []).map((member) =>
+          member.teraType ? { ...member, teraType: null } : member,
+        ),
+      },
+    ]),
+  )
+}
+
 export function sanitizeSoulLinkProgressForRules(progress, ruleset) {
   return Object.fromEntries(
     Object.entries(progress).map(([playerId, playerProgress]) => [
@@ -238,6 +260,7 @@ export function normalizeCreateLocalRunOptions(options = {}) {
     generationRules: normalizeGenerationRules(
       options.generationRules ?? DEFAULT_GENERATION_RULESET,
     ),
+    teraEnabled: !!options.teraEnabled,
     metadata: {
       ...baseSoulLinkState.metadata,
       ...options.metadata,

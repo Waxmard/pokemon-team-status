@@ -30,6 +30,9 @@ export function normalizeGenerationRules(ruleset) {
 
 export function createDefaultSoloRunState(
   generationRules = DEFAULT_GENERATION_RULESET,
+  teraEnabled = false,
+  generationRulesUpdatedAt = null,
+  teraEnabledUpdatedAt = null,
 ) {
   return {
     mode: RUN_MODES.SOLO,
@@ -40,12 +43,16 @@ export function createDefaultSoloRunState(
     progress: createDefaultSoloProgress(),
     rules: {
       generation: normalizeGenerationRules(generationRules),
+      teraEnabled: !!teraEnabled,
+      generationRulesUpdatedAt,
+      teraEnabledUpdatedAt,
     },
   }
 }
 
 export function createDefaultSoulLinkRunState(
   generationRules = DEFAULT_GENERATION_RULESET,
+  teraEnabled = false,
 ) {
   const normalizedGenerationRules = normalizeGenerationRules(generationRules)
 
@@ -53,6 +60,7 @@ export function createDefaultSoulLinkRunState(
     mode: RUN_MODES.SOUL_LINK,
     rules: {
       generation: normalizedGenerationRules,
+      teraEnabled: !!teraEnabled,
     },
     soulLink: createDefaultSoulLinkState(),
   }
@@ -92,16 +100,30 @@ export function assertSoulLinkRunState(runState, context = 'This operation') {
   return runState
 }
 
+function sanitizeTeraTypeForCollection(collection, teraEnabled) {
+  if (teraEnabled) return collection
+  return collection.map((member) =>
+    member.teraType ? { ...member, teraType: null } : member,
+  )
+}
+
 export function sanitizePersistedSoloRunSnapshot(snapshot) {
   const generationRules = normalizeGenerationRules(snapshot.generationRules)
+  const teraEnabled = !!snapshot.teraEnabled
 
   return {
     name: snapshot.name ?? null,
-    team: sanitizePokemonCollectionForRules(snapshot.team, generationRules),
-    box: sanitizePokemonCollectionForRules(snapshot.box, generationRules),
-    dead: sanitizePokemonCollectionForRules(
-      snapshot.dead ?? [],
-      generationRules,
+    team: sanitizeTeraTypeForCollection(
+      sanitizePokemonCollectionForRules(snapshot.team, generationRules),
+      teraEnabled,
+    ),
+    box: sanitizeTeraTypeForCollection(
+      sanitizePokemonCollectionForRules(snapshot.box, generationRules),
+      teraEnabled,
+    ),
+    dead: sanitizeTeraTypeForCollection(
+      sanitizePokemonCollectionForRules(snapshot.dead ?? [], generationRules),
+      teraEnabled,
     ),
     _tombstones: snapshot._tombstones ?? [],
     defeatedGyms: sanitizeDefeatedGymsForRules(
@@ -112,6 +134,8 @@ export function sanitizePersistedSoloRunSnapshot(snapshot) {
     progressUpdatedAt: snapshot.progressUpdatedAt ?? null,
     generationRules,
     generationRulesUpdatedAt: snapshot.generationRulesUpdatedAt ?? null,
+    teraEnabled,
+    teraEnabledUpdatedAt: snapshot.teraEnabledUpdatedAt ?? null,
   }
 }
 
@@ -119,7 +143,12 @@ export function mapPersistedSoloSnapshotToRunState(snapshot) {
   const sanitizedSnapshot = sanitizePersistedSoloRunSnapshot(snapshot)
 
   return {
-    ...createDefaultSoloRunState(sanitizedSnapshot.generationRules),
+    ...createDefaultSoloRunState(
+      sanitizedSnapshot.generationRules,
+      sanitizedSnapshot.teraEnabled,
+      sanitizedSnapshot.generationRulesUpdatedAt,
+      sanitizedSnapshot.teraEnabledUpdatedAt,
+    ),
     team: sanitizedSnapshot.team,
     box: sanitizedSnapshot.box,
     dead: sanitizedSnapshot.dead,
@@ -147,7 +176,10 @@ export function mapSoloRunStateToPersistedSnapshot(runState) {
     pinnedGym: soloRunState.progress.pinnedGym,
     progressUpdatedAt: soloRunState.progress.updatedAt ?? null,
     generationRules: soloRunState.rules.generation,
-    generationRulesUpdatedAt: soloRunState.rules.generationUpdatedAt ?? null,
+    generationRulesUpdatedAt:
+      soloRunState.rules.generationRulesUpdatedAt ?? null,
+    teraEnabled: soloRunState.rules.teraEnabled,
+    teraEnabledUpdatedAt: soloRunState.rules.teraEnabledUpdatedAt ?? null,
   }
 }
 

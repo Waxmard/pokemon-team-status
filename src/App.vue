@@ -48,7 +48,7 @@
       <template v-if="ready">
       <template v-if="isSoloMode">
         <TeamSection :team="team" :box="box" :dead="dead" :has-death-box="true" :death-box-mode="deathBoxMode"
-          @confirmDraft="confirmDraft" @autosaveDraft="autosaveDraft" @immediateSwap="handleImmediateSwap" :generation-rules="generationRules"
+          @confirmDraft="confirmDraft" @autosaveDraft="autosaveDraft" @immediateSwap="handleImmediateSwap" :generation-rules="generationRules" :tera-enabled="teraEnabled"
           @deleteTeamPokemon="deleteTeamPokemon" @deleteBoxPokemon="deleteBoxPokemon" @cancelSwap="handleCancelSwap"
           @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion"
           @killPokemon="handleSoloKillPokemon" @revivePokemon="handleSoloRevivePokemon"
@@ -63,6 +63,7 @@
       <SoulLinkShell
         v-else-if="!isSoloMode"
         :generation-rules="soulLinkGenerationRules"
+        :tera-enabled="soulLinkTeraEnabled"
         :viewed-player-board="viewedSoulLinkPlayerBoard"
         :draft-active="hasDraft"
         :persist-pinned-gym="handleSoulLinkPersistPinnedGym"
@@ -95,9 +96,14 @@
         <h3 class="reset-dialog-title">Options</h3>
         <div class="reset-dialog-options">
           <DialogActionSection>
-            <button class="reset-option" @click="toggleGenerationRules">
-              {{ generationRulesLabel }}
-            </button>
+            <div class="reset-option-group">
+              <button class="reset-option" @click="toggleGenerationRules">
+                {{ generationRulesLabel }}
+              </button>
+              <button class="reset-option" @click="toggleTeraTypes">
+                {{ teraTypesLabel }}
+              </button>
+            </div>
           </DialogActionSection>
           <DialogActionSection v-if="allInactiveRuns.length > 0">
             <div class="reset-option-group">
@@ -299,6 +305,8 @@ const {
   persistDead,
   generationRules,
   persistGenerationRules,
+  teraEnabled,
+  persistTeraEnabled,
   startNewSoloRun,
   resetTeamAndBox,
   resetGyms: resetGymsInStore,
@@ -320,11 +328,13 @@ const {
   rosters: soulLinkRosters,
   gymProgress: soulLinkGymProgress,
   generationRules: soulLinkGenerationRules,
+  teraEnabled: soulLinkTeraEnabled,
   localPreferences: soulLinkLocalPreferences,
   sessionMetadata: soulLinkSessionMetadata,
   loadSoulLinkData,
   loadError: soulLinkLoadError,
   setGenerationRules: setSoulLinkGenerationRules,
+  setTeraEnabled: setSoulLinkTeraEnabled,
   setCachedPlayerSlot,
   updatePlayer: updateSoulLinkPlayer,
   startNewLocalSoulLinkRun,
@@ -560,6 +570,25 @@ const generationRulesLabel = computed(() => {
     : 'Using Post-Gen 6 Rules'
 })
 
+const activeTeraEnabled = computed(() =>
+  isSoloMode.value ? teraEnabled.value : soulLinkTeraEnabled.value,
+)
+
+function toggleTeraTypes() {
+  const nextEnabled = !activeTeraEnabled.value
+
+  if (isSoloMode.value) {
+    persistTeraEnabled(nextEnabled)
+    return
+  }
+
+  setSoulLinkTeraEnabled(nextEnabled)
+}
+
+const teraTypesLabel = computed(() => {
+  return activeTeraEnabled.value ? 'Disable Tera Types' : 'Enable Tera Types'
+})
+
 const activeTypes = computed(() => getAllTypesForRules(generationRules.value))
 
 const viewedSoulLinkPlayerId = computed(() => {
@@ -737,8 +766,6 @@ function selectPlayerNameInput() {
   playerNameInput.value?.select()
 }
 
-// --- Session management ---
-
 async function joinSessionFlow({
   saveCurrentRun,
   unsubscribe,
@@ -906,7 +933,6 @@ function getRulesetPokemonData(name) {
   return getPokemonDataForRules(name, generationRules.value)
 }
 
-// Store original state when swap mode starts
 const swapOriginalState = ref(null)
 
 watch(swapMode, (isSwapMode) => {
@@ -993,7 +1019,6 @@ async function startNewRun(mode) {
   unsubscribeSolo()
 
   if (mode === RUN_MODES.SOLO) {
-    // Save current solo run before starting a new one
     if (isSoloMode.value && soloActiveRunId.value) {
       const currentSnapshot = buildSoloSnapshot()
       if (isEmptySoloRun(currentSnapshot)) {
@@ -1031,7 +1056,6 @@ async function startNewRun(mode) {
   dismissAllDialogs()
 }
 
-// Helper to construct the hypothetical draft team
 function getDraftTeam() {
   if (!draftAction.value?.pokemon) return team.value
 
@@ -1043,7 +1067,6 @@ function getDraftTeam() {
     draftAction.value.type === 'edit' &&
     !draftAction.value.isBoxPokemon
   ) {
-    // Editing a team Pokemon
     return team.value.map((p) =>
       p.id === draftAction.value.editId ? draft : p,
     )
@@ -1051,7 +1074,6 @@ function getDraftTeam() {
   return team.value
 }
 
-// Computed
 const hasDraft = computed(() => {
   return (
     draftAction.value?.pokemon &&
@@ -1178,7 +1200,6 @@ async function handleTeamToBoxSwap(targetId, inHandPokemon) {
   updateEditId(newTeamMember.id)
 }
 
-// Handle immediate swap when clicking a slot in swap mode
 async function handleImmediateSwap(targetId) {
   if (!draftAction.value?.pokemon) return
 
@@ -1350,7 +1371,6 @@ async function autosaveDraft() {
   )
 }
 
-// Methods
 async function confirmDraft() {
   if (!draftAction.value) return
 
@@ -1388,7 +1408,6 @@ async function confirmDraft() {
         ),
       )
     } else {
-      // Editing a team Pokemon
       await persistTeam(
         team.value.map((p) =>
           p.id === draftAction.value.editId
@@ -1535,10 +1554,8 @@ onMounted(async () => {
 
   const startupMode = await restoreMostRecentRun(initialRunMode)
 
-  // Init sync session and sync before showing content so session metadata
-  // and merged state are final on first render (avoids team reorder flash).
-  // Race against a timeout so offline users aren't blocked waiting for
-  // Supabase calls that will never resolve.
+  // Sync must settle before first render to avoid a team-reorder flash;
+  // race a timeout so offline users aren't stuck waiting on Supabase.
   if (startupMode === RUN_MODES.SOLO && isSoloSyncAvailable) {
     const syncPromise = (async () => {
       try {

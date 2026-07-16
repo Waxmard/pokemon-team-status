@@ -4,6 +4,7 @@
       :team="board.team"
       :box="board.box"
       :generation-rules="generationRules"
+      :tera-enabled="teraEnabled"
       :defeated-gyms="board.defeatedGymsList.map((gym) => gym.type)"
       :pinned-gym="board.pinnedGym"
       :partner-roster="partnerRoster"
@@ -55,6 +56,10 @@ defineProps({
   generationRules: {
     type: String,
     required: true,
+  },
+  teraEnabled: {
+    type: Boolean,
+    default: null,
   },
   draftActive: {
     type: Boolean,
