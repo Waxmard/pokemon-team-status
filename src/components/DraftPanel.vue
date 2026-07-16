@@ -1364,7 +1364,7 @@ defineExpose({ openField })
 
 .tera-type-btn {
   position: absolute;
-  bottom: -2.6rem;
+  bottom: -2.8rem;
   left: 50%;
   transform: translateX(-50%);
   width: 32px;
