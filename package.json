@@ -21,7 +21,7 @@
     "prepare": "lefthook install"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.104.1",
+    "@supabase/supabase-js": "^2.105.4",
     "naive-ui": "^2.44.1",
     "vue": "^3.5.33",
     "vuedraggable": "^4.1.0"
