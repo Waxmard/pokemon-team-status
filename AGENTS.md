@@ -13,7 +13,7 @@ This file provides guidance to AI agents when working with code in this reposito
 - `npm run lint` - Check for linting/formatting issues
 - `npm run lint:fix` - Auto-fix linting and formatting issues
 - `npm run format` - Format all source files
-- `npx markdownlint-cli2 docs/*.md README.md` - Lint markdown files
+- `npx markdownlint-cli2 '**/*.md'` - Lint markdown files
 
 ## Release Process
 
@@ -63,7 +63,7 @@ The app uses Vue composables with module-level refs (singleton pattern). State i
   - Tracks current edit operation (add to team, add to box, edit, swap)
   - Holds temporary Pokemon configuration (pokemon, ability, berry, moves, specialMove)
 
-Other composables: `useSoloRunManager.js` and `useSoulLinkRunManager.js` (run index/registry), `useSoloSync.js` and `useSessionSync.js` (Supabase sync), `useSoulLinkHandlers.js` (Soul Link event handlers), `useWizardNavigation.js` (draft panel steps), `createRunIndexManager.js` (shared run index factory)
+Other composables: `useSoloRunManager.js` and `useSoulLinkRunManager.js` (run index/registry), `useSoloSync.js` and `useSessionSync.js` (Supabase sync), `useSoulLinkHandlers.js` (Soul Link event handlers), `useRunOrchestration.js` (run/session orchestration, dialogs, startup), `useSoloDraftHandlers.js` (solo draft, swap and gym scoring), `createRunIndexManager.js` (shared run index factory)
 
 ### Core Type Calculation Logic
 

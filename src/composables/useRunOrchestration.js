@@ -499,41 +499,49 @@ export function useRunOrchestration({
     unsubscribeSolo()
 
     if (mode === RUN_MODES.SOLO) {
-      if (isSoloMode.value && soloActiveRunId.value) {
-        const currentSnapshot = buildSoloSnapshot()
-        if (isEmptySoloRun(currentSnapshot)) {
-          await deleteSoloRun(soloActiveRunId.value)
-        } else {
-          await saveSoloRunToIndex(currentSnapshot)
-        }
-      }
-      await startNewSoloRun()
-      setCurrentRunMode(RUN_MODES.SOLO)
-      const freshSnapshot = buildSoloSnapshot()
-      freshSnapshot.name = null
-      await registerNewSoloRun(freshSnapshot)
-      if (isSoloSyncAvailable) {
-        await deleteSoloRemoteSession()
-      }
-      setupSoloSync()
+      await startFreshSoloRun()
     } else {
-      if (!isSoloMode.value) {
-        await saveCurrentRunToIndex(buildSoulLinkSnapshot())
-      }
-      startNewLocalSoulLinkRun()
-      setCurrentRunMode(RUN_MODES.SOUL_LINK)
-      await registerNewRun(buildSoulLinkSnapshot())
-      if (isSupabaseAvailable) {
-        try {
-          await createSoulLinkSession()
-          subscribeSoulLink()
-        } catch (err) {
-          console.error('Failed to create session for new Soul Link run:', err)
-        }
-      }
+      await startFreshSoulLinkRun()
     }
 
     dismissAllDialogs()
+  }
+
+  async function startFreshSoloRun() {
+    if (isSoloMode.value && soloActiveRunId.value) {
+      const currentSnapshot = buildSoloSnapshot()
+      if (isEmptySoloRun(currentSnapshot)) {
+        await deleteSoloRun(soloActiveRunId.value)
+      } else {
+        await saveSoloRunToIndex(currentSnapshot)
+      }
+    }
+    await startNewSoloRun()
+    setCurrentRunMode(RUN_MODES.SOLO)
+    const freshSnapshot = buildSoloSnapshot()
+    freshSnapshot.name = null
+    await registerNewSoloRun(freshSnapshot)
+    if (isSoloSyncAvailable) {
+      await deleteSoloRemoteSession()
+    }
+    setupSoloSync()
+  }
+
+  async function startFreshSoulLinkRun() {
+    if (!isSoloMode.value) {
+      await saveCurrentRunToIndex(buildSoulLinkSnapshot())
+    }
+    startNewLocalSoulLinkRun()
+    setCurrentRunMode(RUN_MODES.SOUL_LINK)
+    await registerNewRun(buildSoulLinkSnapshot())
+    if (isSupabaseAvailable) {
+      try {
+        await createSoulLinkSession()
+        subscribeSoulLink()
+      } catch (err) {
+        console.error('Failed to create session for new Soul Link run:', err)
+      }
+    }
   }
 
   function buildSoloSnapshot() {
@@ -686,6 +694,7 @@ export function useRunOrchestration({
   onUnmounted(() => {
     document.removeEventListener('visibilitychange', handleVisibilityChange)
     unsubscribeSolo()
+    unsubscribeSoulLink()
   })
 
   return {

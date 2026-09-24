@@ -433,47 +433,62 @@ export function useSoloDraftHandlers() {
       return
     }
 
-    const newMember = buildPokemonMember(draftAction.value, { source: 'team' })
-
-    if (draftAction.value.type === 'add') {
-      if (team.value.length < 6) {
-        await persistTeam([...team.value, newMember])
-      } else {
-        enterAddReplaceMode()
-        return
-      }
-    } else if (draftAction.value.type === 'addToBox') {
-      await persistBox([newMember, ...box.value])
-    } else if (draftAction.value.type === 'addToDead') {
-      await persistDead([newMember, ...dead.value])
-    } else if (draftAction.value.type === 'edit') {
-      if (draftAction.value.isBoxPokemon) {
-        await confirmBoxPokemonEdit()
-      } else if (draftAction.value.isDeadPokemon) {
-        await persistDead(
-          dead.value.map((member) =>
-            member.id === draftAction.value.deadPokemonId
-              ? buildPokemonMember(draftAction.value, {
-                  id: draftAction.value.deadPokemonId,
-                  source: 'dead',
-                })
-              : member,
-          ),
-        )
-      } else {
-        await persistTeam(
-          team.value.map((p) =>
-            p.id === draftAction.value.editId
-              ? buildPokemonMember(draftAction.value, {
-                  id: draftAction.value.editId,
-                })
-              : p,
-          ),
-        )
-      }
-    }
-
+    const committed = await commitDraftByType(
+      buildPokemonMember(draftAction.value, { source: 'team' }),
+    )
+    if (!committed) return
     cancel()
+  }
+
+  async function commitDraftByType(newMember) {
+    const action = draftAction.value
+    if (action.type === 'add') {
+      if (team.value.length >= 6) {
+        enterAddReplaceMode()
+        return false
+      }
+      await persistTeam([...team.value, newMember])
+      return true
+    }
+    if (action.type === 'addToBox') {
+      await persistBox([newMember, ...box.value])
+      return true
+    }
+    if (action.type === 'addToDead') {
+      await persistDead([newMember, ...dead.value])
+      return true
+    }
+    if (action.type === 'edit') {
+      await commitDraftEdit(action)
+    }
+    return true
+  }
+
+  async function commitDraftEdit(action) {
+    if (action.isBoxPokemon) {
+      await confirmBoxPokemonEdit()
+      return
+    }
+    if (action.isDeadPokemon) {
+      await persistDead(
+        dead.value.map((member) =>
+          member.id === action.deadPokemonId
+            ? buildPokemonMember(action, {
+                id: action.deadPokemonId,
+                source: 'dead',
+              })
+            : member,
+        ),
+      )
+      return
+    }
+    await persistTeam(
+      team.value.map((p) =>
+        p.id === action.editId
+          ? buildPokemonMember(action, { id: action.editId })
+          : p,
+      ),
+    )
   }
 
   function handleDeleteFromDraft() {
