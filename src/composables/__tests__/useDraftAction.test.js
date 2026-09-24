@@ -10,19 +10,17 @@ describe('useDraftAction', () => {
   })
 
   it('starts inactive', () => {
-    expect(draft.isActive.value).toBe(false)
     expect(draft.draftAction.value).toBeNull()
     expect(draft.swapMode.value).toBe(false)
   })
 
   describe('startAdd', () => {
     it('creates an add draft action', () => {
-      const pokemon = { name: 'Pikachu', types: ['electric'] }
-      draft.startAdd(pokemon)
+      draft.startAdd()
 
-      expect(draft.isActive.value).toBe(true)
+      expect(draft.draftAction.value).not.toBeNull()
       expect(draft.draftAction.value.type).toBe('add')
-      expect(draft.draftAction.value.pokemon).toEqual(pokemon)
+      expect(draft.draftAction.value.pokemon).toBeNull()
     })
 
     it('initializes with default member fields', () => {
@@ -36,10 +34,10 @@ describe('useDraftAction', () => {
 
     it('toggles off when called again in add mode', () => {
       draft.startAdd()
-      expect(draft.isActive.value).toBe(true)
+      expect(draft.draftAction.value).not.toBeNull()
 
       draft.startAdd()
-      expect(draft.isActive.value).toBe(false)
+      expect(draft.draftAction.value).toBeNull()
     })
 
     it('does not toggle off when switching from a different mode', () => {
@@ -78,10 +76,10 @@ describe('useDraftAction', () => {
 
     it('toggles off when editing same ID', () => {
       draft.startEdit('id-1', member)
-      expect(draft.isActive.value).toBe(true)
+      expect(draft.draftAction.value).not.toBeNull()
 
       draft.startEdit('id-1', member)
-      expect(draft.isActive.value).toBe(false)
+      expect(draft.draftAction.value).toBeNull()
     })
 
     it('switches to new member when editing different ID', () => {
@@ -113,7 +111,7 @@ describe('useDraftAction', () => {
     it('toggles off when editing same box pokemon', () => {
       draft.startEditBox(boxMember)
       draft.startEditBox(boxMember)
-      expect(draft.isActive.value).toBe(false)
+      expect(draft.draftAction.value).toBeNull()
     })
   })
 
@@ -126,7 +124,7 @@ describe('useDraftAction', () => {
     it('toggles off when called again', () => {
       draft.startAddToBox()
       draft.startAddToBox()
-      expect(draft.isActive.value).toBe(false)
+      expect(draft.draftAction.value).toBeNull()
     })
   })
 
@@ -149,7 +147,7 @@ describe('useDraftAction', () => {
     it('toggles off when editing same dead pokemon', () => {
       draft.startEditDead(deadMember)
       draft.startEditDead(deadMember)
-      expect(draft.isActive.value).toBe(false)
+      expect(draft.draftAction.value).toBeNull()
     })
   })
 
@@ -162,7 +160,7 @@ describe('useDraftAction', () => {
     it('toggles off when called again', () => {
       draft.startAddToDead()
       draft.startAddToDead()
-      expect(draft.isActive.value).toBe(false)
+      expect(draft.draftAction.value).toBeNull()
     })
   })
 
@@ -279,6 +277,35 @@ describe('useDraftAction', () => {
 
       expect(draft.draftAction.value).toBeNull()
       expect(draft.swapMode.value).toBe(false)
+    })
+  })
+
+  describe('convertToEdit', () => {
+    it.each([
+      ['team', { isTeamPokemon: true }, 'editId'],
+      ['box', { isBoxPokemon: true }, 'boxPokemonId'],
+      ['dead', { isDeadPokemon: true }, 'deadPokemonId'],
+    ])('turns the draft into a %s edit', (rosterKey, flag, idField) => {
+      draft.startAdd()
+      draft.convertToEdit(rosterKey, 'member-1')
+
+      expect(draft.draftAction.value.type).toBe('edit')
+      expect(draft.draftAction.value).toMatchObject(flag)
+      expect(draft.draftAction.value[idField]).toBe('member-1')
+
+      // The other two id slots must be cleared so stale ids can't be reused.
+      const cleared = ['editId', 'boxPokemonId', 'deadPokemonId'].filter(
+        (field) => field !== idField,
+      )
+      for (const field of cleared) {
+        expect(draft.draftAction.value[field]).toBeNull()
+      }
+    })
+
+    it('is a no-op when there is no draft open', () => {
+      draft.convertToEdit('team', 'member-1')
+
+      expect(draft.draftAction.value).toBeNull()
     })
   })
 })

@@ -37,8 +37,8 @@
                 type="text"
                 maxlength="32"
                 aria-label="Viewed Soul Link player name"
-                @blur="handleRenameViewedSoulLinkPlayerInput"
-                @focus="selectPlayerNameInput"
+                @blur="handleRenameViewedSoulLinkPlayer($event.target.value)"
+                @focus="playerNameInput?.select()"
               />
             </label>
           </span>
@@ -47,24 +47,23 @@
 
       <template v-if="ready">
       <template v-if="isSoloMode">
-        <TeamSection :team="team" :box="box" :dead="dead" :has-death-box="true" :death-box-mode="deathBoxMode"
+        <TeamSection :team="team" :box="box" :dead="dead" :death-box-mode="deathBoxMode"
           @autosaveDraft="autosaveDraft" @immediateSwap="handleImmediateSwap" :generation-rules="generationRules" :tera-enabled="teraEnabled"
-          @deleteTeamPokemon="deleteTeamPokemon" @deleteBoxPokemon="deleteBoxPokemon" @cancelSwap="handleCancelSwap"
-          @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion"
+          @cancelSwap="handleCancelSwap"
+          @swapSuggestion="handleSwapSuggestion"
           @killPokemon="handleSoloKillPokemon" @revivePokemon="handleSoloRevivePokemon"
           @deleteDeadPokemon="handleSoloDeleteDeadPokemon" @exitDeathBox="deathBoxMode = false" />
 
-        <GymColumns :team="team" :box="box" :remainingGyms="remainingGyms" :defeatedGymsList="defeatedGymsList"
-          :defeated-gym-types="defeatedGyms" :pinned-type="pinnedGym" :persist-pinned-gym="persistPinnedGym" :generation-rules="generationRules"
+        <GymColumns :team="team" :box="box" :remainingGyms="remainingGyms" :defeatedGymsList="defeatedGymsList" :pinned-type="pinnedGym" :persist-pinned-gym="persistPinnedGym" :generation-rules="generationRules"
           :draftActive="hasDraft"
           @defeatGym="defeatGym" @undefeatGym="undefeatGym" @swapSuggestion="handleSwapSuggestion" />
       </template>
 
-      <SoulLinkShell
-        v-else-if="!isSoloMode"
+      <SoulLinkPlayerView
+        v-else
+        :board="viewedSoulLinkPlayerBoard"
         :generation-rules="soulLinkGenerationRules"
         :tera-enabled="soulLinkTeraEnabled"
-        :viewed-player-board="viewedSoulLinkPlayerBoard"
         :draft-active="hasDraft"
         :persist-pinned-gym="handleSoulLinkPersistPinnedGym"
         :partner-roster="soulLinkPartnerRoster"
@@ -72,10 +71,7 @@
         :death-box-mode="deathBoxMode"
         @autosaveDraft="handleSoulLinkAutosaveDraft"
         @immediateSwap="handleSoulLinkImmediateSwap"
-        @deleteTeamPokemon="handleSoulLinkDeleteTeamPokemon"
-        @deleteBoxPokemon="handleSoulLinkDeleteBoxPokemon"
         @cancelSwap="handleSoulLinkCancelSwap"
-        @deletePokemon="handleSoulLinkDeleteFromDraft"
         @swapSuggestion="handleSoulLinkSwapSuggestion"
         @defeatGym="handleSoulLinkDefeatGym"
         @undefeatGym="handleSoulLinkUndefeatGym"
@@ -88,135 +84,113 @@
     </div>
   </n-config-provider>
 
-  <Teleport to="body">
-    <Transition name="dialog">
-    <div v-if="showResetDialog" class="reset-overlay" @click.self="showResetDialog = false">
-      <div class="reset-dialog">
-        <h3 class="reset-dialog-title">Options</h3>
-        <div class="reset-dialog-options">
-          <DialogActionSection>
-            <div class="reset-option-group">
-              <button class="reset-option" @click="toggleGenerationRules">
-                {{ generationRulesLabel }}
-              </button>
-              <button class="reset-option" @click="toggleTeraTypes">
-                {{ teraTypesLabel }}
-              </button>
-            </div>
-          </DialogActionSection>
-          <DialogActionSection v-if="allInactiveRuns.length > 0">
-            <div class="reset-option-group">
-              <div class="my-runs-header">Switch Run</div>
-              <button
-                v-for="run in allInactiveRuns"
-                :key="run.id"
-                class="reset-option"
-                @click="run.type === 'solo' ? handleSwitchSoloRun(run.id) : handleSwitchRun(run.id)"
-              >
-                {{ run.label }}
-              </button>
-            </div>
-          </DialogActionSection>
-          <DialogActionSection v-if="isSupabaseAvailable">
-            <div class="reset-option-group">
-              <template v-if="showOptionsJoinInput">
-                <div class="session-input-row">
-                  <input
-                    ref="optionsJoinInputEl"
-                    v-model="optionsJoinCode"
-                    class="session-code-input"
-                    type="text"
-                    maxlength="6"
-                    placeholder="Invite code"
-                    @keydown.enter="handleJoinRun"
-                  />
-                  <button class="reset-option session-confirm-btn" @click="handleJoinRun" :disabled="sessionActionPending">
-                    Join
-                  </button>
-                </div>
-                <div v-if="joinRunError" class="session-join-error">{{ joinRunError }}</div>
-              </template>
-              <button v-else class="reset-option" @click="openOptionsJoinInput">
-                Join Run
-              </button>
-            </div>
-          </DialogActionSection>
-          <DialogActionSection>
-            <div class="reset-option-group">
-              <button class="reset-option" @click="resetPokemon">
-                Reset Team & Box
-              </button>
-              <button class="reset-option" @click="resetGyms">
-                Reset Gyms
-              </button>
-            </div>
-          </DialogActionSection>
-          <DialogActionSection v-if="(hasSoloRemoteSession && isSoloMode) || (hasRemoteSession && !isSoloMode)">
-            <button class="reset-option" @click="isSoloMode ? handleLeaveSoloSession() : handleLeaveSoulLinkSession()">
-              Leave This Run
-            </button>
-          </DialogActionSection>
-          <DialogActionSection v-if="currentActiveRunId">
-            <div class="reset-option-group">
-              <button class="reset-option reset-option-danger" @click="deleteRunTarget = currentActiveRunId; showResetDialog = false">
-                Delete This Run
-              </button>
-            </div>
-          </DialogActionSection>
+<DialogShell v-model:visible="showResetDialog" title="Options">
+      <DialogActionSection>
+        <div class="reset-option-group">
+          <button class="reset-option" @click="toggleGenerationRules">
+            {{ generationRulesLabel }}
+          </button>
+          <button class="reset-option" @click="toggleTeraTypes">
+            {{ teraTypesLabel }}
+          </button>
         </div>
-        <button class="reset-dialog-cancel" @click="showResetDialog = false">✕</button>
-      </div>
-    </div>
-    </Transition>
-  </Teleport>
+      </DialogActionSection>
+      <DialogActionSection v-if="allInactiveRuns.length > 0">
+        <div class="reset-option-group">
+          <div class="my-runs-header">Switch Run</div>
+          <button
+            v-for="run in allInactiveRuns"
+            :key="run.id"
+            class="reset-option"
+            @click="run.type === 'solo' ? handleSwitchSoloRun(run.id) : handleSwitchRun(run.id)"
+          >
+            {{ run.label }}
+          </button>
+        </div>
+      </DialogActionSection>
+      <DialogActionSection v-if="isSupabaseAvailable">
+        <div class="reset-option-group">
+          <template v-if="showOptionsJoinInput">
+            <div class="session-input-row">
+              <input
+                ref="optionsJoinInputEl"
+                v-model="optionsJoinCode"
+                class="session-code-input"
+                type="text"
+                maxlength="6"
+                placeholder="Invite code"
+                @keydown.enter="handleJoinRun"
+              />
+              <button class="reset-option session-confirm-btn" @click="handleJoinRun" :disabled="sessionActionPending">
+                Join
+              </button>
+            </div>
+            <div v-if="joinRunError" class="session-join-error">{{ joinRunError }}</div>
+          </template>
+          <button v-else class="reset-option" @click="openOptionsJoinInput">
+            Join Run
+          </button>
+        </div>
+      </DialogActionSection>
+      <DialogActionSection>
+        <div class="reset-option-group">
+          <button class="reset-option" @click="resetPokemon">
+            Reset Team & Box
+          </button>
+          <button class="reset-option" @click="resetGyms">
+            Reset Gyms
+          </button>
+        </div>
+      </DialogActionSection>
+      <DialogActionSection v-if="(hasSoloRemoteSession && isSoloMode) || (hasRemoteSession && !isSoloMode)">
+        <button class="reset-option" @click="isSoloMode ? handleLeaveSoloSession() : handleLeaveSoulLinkSession()">
+          Leave This Run
+        </button>
+      </DialogActionSection>
+      <DialogActionSection v-if="currentActiveRunId">
+        <div class="reset-option-group">
+          <button class="reset-option reset-option-danger" @click="deleteRunTarget = currentActiveRunId; showResetDialog = false">
+            Delete This Run
+          </button>
+        </div>
+      </DialogActionSection>
+  </DialogShell>
 
-  <Teleport to="body">
-    <Transition name="dialog">
-    <div v-if="deleteRunTarget" class="reset-overlay"
-         @click.self="deleteRunTarget = null">
-      <div class="reset-dialog">
-        <h3 class="reset-dialog-title">Delete Run</h3>
-        <p class="linked-delete-text">
-          This run and all its data will be permanently deleted.
-        </p>
-        <div class="reset-dialog-options">
-          <DialogActionSection>
-            <button class="reset-option reset-option-danger"
-                    @click="isSoloDeleteTarget ? handleDeleteSoloRun(deleteRunTarget) : handleDeleteRun(deleteRunTarget)">
-              Delete
-            </button>
-          </DialogActionSection>
-        </div>
-        <button class="reset-dialog-cancel"
-                @click="deleteRunTarget = null">✕</button>
-      </div>
-    </div>
-    </Transition>
-  </Teleport>
+<DialogShell
+    :visible="deleteRunTarget !== null"
+    title="Delete Run"
+    @update:visible="deleteRunTarget = null"
+  >
+    <template #intro>
+      <p class="linked-delete-text">
+        This run and all its data will be permanently deleted.
+      </p>
+    </template>
+    <DialogActionSection>
+      <button class="reset-option reset-option-danger"
+              @click="isSoloDeleteTarget ? handleDeleteSoloRun(deleteRunTarget) : handleDeleteRun(deleteRunTarget)">
+        Delete
+      </button>
+    </DialogActionSection>
+  </DialogShell>
 
-  <Teleport to="body">
-    <Transition name="dialog">
-    <div v-if="linkedDeleteTarget" class="reset-overlay"
-         @click.self="linkedDeleteTarget = null">
-      <div class="reset-dialog">
-        <h3 class="reset-dialog-title">Delete Linked Pair</h3>
-        <p class="linked-delete-text">
-          This linked Pokemon and its partner will both be deleted.
-        </p>
-        <div class="reset-dialog-options">
-          <DialogActionSection>
-            <button class="reset-option reset-option-danger"
-                    @click="confirmLinkedDelete">
-              Delete Both
-            </button>
-          </DialogActionSection>
-        </div>
-        <button class="reset-dialog-cancel"
-                @click="linkedDeleteTarget = null">✕</button>
-      </div>
-    </div>
-    </Transition>
-  </Teleport>
+<DialogShell
+    :visible="linkedDeleteTarget !== null"
+    title="Delete Linked Pair"
+    @update:visible="linkedDeleteTarget = null"
+  >
+    <template #intro>
+      <p class="linked-delete-text">
+        This linked Pokemon and its partner will both be deleted.
+      </p>
+    </template>
+    <DialogActionSection>
+      <button class="reset-option reset-option-danger"
+              @click="confirmLinkedDelete">
+        Delete Both
+      </button>
+    </DialogActionSection>
+  </DialogShell>
 
   <SessionDialog
     v-model:visible="showSoulLinkDialog"
@@ -239,7 +213,7 @@
     title="Solo Run"
     :session-code="soloInviteCode"
     :copy-label="soloCopyLabel"
-    :has-remote-session="hasSoloRemoteSession && isSoloSyncAvailable"
+    :has-remote-session="hasSoloRemoteSession && isSupabaseAvailable"
     :show-death-box="isSoloMode"
     new-run-label="New Solo Run"
     @copy-code="copySoloInviteCode"
@@ -253,9 +227,10 @@ import { NConfigProvider } from 'naive-ui'
 import { computed, nextTick, ref, watch } from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import DialogActionSection from './components/DialogActionSection.vue'
+import DialogShell from './components/DialogShell.vue'
 import GymColumns from './components/GymColumns.vue'
 import SessionDialog from './components/SessionDialog.vue'
-import SoulLinkShell from './components/SoulLinkShell.vue'
+import SoulLinkPlayerView from './components/SoulLinkPlayerView.vue'
 import TeamSection from './components/TeamSection.vue'
 import { useDraftAction } from './composables/useDraftAction.js'
 import { useRunOrchestration } from './composables/useRunOrchestration.js'
@@ -289,8 +264,6 @@ const {
   teraEnabled,
   persistTeraEnabled,
   pinnedGym,
-  deleteTeamPokemon,
-  deleteBoxPokemon,
   revivePokemon,
   deleteDeadPokemon,
   defeatGym,
@@ -310,25 +283,15 @@ const {
   setTeraEnabled: setSoulLinkTeraEnabled,
   getPlayerRoster,
   getFullPlayerRoster,
-  setPlayerRoster: setSoulLinkPlayerRoster,
-  updateRosterMember: updateSoulLinkRosterMember,
-  removeRosterMember: removeSoulLinkRosterMember,
-  pullState: pullSoulLinkState,
-  pushState: pushSoulLinkState,
 } = useSoulLinkStore()
 
 const { swapMode, sanitizeDraft } = useDraftAction()
 
-const { inviteCode: soloInviteCode, isAvailable: isSoloSyncAvailable } =
-  useSoloSync()
+const { inviteCode: soloInviteCode } = useSoloSync()
 
 const playerNameInput = ref(null)
 const soloRunNameInput = ref(null)
 const optionsJoinInputEl = ref(null)
-const appTitle = computed(() =>
-  isSoloMode.value ? 'Weakness Calculator' : viewedSoulLinkPlayerName.value,
-)
-
 const activeGenerationRules = computed(() =>
   isSoloMode.value ? generationRules.value : soulLinkGenerationRules.value,
 )
@@ -439,9 +402,6 @@ const {
   handleSoulLinkImmediateSwap,
   handleSoulLinkCancelSwap,
   handleSoulLinkSwapSuggestion,
-  handleSoulLinkDeleteTeamPokemon,
-  handleSoulLinkDeleteBoxPokemon,
-  handleSoulLinkDeleteFromDraft,
   handleSoulLinkDefeatGym,
   handleSoulLinkUndefeatGym,
   handleSoulLinkPersistPinnedGym,
@@ -461,7 +421,6 @@ const {
   defeatedGymsList,
   autosaveDraft,
   handleImmediateSwap,
-  handleDeleteFromDraft,
   handleSwapSuggestion,
   handleCancelSwap,
   handleSoloKillPokemon,
@@ -508,7 +467,6 @@ const {
   handleViewDeathBox,
   handleViewOtherSoulLinkPlayer,
   handleRenameSoloRun,
-  handleRenameViewedSoulLinkPlayerInput,
   copyInviteCode,
   copySoloInviteCode,
   startNewRun,
@@ -521,14 +479,10 @@ const {
 })
 
 function handleSoulLinkAutosaveDraft() {
-  const result = confirmSoulLinkDraft({ closeAfterPersist: false })
+  const result = confirmSoulLinkDraft()
   if (result?.placedInDead) {
     deathBoxMode.value = true
   }
-}
-
-function selectPlayerNameInput() {
-  playerNameInput.value?.select()
 }
 
 function openOptionsJoinInput() {
@@ -591,21 +545,6 @@ function clearPendingTeraTypes(clearedAt = null) {
 watch(activeTeraEnabled, (enabled) => {
   if (!enabled) clearPendingTeraTypes()
 })
-
-if (import.meta.env.DEV) {
-  import('./utils/devTools.js').then(({ createDevTools }) => {
-    window.__sl = createDevTools({
-      players: soulLinkPlayers,
-      rosters: soulLinkRosters,
-      sessionMetadata: soulLinkSessionMetadata,
-      updateRosterMember: updateSoulLinkRosterMember,
-      removeRosterMember: removeSoulLinkRosterMember,
-      setPlayerRoster: setSoulLinkPlayerRoster,
-      pullState: pullSoulLinkState,
-      pushState: pushSoulLinkState,
-    })
-  })
-}
 </script>
 
 <style scoped>
@@ -696,200 +635,6 @@ if (import.meta.env.DEV) {
 </style>
 
 <style>
-.dialog-enter-active,
-.dialog-leave-active {
-  transition: opacity var(--transition-base);
-}
-
-.dialog-enter-from,
-.dialog-leave-to {
-  opacity: 0;
-}
-
-.dialog-enter-active .reset-dialog,
-.dialog-leave-active .reset-dialog {
-  transition: transform var(--transition-base), opacity var(--transition-base);
-}
-
-.dialog-enter-from .reset-dialog,
-.dialog-leave-to .reset-dialog {
-  opacity: 0;
-  transform: scale(0.95);
-}
-
-.reset-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.reset-dialog {
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  padding: var(--space-6);
-  min-width: 220px;
-  text-align: center;
-  position: relative;
-}
-
-.reset-dialog-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: var(--space-4);
-  color: var(--color-text-primary);
-}
-
-.reset-dialog-options {
-  display: flex;
-  flex-direction: column;
-}
-
-.reset-option {
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  -webkit-appearance: none;
-  appearance: none;
-  padding: var(--space-2) var(--space-4);
-  font-size: 0.95rem;
-  color: var(--color-text-primary);
-  cursor: pointer;
-  transition: background var(--transition-base), border-color var(--transition-base);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.reset-option:focus,
-.reset-option:focus-visible,
-.reset-option:active {
-  background: transparent;
-  outline: none;
-}
-
-.reset-option-danger {
-  color: var(--color-danger);
-  border-color: var(--color-danger);
-}
-
-.reset-option-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .reset-option:hover:not(:disabled) {
-    background: var(--color-surface-light);
-    border-color: var(--color-text-muted);
-  }
-
-  .reset-option-danger:hover {
-    background: rgba(239, 68, 68, 0.08);
-    border-color: var(--color-danger);
-  }
-}
-
-.reset-dialog-cancel {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  font-size: 1rem;
-  cursor: pointer;
-  padding: var(--space-1);
-  transition: color var(--transition-base);
-}
-
-.reset-dialog-cancel:hover {
-  color: var(--color-text-primary);
-}
-
-.linked-delete-text {
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  margin-bottom: var(--space-4);
-}
-
-.session-input-row {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.session-code-input {
-  flex: 1;
-  min-width: 0;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-light);
-  color: var(--color-text-primary);
-  font-size: 1rem;
-  font-family: monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  text-align: center;
-}
-
-.session-code-input::placeholder {
-  text-transform: none;
-  letter-spacing: normal;
-  color: var(--color-text-muted);
-}
-
-.session-confirm-btn {
-  flex-shrink: 0;
-}
-
-.session-join-error {
-  color: var(--color-danger);
-  font-size: 0.8rem;
-  margin-top: var(--space-1);
-}
-
-.session-code-display {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  font-family: monospace;
-  font-size: 0.95rem;
-  letter-spacing: 0.15em;
-  color: var(--color-text-primary);
-  cursor: pointer;
-  transition: background var(--transition-base);
-}
-
-.session-code-hint {
-  font-family: inherit;
-  font-size: 0.7rem;
-  letter-spacing: normal;
-  color: var(--color-text-muted);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .session-code-display:hover {
-    background: var(--color-surface-light);
-  }
-}
-
-.my-runs-header {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: var(--space-1);
-}
-
 @media (orientation: landscape) and (max-height: 500px) {
   .app-container .team-section-wrapper {
     flex: 1;

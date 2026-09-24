@@ -22,7 +22,7 @@ const { repository } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../services/localRunRepository.js', () => ({
-  createLocalSoloRunRepository: () => repository,
+  localRunRepository: repository,
 }))
 
 describe('useSoloRunManager', () => {
@@ -284,6 +284,55 @@ describe('useSoloRunManager', () => {
         ],
       }),
     )
+  })
+
+  it('renames a run without refreshing its index summary', async () => {
+    const originalUpdatedAt = '2026-04-01T12:00:00.000Z'
+    repository.loadSoloRunIndex.mockResolvedValue({
+      activeRunId: 'solo-run-9',
+      runs: [
+        {
+          id: 'solo-run-9',
+          name: 'Old Name',
+          updatedAt: originalUpdatedAt,
+          teamCount: 0,
+        },
+        {
+          id: 'newer-run',
+          updatedAt: '2026-04-02T12:00:00.000Z',
+          teamCount: 0,
+        },
+      ],
+    })
+    repository.loadSoloRun.mockResolvedValue({
+      team: [],
+      generationRules: 'current',
+    })
+
+    const { useSoloRunManager } = await import('../useSoloRunManager.js')
+    const manager = useSoloRunManager()
+
+    await manager.loadRunIndex()
+    repository.persistSoloRun.mockClear()
+
+    await manager.renameRun('solo-run-9', 'New Name')
+
+    expect(manager.activeRunSummary.value).toEqual({
+      id: 'solo-run-9',
+      name: 'New Name',
+      updatedAt: originalUpdatedAt,
+      teamCount: 0,
+    })
+    // Renaming must not bump updatedAt, which drives runList's sort order.
+    expect(manager.runList.value.map((run) => run.id)).toEqual([
+      'newer-run',
+      'solo-run-9',
+    ])
+    expect(repository.persistSoloRun).toHaveBeenCalledWith('solo-run-9', {
+      team: [],
+      generationRules: 'current',
+      name: 'New Name',
+    })
   })
 
   describe('run index repair on load', () => {

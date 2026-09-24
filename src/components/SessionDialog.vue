@@ -1,45 +1,40 @@
 <template>
-  <Teleport to="body">
-    <Transition name="dialog">
-    <div v-if="visible" class="reset-overlay" @click.self="$emit('update:visible', false)">
-      <div class="reset-dialog">
-        <h3 class="reset-dialog-title">{{ title }}</h3>
-        <div class="reset-dialog-options">
-          <DialogActionSection v-if="hasRemoteSession">
-            <div class="reset-option-group">
-              <div class="session-code-display" @click="$emit('copyCode')">
-                {{ sessionCode }}
-                <span class="session-code-hint">{{ copyLabel }}</span>
-              </div>
-            </div>
-          </DialogActionSection>
-          <DialogActionSection v-if="showDeathBox">
-            <button class="reset-option" @click="$emit('viewDeathBox')">
-              View Death Box
-            </button>
-          </DialogActionSection>
-          <DialogActionSection v-if="showViewPlayer">
-            <button class="reset-option" @click="$emit('viewOtherPlayer')">
-              View {{ otherPlayerName }}
-            </button>
-          </DialogActionSection>
-          <DialogActionSection>
-            <div class="reset-option-group">
-              <button class="reset-option" @click="$emit('newRun')">
-                {{ newRunLabel }}
-              </button>
-            </div>
-          </DialogActionSection>
+  <DialogShell
+    :visible="visible"
+    :title="title"
+    @update:visible="$emit('update:visible', $event)"
+  >
+    <DialogActionSection v-if="hasRemoteSession">
+      <div class="reset-option-group">
+        <div class="session-code-display" @click="$emit('copyCode')">
+          {{ sessionCode }}
+          <span class="session-code-hint">{{ copyLabel }}</span>
         </div>
-        <button class="reset-dialog-cancel" @click="$emit('update:visible', false)">✕</button>
       </div>
-    </div>
-    </Transition>
-  </Teleport>
+    </DialogActionSection>
+    <DialogActionSection v-if="showDeathBox">
+      <button class="reset-option" @click="$emit('viewDeathBox')">
+        View Death Box
+      </button>
+    </DialogActionSection>
+    <DialogActionSection v-if="showViewPlayer">
+      <button class="reset-option" @click="$emit('viewOtherPlayer')">
+        View {{ otherPlayerName }}
+      </button>
+    </DialogActionSection>
+    <DialogActionSection>
+      <div class="reset-option-group">
+        <button class="reset-option" @click="$emit('newRun')">
+          {{ newRunLabel }}
+        </button>
+      </div>
+    </DialogActionSection>
+  </DialogShell>
 </template>
 
 <script setup>
 import DialogActionSection from './DialogActionSection.vue'
+import DialogShell from './DialogShell.vue'
 
 defineProps({
   visible: { type: Boolean, required: true },

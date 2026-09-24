@@ -190,23 +190,20 @@ export function calculateScore(
   return score
 }
 
-export function calculateScoreChanges(
-  team,
-  draftMember,
-  ruleset = DEFAULT_GENERATION_RULESET,
-) {
-  return getAllTypesForRules(ruleset)
-    .map((type) => {
-      const oldScore = calculateScore(type, team, ruleset)
-      const newScore = calculateScore(type, [...team, draftMember], ruleset)
-      return {
-        type,
-        oldScore,
-        newScore,
-        diff: newScore - oldScore,
-      }
-    })
-    .filter((c) => c.diff !== 0)
+function compareGymScores(a, b) {
+  if (a.score !== b.score) return a.score - b.score
+  return (a.berryCount ?? 0) - (b.berryCount ?? 0)
+}
+
+/** Scores every gym type for a team, worst-first. */
+export function scoreGyms(types, team, ruleset = DEFAULT_GENERATION_RULESET) {
+  return types
+    .map((type) => ({
+      type,
+      score: calculateScore(type, team, ruleset),
+      berryCount: calculateBerryTiebreaker(type, team, ruleset),
+    }))
+    .sort(compareGymScores)
 }
 
 const SCORE_CAP = 4
@@ -262,16 +259,42 @@ function compareArrays(a, b) {
   return a.length - b.length
 }
 
+/** Field order is the comparison precedence. */
+const PROFILE_FIELDS = [
+  'pinnedScore',
+  'undefeatedScores',
+  'defeatedScores',
+  'allCapped',
+  'allUncapped',
+]
+
 function compareProfiles(a, b) {
-  const c0 = compareArrays(a.pinnedScore, b.pinnedScore)
-  if (c0 !== 0) return c0
-  const c1 = compareArrays(a.undefeatedScores, b.undefeatedScores)
-  if (c1 !== 0) return c1
-  const c2 = compareArrays(a.defeatedScores, b.defeatedScores)
-  if (c2 !== 0) return c2
-  const c3 = compareArrays(a.allCapped, b.allCapped)
-  if (c3 !== 0) return c3
-  return compareArrays(a.allUncapped, b.allUncapped)
+  for (const field of PROFILE_FIELDS) {
+    const comparison = compareArrays(a[field], b[field])
+    if (comparison !== 0) return comparison
+  }
+  return 0
+}
+
+/** Picks the highest-scoring candidate, or null for an empty list. */
+function bestOver(candidates, buildTeam, { defeatedGyms, pinnedGym, ruleset }) {
+  let candidate = null
+  let profile = null
+
+  for (const current of candidates) {
+    const currentProfile = teamScoreProfile(
+      buildTeam(current),
+      defeatedGyms,
+      pinnedGym,
+      ruleset,
+    )
+    if (!profile || compareProfiles(currentProfile, profile) > 0) {
+      profile = currentProfile
+      candidate = current
+    }
+  }
+
+  return { candidate, profile }
 }
 
 export function findBestSwap(
@@ -292,27 +315,16 @@ export function findBestSwap(
     ruleset,
   )
 
-  let best = null
-  let bestProfile = null
+  const { candidate, profile } = bestOver(
+    pool,
+    (pooled) =>
+      isTeamMember
+        ? team.map((p) => (p.id === editingMember.id ? pooled : p))
+        : team.map((p) => (p.id === pooled.id ? editingMember : p)),
+    { defeatedGyms, pinnedGym, ruleset },
+  )
 
-  for (const candidate of pool) {
-    let newTeam
-    if (isTeamMember) {
-      newTeam = team.map((p) => (p.id === editingMember.id ? candidate : p))
-    } else {
-      newTeam = team.map((p) => (p.id === candidate.id ? editingMember : p))
-    }
-
-    const profile = teamScoreProfile(newTeam, defeatedGyms, pinnedGym, ruleset)
-
-    if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
-      bestProfile = profile
-      best = candidate
-    }
-  }
-
-  const improvement = compareProfiles(bestProfile, currentProfile)
-  return { candidate: best, improvement }
+  return { candidate, improvement: compareProfiles(profile, currentProfile) }
 }
 
 export function findGlobalBestSwap(
@@ -329,25 +341,17 @@ export function findGlobalBestSwap(
     pinnedGym,
     ruleset,
   )
-  let best = null
-  let bestProfile = null
-  for (const teamMember of team) {
-    for (const boxMember of box) {
-      const newTeam = team.map((p) => (p.id === teamMember.id ? boxMember : p))
-      const profile = teamScoreProfile(
-        newTeam,
-        defeatedGyms,
-        pinnedGym,
-        ruleset,
-      )
-      if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
-        bestProfile = profile
-        best = { teamMember, boxMember }
-      }
-    }
-  }
-  const improvement = compareProfiles(bestProfile, currentProfile)
-  return { ...best, improvement }
+  const pairs = team.flatMap((teamMember) =>
+    box.map((boxMember) => ({ teamMember, boxMember })),
+  )
+  const { candidate, profile } = bestOver(
+    pairs,
+    ({ teamMember, boxMember }) =>
+      team.map((p) => (p.id === teamMember.id ? boxMember : p)),
+    { defeatedGyms, pinnedGym, ruleset },
+  )
+
+  return { ...candidate, improvement: compareProfiles(profile, currentProfile) }
 }
 
 export function calculateTypeSuggestionScore(
@@ -376,33 +380,24 @@ export function calculateTypeSuggestionScore(
     pinnedGym,
     ruleset,
   )
-  let bestProfile = null
-
   if (team.length < 6) {
-    bestProfile = teamScoreProfile(
+    const profile = teamScoreProfile(
       [...team, hypothetical],
       defeatedGyms,
       pinnedGym,
       ruleset,
     )
-  } else {
-    for (const teamMember of team) {
-      const newTeam = team.map((p) =>
-        p.id === teamMember.id ? hypothetical : p,
-      )
-      const profile = teamScoreProfile(
-        newTeam,
-        defeatedGyms,
-        pinnedGym,
-        ruleset,
-      )
-      if (!bestProfile || compareProfiles(profile, bestProfile) > 0) {
-        bestProfile = profile
-      }
-    }
+    return compareProfiles(profile, currentProfile)
   }
 
-  return compareProfiles(bestProfile, currentProfile)
+  const { profile } = bestOver(
+    team,
+    (teamMember) =>
+      team.map((p) => (p.id === teamMember.id ? hypothetical : p)),
+    { defeatedGyms, pinnedGym, ruleset },
+  )
+
+  return compareProfiles(profile, currentProfile)
 }
 
 export function calculateBerryTiebreaker(

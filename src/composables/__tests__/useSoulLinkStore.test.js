@@ -14,7 +14,7 @@ import { useSoulLinkStore } from '../useSoulLinkStore.js'
 
 describe('useSoulLinkStore', () => {
   beforeEach(() => {
-    useSoulLinkStore().resetLocalRun()
+    useSoulLinkStore().createLocalRun()
   })
 
   afterEach(() => {
@@ -38,7 +38,9 @@ describe('useSoulLinkStore', () => {
       createdAt: null,
     })
     expect(firstStore.players.value).toHaveLength(2)
-    expect(firstStore.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([])
+    expect(firstStore.getPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL).team).toEqual(
+      [],
+    )
   })
 
   it('returns defensive read views instead of mutable live state', () => {
@@ -55,7 +57,7 @@ describe('useSoulLinkStore', () => {
 
     const runStateView = store.runState.value
     const playersView = store.players.value
-    const teamView = store.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)
+    const teamView = store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL).team
 
     expect(() => {
       runStateView.mode = 'solo'
@@ -69,7 +71,7 @@ describe('useSoulLinkStore', () => {
 
     expect(store.runState.value.mode).toBe(RUN_MODES.SOUL_LINK)
     expect(store.players.value[0].name).toBe('Player 1')
-    expect(store.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([
+    expect(store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL).team).toEqual([
       expect.objectContaining({ id: 'member-1', speciesName: 'Mudkip' }),
     ])
   })
@@ -105,14 +107,14 @@ describe('useSoulLinkStore', () => {
     expect(store.localPreferences.value.preferredPlayerId).toBe(
       SOUL_LINK_PLAYER_IDS.PARTNER,
     )
-    expect(store.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([
+    expect(store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL).team).toEqual([
       expect.objectContaining({
         id: 'member-boot-1',
         ownerPlayerId: SOUL_LINK_PLAYER_IDS.LOCAL,
       }),
     ])
 
-    store.resetLocalRun()
+    store.createLocalRun()
 
     expect(store.runState.value).toEqual(
       expect.objectContaining({
@@ -142,12 +144,13 @@ describe('useSoulLinkStore', () => {
       }),
     )
 
-    store.startNewLocalSoulLinkRun(GENERATION_RULESETS.PRE_GEN_6)
+    store.setGenerationRules(GENERATION_RULESETS.PRE_GEN_6)
+    store.startNewLocalSoulLinkRun()
 
     expect(store.runState.value.mode).toBe(RUN_MODES.SOUL_LINK)
     expect(store.generationRules.value).toBe(GENERATION_RULESETS.PRE_GEN_6)
     expect(store.sessionMetadata.value.name).toBeNull()
-    expect(store.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([])
+    expect(store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL).team).toEqual([])
   })
 
   it('sanitizes Soul Link rosters and gym progress when rules change', () => {
@@ -182,7 +185,7 @@ describe('useSoulLinkStore', () => {
     store.setGenerationRules(GENERATION_RULESETS.PRE_GEN_6)
 
     expect(store.generationRules.value).toBe(GENERATION_RULESETS.PRE_GEN_6)
-    expect(store.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([
+    expect(store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL).team).toEqual([
       expect.objectContaining({
         id: 'member-fairy-1',
         speciesName: 'Clefairy',
@@ -225,14 +228,14 @@ describe('useSoulLinkStore', () => {
     })
     store.removeRosterMember(SOUL_LINK_PLAYER_IDS.PARTNER, 'box', 'member-2')
 
-    expect(store.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([
+    expect(store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL).team).toEqual([
       expect.objectContaining({
         id: 'member-1',
         nickname: 'Leaf',
         ownerPlayerId: SOUL_LINK_PLAYER_IDS.LOCAL,
       }),
     ])
-    expect(store.getPlayerBox(SOUL_LINK_PLAYER_IDS.PARTNER)).toEqual([])
+    expect(store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.PARTNER).box).toEqual([])
     expect(store.getPlayerGymProgress(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual(
       expect.objectContaining({
         defeatedGyms: ['rock'],
@@ -269,11 +272,11 @@ describe('useSoulLinkStore', () => {
     store.addRosterMember(SOUL_LINK_PLAYER_IDS.LOCAL, 'box', boxFirst)
     store.addRosterMember(SOUL_LINK_PLAYER_IDS.LOCAL, 'box', boxSecond)
 
-    const team = store.getPlayerTeam(SOUL_LINK_PLAYER_IDS.LOCAL)
+    const team = store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL).team
     expect(team[0]).toEqual(expect.objectContaining({ id: 'team-1' }))
     expect(team[1]).toEqual(expect.objectContaining({ id: 'team-2' }))
 
-    const box = store.getPlayerBox(SOUL_LINK_PLAYER_IDS.LOCAL)
+    const box = store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL).box
     expect(box[0]).toEqual(expect.objectContaining({ id: 'box-2' }))
     expect(box[1]).toEqual(expect.objectContaining({ id: 'box-1' }))
   })
@@ -326,13 +329,13 @@ describe('useSoulLinkStore', () => {
     store.reviveRosterMember(SOUL_LINK_PLAYER_IDS.LOCAL, 'local-linked')
     store.reviveRosterMember(SOUL_LINK_PLAYER_IDS.PARTNER, 'partner-linked')
 
-    expect(store.getPlayerBox(SOUL_LINK_PLAYER_IDS.LOCAL)).toEqual([
+    expect(store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.LOCAL).box).toEqual([
       expect.objectContaining({
         id: 'local-linked',
         pairId: 'partner-linked',
       }),
     ])
-    expect(store.getPlayerBox(SOUL_LINK_PLAYER_IDS.PARTNER)).toEqual([
+    expect(store.getPlayerRoster(SOUL_LINK_PLAYER_IDS.PARTNER).box).toEqual([
       expect.objectContaining({
         id: 'partner-linked',
         pairId: 'local-linked',

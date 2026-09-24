@@ -1,7 +1,10 @@
-import { mergeRosterMembers } from './soulLinkModel.js'
-
-const DEFAULT_ROSTER = { team: [], box: [], dead: [], _tombstones: [] }
-const DEFAULT_PROGRESS = { defeatedGyms: [], pinnedGym: null, updatedAt: null }
+import { pickSoloSnapshotFields } from './runSnapshot.js'
+import {
+  emptyProgress,
+  emptyRoster,
+  isNewerOrEqual,
+  mergeRosterMembers,
+} from './soulLinkModel.js'
 
 function ensureRosterShape(snapshot) {
   return {
@@ -40,17 +43,15 @@ export function migrateLegacySoloSnapshot(snapshot) {
 
 export function mergeSoloRoster(localRoster, remoteRoster) {
   return mergeRosterMembers(
-    { ...DEFAULT_ROSTER, ...localRoster },
-    { ...DEFAULT_ROSTER, ...remoteRoster },
+    { ...emptyRoster(), ...localRoster },
+    { ...emptyRoster(), ...remoteRoster },
   )
 }
 
 export function mergeSoloProgress(localProgress, remoteProgress) {
-  const local = { ...DEFAULT_PROGRESS, ...localProgress }
-  const remote = { ...DEFAULT_PROGRESS, ...remoteProgress }
-  const localTs = local.updatedAt ?? 0
-  const remoteTs = remote.updatedAt ?? 0
-  return localTs >= remoteTs ? local : remote
+  const local = { ...emptyProgress(), ...localProgress }
+  const remote = { ...emptyProgress(), ...remoteProgress }
+  return isNewerOrEqual(local.updatedAt, remote.updatedAt) ? local : remote
 }
 
 export function mergeSoloRemoteState(localSnapshot, remoteSnapshot) {
@@ -70,19 +71,22 @@ export function mergeSoloRemoteState(localSnapshot, remoteSnapshot) {
 
   const localRulesTs = local.generationRulesUpdatedAt ?? 0
   const remoteRulesTs = remote.generationRulesUpdatedAt ?? 0
-  const generationRules =
-    localRulesTs >= remoteRulesTs
-      ? local.generationRules
-      : remote.generationRules
-  const generationRulesUpdatedAt =
-    localRulesTs >= remoteRulesTs ? localRulesTs : remoteRulesTs
+  const preferLocalRules = isNewerOrEqual(localRulesTs, remoteRulesTs)
+  const generationRules = preferLocalRules
+    ? local.generationRules
+    : remote.generationRules
+  const generationRulesUpdatedAt = preferLocalRules
+    ? localRulesTs
+    : remoteRulesTs
 
-  const localTeraTs = local.teraEnabledUpdatedAt ?? 0
-  const remoteTeraTs = remote.teraEnabledUpdatedAt ?? 0
-  const teraEnabled =
-    localTeraTs >= remoteTeraTs ? local.teraEnabled : remote.teraEnabled
-  const teraEnabledUpdatedAt =
-    localTeraTs >= remoteTeraTs ? localTeraTs : remoteTeraTs
+  const preferLocalTera = isNewerOrEqual(
+    local.teraEnabledUpdatedAt,
+    remote.teraEnabledUpdatedAt,
+  )
+  const teraEnabled = preferLocalTera ? local.teraEnabled : remote.teraEnabled
+  const teraEnabledUpdatedAt = preferLocalTera
+    ? (local.teraEnabledUpdatedAt ?? 0)
+    : (remote.teraEnabledUpdatedAt ?? 0)
 
   return {
     name: remote.name ?? local.name ?? null,
@@ -103,16 +107,6 @@ export function mergeSoloRemoteState(localSnapshot, remoteSnapshot) {
 export function buildSoloRemotePayload(snapshot) {
   return {
     name: snapshot.name ?? null,
-    team: snapshot.team ?? [],
-    box: snapshot.box ?? [],
-    dead: snapshot.dead ?? [],
-    _tombstones: snapshot._tombstones ?? [],
-    defeatedGyms: snapshot.defeatedGyms ?? [],
-    pinnedGym: snapshot.pinnedGym ?? null,
-    progressUpdatedAt: snapshot.progressUpdatedAt ?? null,
-    generationRules: snapshot.generationRules,
-    generationRulesUpdatedAt: snapshot.generationRulesUpdatedAt ?? null,
-    teraEnabled: !!snapshot.teraEnabled,
-    teraEnabledUpdatedAt: snapshot.teraEnabledUpdatedAt ?? null,
+    ...pickSoloSnapshotFields(snapshot),
   }
 }

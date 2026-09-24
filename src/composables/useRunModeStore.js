@@ -25,7 +25,7 @@ function loadCurrentRunMode() {
   return nextMode
 }
 
-function persistCurrentRunMode(mode) {
+function setCurrentRunMode(mode) {
   const nextMode = normalizeRunMode(mode)
 
   currentRunMode.value = nextMode
@@ -34,15 +34,10 @@ function persistCurrentRunMode(mode) {
   return nextMode
 }
 
-function setCurrentRunMode(mode) {
-  return persistCurrentRunMode(mode)
-}
-
 export function useRunModeStore() {
   return {
     currentRunMode: computed(() => currentRunMode.value),
     loadCurrentRunMode,
-    persistCurrentRunMode,
     setCurrentRunMode,
   }
 }

@@ -1,9 +1,8 @@
 import { computed, ref } from 'vue'
 import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
-import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
+import { localRunRepository as repository } from '../services/localRunRepository.js'
 import {
   assertSoloRunState,
-  createDefaultRunState,
   createDefaultSoloRunState,
   mapPersistedSoloSnapshotToRunState,
   mapSoloRunStateToPersistedSnapshot,
@@ -11,13 +10,9 @@ import {
   sanitizePersistedSoloRunSnapshot,
 } from '../utils/runSnapshot.js'
 import { migrateLegacySoloSnapshot } from '../utils/soloMergeModel.js'
-import {
-  prefetchBerrySprites,
-  prefetchTypeIcons,
-} from '../utils/spriteCache.js'
+import { prefetchSprites } from '../utils/spriteCache.js'
 import { useSoloRunManager } from './useSoloRunManager.js'
 
-const repository = createLocalSoloRunRepository()
 const { persistActiveRunSnapshot, activeRunId } = useSoloRunManager()
 let queuedPersist = Promise.resolve()
 
@@ -120,7 +115,7 @@ function getSanitizedSnapshotPersistOperations(
   return persistOperations
 }
 
-const runState = ref(createDefaultRunState())
+const runState = ref(createDefaultSoloRunState())
 const loadError = ref(false)
 
 const team = computed(() => getSoloRunState('Accessing the team store').team)
@@ -132,9 +127,6 @@ const pinnedGym = computed(
   () => getSoloRunState('Accessing the pinned gym').progress.pinnedGym,
 )
 const dead = computed(() => getSoloRunState('Accessing dead').dead)
-const tombstones = computed(
-  () => getSoloRunState('Accessing tombstones')._tombstones ?? [],
-)
 const generationRules = computed(
   () => getSoloRunState('Accessing generation rules').rules.generation,
 )
@@ -232,8 +224,7 @@ export function useRunStore() {
         )
       }
 
-      prefetchBerrySprites()
-      prefetchTypeIcons()
+      prefetchSprites()
       navigator.storage?.persist?.()
     } catch (error) {
       console.error('Failed to load data:', error)
@@ -283,13 +274,15 @@ export function useRunStore() {
     await persistDefeatedGyms([])
   }
 
-  async function startNewSoloRun(
-    nextGenerationRules = generationRules.value,
-    nextTeraEnabled = teraEnabled.value,
-  ) {
+  async function startNewSoloRun() {
     const now = Date.now()
     const snapshot = mapSoloRunStateToPersistedSnapshot(
-      createDefaultSoloRunState(nextGenerationRules, nextTeraEnabled, now, now),
+      createDefaultSoloRunState(
+        generationRules.value,
+        teraEnabled.value,
+        now,
+        now,
+      ),
     )
 
     setRunState(snapshot)
@@ -320,16 +313,6 @@ export function useRunStore() {
       { memberId, deletedAt: Date.now() },
     ]
     runState.value = { ...soloRunState, _tombstones: nextTombstones }
-  }
-
-  async function deleteTeamPokemon(id) {
-    addTombstone(id)
-    await persistTeam(team.value.filter((pokemon) => pokemon.id !== id))
-  }
-
-  async function deleteBoxPokemon(id) {
-    addTombstone(id)
-    await persistBox(box.value.filter((pokemon) => pokemon.id !== id))
   }
 
   async function killTeamPokemon(id) {
@@ -415,15 +398,12 @@ export function useRunStore() {
     persistTeam,
     persistBox,
     persistDead,
-    persistDefeatedGyms,
     persistPinnedGym,
     persistGenerationRules,
     persistTeraEnabled,
     startNewSoloRun,
     resetTeamAndBox,
     resetGyms,
-    deleteTeamPokemon,
-    deleteBoxPokemon,
     killTeamPokemon,
     killBoxPokemon,
     revivePokemon,

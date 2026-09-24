@@ -76,7 +76,6 @@ export function useRunOrchestration({
     scheduleAutoSync: scheduleSoloAutoSync,
     inviteCode: soloInviteCode,
     sessionId: soloSessionId,
-    isAvailable: isSoloSyncAvailable,
     joinSession: joinSoloSession,
     leaveSession: leaveSoloSession,
     deleteRemoteSession: deleteSoloRemoteSession,
@@ -136,7 +135,7 @@ export function useRunOrchestration({
   }
 
   function setupSoloSync() {
-    if (!isSoloSyncAvailable) return
+    if (!isSupabaseAvailable) return
     initSoloSyncSession(
       () => buildSoloSnapshot(),
       (s) => applySoloRemoteSnapshot(s),
@@ -207,30 +206,47 @@ export function useRunOrchestration({
     isSoloMode.value ? loadError.value : soulLinkLoadError.value,
   )
 
+  const modeHandlers = {
+    solo: {
+      reload: loadData,
+      resetPokemon: resetTeamAndBox,
+      resetGyms: resetGymsInStore,
+      resyncFromRemote: () => {
+        if (!hasSoloRemoteSession.value) return
+        syncSoloSession().catch((err) =>
+          console.error('Solo foreground re-sync failed:', err),
+        )
+      },
+    },
+    soulLink: {
+      reload: loadSoulLinkData,
+      resetPokemon: () => resetPlayerRoster(viewedSoulLinkPlayerId.value),
+      resetGyms: () => resetPlayerGymProgress(viewedSoulLinkPlayerId.value),
+      resyncFromRemote: () => {
+        if (!hasRemoteSession.value) return
+        syncSoulLinkSession().catch((err) =>
+          console.error('Foreground re-sync failed:', err),
+        )
+      },
+    },
+  }
+
+  function currentModeHandlers() {
+    return isSoloMode.value ? modeHandlers.solo : modeHandlers.soulLink
+  }
+
   function retryLoad() {
-    if (isSoloMode.value) {
-      loadData()
-    } else {
-      loadSoulLinkData()
-    }
+    currentModeHandlers().reload()
   }
 
   function resetPokemon() {
-    if (isSoloMode.value) {
-      resetTeamAndBox()
-    } else {
-      resetPlayerRoster(viewedSoulLinkPlayerId.value)
-    }
+    currentModeHandlers().resetPokemon()
     cancel()
     showResetDialog.value = false
   }
 
   function resetGyms() {
-    if (isSoloMode.value) {
-      resetGymsInStore()
-    } else {
-      resetPlayerGymProgress(viewedSoulLinkPlayerId.value)
-    }
+    currentModeHandlers().resetGyms()
     showResetDialog.value = false
   }
 
@@ -238,16 +254,6 @@ export function useRunOrchestration({
     deathBoxMode.value = true
     if (mode === 'soulLink') showSoulLinkDialog.value = false
     else if (mode === 'solo') showSoloDialog.value = false
-  }
-
-  async function createFreshSoloRun() {
-    await startNewSoloRun()
-    setCurrentRunMode(RUN_MODES.SOLO)
-    const freshSnapshot = buildSoloSnapshot()
-    freshSnapshot.name = null
-    await registerNewSoloRun(freshSnapshot)
-    dismissAllDialogs()
-    setupSoloSync()
   }
 
   async function handleLeaveSoloSession() {
@@ -262,7 +268,7 @@ export function useRunOrchestration({
     if (result.nextRunId) {
       await switchToSoloRunCore(result.nextRunId, null)
     } else {
-      await createFreshSoloRun()
+      await startFreshSoloRun()
     }
   }
 
@@ -291,10 +297,6 @@ export function useRunOrchestration({
     if (!player || !trimmedName || trimmedName === player.name) return
 
     updateSoulLinkPlayer(player.id, { name: trimmedName })
-  }
-
-  function handleRenameViewedSoulLinkPlayerInput(event) {
-    handleRenameViewedSoulLinkPlayer(event.target.value)
   }
 
   function handleRenameSoloRun(event) {
@@ -521,9 +523,10 @@ export function useRunOrchestration({
     const freshSnapshot = buildSoloSnapshot()
     freshSnapshot.name = null
     await registerNewSoloRun(freshSnapshot)
-    if (isSoloSyncAvailable) {
+    if (isSupabaseAvailable) {
       await deleteSoloRemoteSession()
     }
+    dismissAllDialogs()
     setupSoloSync()
   }
 
@@ -599,23 +602,13 @@ export function useRunOrchestration({
       }
     } else {
       // No runs of any kind — create a fresh solo run
-      await createFreshSoloRun()
+      await startFreshSoloRun()
     }
   }
 
   function handleVisibilityChange() {
     if (document.hidden) return
-    if (isSoloMode.value) {
-      if (hasSoloRemoteSession.value) {
-        syncSoloSession().catch((err) =>
-          console.error('Solo foreground re-sync failed:', err),
-        )
-      }
-    } else if (hasRemoteSession.value) {
-      syncSoulLinkSession().catch((err) =>
-        console.error('Foreground re-sync failed:', err),
-      )
-    }
+    currentModeHandlers().resyncFromRemote()
   }
 
   async function restoreMostRecentRun(preferredMode) {
@@ -651,7 +644,7 @@ export function useRunOrchestration({
 
     // Sync must settle before first render to avoid a team-reorder flash;
     // race a timeout so offline users aren't stuck waiting on Supabase.
-    if (startupMode === RUN_MODES.SOLO && isSoloSyncAvailable) {
+    if (startupMode === RUN_MODES.SOLO && isSupabaseAvailable) {
       const syncPromise = (async () => {
         try {
           await initSoloSyncSession(
@@ -732,7 +725,6 @@ export function useRunOrchestration({
     handleViewDeathBox,
     handleViewOtherSoulLinkPlayer,
     handleRenameSoloRun,
-    handleRenameViewedSoulLinkPlayerInput,
     copyInviteCode,
     copySoloInviteCode,
     startNewRun,

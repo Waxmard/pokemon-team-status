@@ -1,7 +1,6 @@
 <template>
   <div class="team-slot" :class="{
     empty: !pokemon,
-    clickable: interactive,
   }" :style="cardBackgroundStyle" @click="handleClick">
     <Transition name="slot-content" mode="out-in">
       <div v-if="pokemon" key="filled" class="slot-inner">
@@ -47,9 +46,9 @@ import { computed } from 'vue'
 import { useRunStore } from '../composables/useRunStore.js'
 import { ABILITIES } from '../data/abilities.js'
 import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
-import { hexToRgba } from '../utils/colors.js'
+import { getTypeBackground, hexToRgba } from '../utils/colors.js'
 import { getMemberTypesForRules } from '../utils/generationRules.js'
-import { getBerrySprite, resolveSpriteUrl } from '../utils/pokemon.js'
+import { getBerrySprite, resolveMemberSpriteUrl } from '../utils/pokemon.js'
 import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
@@ -60,10 +59,6 @@ const props = defineProps({
   generationRules: {
     type: String,
     default: null,
-  },
-  interactive: {
-    type: Boolean,
-    default: true,
   },
 })
 
@@ -76,8 +71,6 @@ const effectiveGenerationRules = computed(
 )
 
 function handleClick() {
-  if (!props.interactive) return
-
   if (props.pokemon) {
     emit('edit', props.pokemon.id)
     return
@@ -88,20 +81,13 @@ function handleClick() {
 
 const spriteUrl = computed(() => {
   if (!props.pokemon) return null
-  return resolveSpriteUrl(props.pokemon.name, {
-    variant: props.pokemon.spriteVariant,
-    megaSpriteId: props.pokemon.megaSpriteId,
-  })
+  return resolveMemberSpriteUrl(props.pokemon)
 })
 
 const partnerSpriteUrl = computed(() => {
   if (!props.pokemon?.pairedPartner) return null
   const partner = props.pokemon.pairedPartner
-  return resolveSpriteUrl(partner.name, {
-    variant: partner.spriteVariant,
-    megaSpriteId: partner.megaSpriteId,
-    small: true,
-  })
+  return resolveMemberSpriteUrl(partner, { small: true })
 })
 
 function getExtendedTypes(pokemon, baseTypes) {
@@ -139,12 +125,7 @@ const cardBackgroundStyle = computed(() => {
 
   const types = getExtendedTypes(props.pokemon, baseTypes)
 
-  if (types.length === 1) {
-    const color = TYPE_COLORS[types[0]].bg
-    return {
-      background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacity * 0.7)} 100%)`,
-    }
-  }
+  if (types.length === 1) return getTypeBackground(types[0], opacity)
 
   const stops = types.map((type, i) => {
     const color = TYPE_COLORS[type].bg
@@ -159,6 +140,7 @@ const cardBackgroundStyle = computed(() => {
 
 <style scoped>
 .team-slot {
+  cursor: pointer;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -188,10 +170,6 @@ const cardBackgroundStyle = computed(() => {
 .slot-content-leave-to {
   opacity: 0;
   transform: scale(0.95);
-}
-
-.team-slot.clickable {
-  cursor: pointer;
 }
 
 .team-slot.empty {

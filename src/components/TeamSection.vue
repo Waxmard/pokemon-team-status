@@ -1,7 +1,7 @@
 <template>
   <div class="team-section-wrapper">
     <!-- Swap Action Buttons (cancel/confirm) - shown only in swap mode -->
-    <div v-if="!readOnly && swapMode" class="swap-action-buttons">
+    <div v-if="swapMode" class="swap-action-buttons">
       <button class="swap-action-btn cancel" @click="handleCancelSwap">
         <span class="action-icon">✕</span>
       </button>
@@ -11,7 +11,7 @@
     </div>
 
     <!-- Add Button (when not editing) -->
-    <button v-if="!readOnly && !swapMode && !showDraftPanel" class="add-button" @click="handleAddClick">
+    <button v-if="!swapMode && !showDraftPanel" class="add-button" @click="handleAddClick">
       <span class="add-icon">+</span>
     </button>
 
@@ -39,16 +39,13 @@
               :key="pokemon.id"
               :pokemon="pokemon"
               :generation-rules="generationRules"
-              :interactive="!readOnly"
               @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditPokemon(pokemon.id)"
-              @delete="handleDeleteTeamPokemon"
             />
             <!-- Empty slots for swap mode -->
             <TeamSlot
               v-for="i in emptyTeamSlotCount"
               :key="'team-empty-' + i"
               :pokemon="null"
-              :interactive="!readOnly"
               @add="swapMode ? handleSwapSelect(null) : startAdd()"
             />
           </div>
@@ -60,15 +57,12 @@
               :key="pokemon.id"
               :pokemon="pokemon"
               :generation-rules="generationRules"
-              :interactive="!readOnly"
               @edit="swapMode ? handleSwapSelect(pokemon.id) : handleEditBoxPokemon(pokemon.id)"
-              @delete="handleDeleteBoxPokemon"
             />
             <TeamSlot
               v-for="i in emptyBoxSlotCount"
               :key="'box-empty-' + i"
               :pokemon="null"
-              :interactive="!readOnly"
               @add="swapMode ? handleSwapSelect(null) : startAddToBox()"
             />
           </div>
@@ -79,9 +73,7 @@
               <TeamSlot
                 :pokemon="pokemon"
                 :generation-rules="generationRules"
-                :interactive="!readOnly"
                 @edit="handleEditDeadPokemon(pokemon.id)"
-                @delete="handleDeleteDeadPokemon(pokemon.id)"
               />
             </div>
           </div>
@@ -118,7 +110,7 @@
           <button
             v-if="draftAction?.pokemon"
             class="add-button moves-btn"
-            :class="{ 'moves-btn-centered': !readOnly && isEditingDead }"
+            :class="{ 'moves-btn-centered': isEditingDead }"
             @click="openMovesField"
           >
             <span v-if="draftAction.moves?.length" class="moves-btn-icons">
@@ -135,7 +127,7 @@
           </button>
           <!-- Revive Button (when editing a dead Pokemon) -->
           <button
-            v-if="!readOnly && isEditingDead"
+            v-if="isEditingDead"
             class="add-button revive-mode"
             @click="handleReviveFromDraft"
           >
@@ -143,7 +135,7 @@
           </button>
           <!-- Delete/Kill Button -->
           <button
-            v-if="!readOnly && isEditing"
+            v-if="isEditing"
             class="add-button delete-mode"
             @click="handleDeleteClick"
           >
@@ -190,10 +182,6 @@ const props = defineProps({
     type: Boolean,
     default: null,
   },
-  readOnly: {
-    type: Boolean,
-    default: false,
-  },
   defeatedGyms: {
     type: Array,
     default: null,
@@ -207,10 +195,6 @@ const props = defineProps({
     default: null,
   },
   isSoulLinkMode: {
-    type: Boolean,
-    default: false,
-  },
-  hasDeathBox: {
     type: Boolean,
     default: false,
   },
@@ -231,10 +215,7 @@ const props = defineProps({
 const emit = defineEmits([
   'autosaveDraft',
   'immediateSwap',
-  'deleteTeamPokemon',
-  'deleteBoxPokemon',
   'cancelSwap',
-  'deletePokemon',
   'swapSuggestion',
   'killPokemon',
   'revivePokemon',
@@ -309,12 +290,10 @@ function handleModeClick() {
     return
   }
   if (swapMode.value) {
-    if (props.readOnly) return
     emit('cancelSwap')
     return
   }
   if (isEditingForSwap.value) {
-    if (props.readOnly) return
     enterSwapMode()
     return
   }
@@ -322,12 +301,10 @@ function handleModeClick() {
 }
 
 function handleCancelSwap() {
-  if (props.readOnly) return
   emit('cancelSwap')
 }
 
 function handleConfirmSwap() {
-  if (props.readOnly) return
   exitSwapMode()
 }
 
@@ -379,13 +356,13 @@ const emptyTeamSlotCount = computed(() => {
 })
 
 function handleSwapSelect(targetId) {
-  if (!props.readOnly && swapMode.value) {
+  if (swapMode.value) {
     emit('immediateSwap', targetId)
   }
 }
 
 const showDraftPanel = computed(() => {
-  return !!draftAction.value && !swapMode.value && !props.readOnly
+  return !!draftAction.value && !swapMode.value
 })
 
 const isEditingForSwap = computed(() => {
@@ -403,12 +380,7 @@ const isEditingDead = computed(() => {
   return draftAction.value?.isDeadPokemon && !swapMode.value
 })
 
-const hasKillAction = computed(() => props.isSoulLinkMode || props.hasDeathBox)
-
-const deleteActionIcon = computed(() => {
-  if (isEditingDead.value) return '🗑'
-  return hasKillAction.value ? '💀' : '🗑'
-})
+const deleteActionIcon = computed(() => (isEditingDead.value ? '🗑' : '💀'))
 
 function buildEditPayload(pokemon) {
   return {
@@ -429,14 +401,12 @@ function buildEditPayload(pokemon) {
 }
 
 function handleEditPokemon(id) {
-  if (props.readOnly) return
   const pokemon = props.team.find((p) => p.id === id)
   if (!pokemon) return
   startEdit(id, buildEditPayload(pokemon))
 }
 
 function handleEditBoxPokemon(boxPokemonId) {
-  if (props.readOnly) return
   const pokemon = props.box.find((p) => p.id === boxPokemonId)
   if (!pokemon) return
   startEditBox({ id: boxPokemonId, ...buildEditPayload(pokemon) })
@@ -450,7 +420,6 @@ function toggleViewMode() {
 }
 
 function handleAddClick() {
-  if (props.readOnly) return
   if (viewMode.value === 'dead') {
     startAddToDead()
   } else if (viewMode.value === 'box') {
@@ -461,7 +430,6 @@ function handleAddClick() {
 }
 
 function handleSwapSuggestion(event) {
-  if (props.readOnly) return
   emit('swapSuggestion', event)
 }
 
@@ -471,7 +439,6 @@ function killPokemon(id, rosterKey) {
 }
 
 function handleDeleteClick() {
-  if (props.readOnly) return
   if (draftAction.value?.isDeadPokemon) {
     const id = draftAction.value.deadPokemonId
     if (id) {
@@ -479,47 +446,23 @@ function handleDeleteClick() {
     }
     return
   }
-  if (hasKillAction.value) {
-    const rosterKey = draftAction.value?.isBoxPokemon ? 'box' : 'team'
-    const id = draftAction.value?.isBoxPokemon
-      ? draftAction.value.boxPokemonId
-      : draftAction.value?.editId
-    if (id) {
-      killPokemon(id, rosterKey)
-      cancel()
-    }
-    return
+  const rosterKey = draftAction.value?.isBoxPokemon ? 'box' : 'team'
+  const id = draftAction.value?.isBoxPokemon
+    ? draftAction.value.boxPokemonId
+    : draftAction.value?.editId
+  if (id) {
+    killPokemon(id, rosterKey)
+    cancel()
   }
-  emit('deletePokemon')
-}
-
-function handleDeleteTeamPokemon(id) {
-  if (props.readOnly) return
-  if (hasKillAction.value) {
-    killPokemon(id, 'team')
-    return
-  }
-  emit('deleteTeamPokemon', id)
-}
-
-function handleDeleteBoxPokemon(id) {
-  if (props.readOnly) return
-  if (hasKillAction.value) {
-    killPokemon(id, 'box')
-    return
-  }
-  emit('deleteBoxPokemon', id)
 }
 
 function handleEditDeadPokemon(id) {
-  if (props.readOnly) return
   const pokemon = props.dead.find((p) => p.id === id)
   if (!pokemon) return
   startEditDead({ id, ...buildEditPayload(pokemon) })
 }
 
 function handleReviveFromDraft() {
-  if (props.readOnly) return
   const id = draftAction.value?.deadPokemonId
   if (!id) return
   cancel()
@@ -528,11 +471,6 @@ function handleReviveFromDraft() {
   nextTick(() => {
     viewMode.value = 'box'
   })
-}
-
-function handleDeleteDeadPokemon(id) {
-  if (props.readOnly) return
-  emit('deleteDeadPokemon', { id })
 }
 </script>
 

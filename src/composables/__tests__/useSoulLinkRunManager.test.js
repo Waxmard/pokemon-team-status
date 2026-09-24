@@ -10,7 +10,7 @@ const { repository } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../services/localRunRepository.js', () => ({
-  createLocalSoloRunRepository: () => repository,
+  localRunRepository: repository,
 }))
 
 describe('useSoulLinkRunManager', () => {

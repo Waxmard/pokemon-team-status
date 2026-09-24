@@ -11,9 +11,9 @@ import {
 } from './runSnapshot.js'
 import {
   createDefaultSoulLinkLocalPreferences,
-  createDefaultSoulLinkPlayerProgress,
-  createDefaultSoulLinkPlayerRoster,
   createDefaultSoulLinkState,
+  emptyProgress,
+  emptyRoster,
 } from './soulLinkModel.js'
 
 export function getPlayerIdsFromPlayers(players) {
@@ -232,7 +232,7 @@ export function normalizeRosters(rosters, playerIds, context) {
   const normalizedRosters = normalizePlayerScopedRecords(
     rosters,
     playerIds,
-    createDefaultSoulLinkPlayerRoster,
+    emptyRoster,
     context,
   )
 
@@ -279,7 +279,7 @@ export function normalizeCreateLocalRunOptions(options = {}) {
     progress: normalizePlayerScopedRecords(
       options.progress,
       playerIds,
-      createDefaultSoulLinkPlayerProgress,
+      emptyProgress,
       'Creating a local Soul Link run',
     ),
     sync: {

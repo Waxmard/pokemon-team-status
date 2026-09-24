@@ -4,19 +4,19 @@ import {
   GENERATION_RULESETS,
 } from '../../data/types.js'
 import {
-  createDefaultRunState,
   createDefaultSoloRunState,
   createDefaultSoulLinkRunState,
   mapPersistedSoloSnapshotToRunState,
   mapSoloRunStateToPersistedSnapshot,
   normalizeGenerationRules,
   RUN_MODES,
+  SOLO_SNAPSHOT_FIELDS,
   sanitizePersistedSoloRunSnapshot,
 } from '../runSnapshot.js'
 
 describe('runSnapshot helpers', () => {
   it('creates the default normalized run state shape', () => {
-    expect(createDefaultRunState()).toEqual({
+    expect(createDefaultSoloRunState()).toEqual({
       mode: RUN_MODES.SOLO,
       team: [],
       box: [],
@@ -246,5 +246,16 @@ describe('runSnapshot helpers', () => {
     expect(() =>
       mapSoloRunStateToPersistedSnapshot(createDefaultSoulLinkRunState()),
     ).toThrow(/only supports solo runs/i)
+  })
+
+  it('sanitizes every field in the canonical solo snapshot set', () => {
+    const snapshot = mapSoloRunStateToPersistedSnapshot(
+      createDefaultSoloRunState(),
+    )
+    const sanitized = sanitizePersistedSoloRunSnapshot(snapshot)
+
+    for (const field of SOLO_SNAPSHOT_FIELDS) {
+      expect(Object.hasOwn(sanitized, field), field).toBe(true)
+    }
   })
 })

@@ -12,7 +12,7 @@
 
     <!-- Pin slot as absolute overlay, not in grid flow -->
     <div
-      v-if="!readOnly && isDragging"
+      v-if="isDragging"
       class="pin-slot-overlay"
       :class="{ 'pin-slot-hover': isPinSlotHover }"
       @dragenter.prevent="onPinSlotEnter"
@@ -35,7 +35,6 @@
         :pinned="element.type === pinnedType"
         :improvementScore="element.improvementScore"
         :suggestionMode="suggestionMode"
-        :readOnly="readOnly"
         :style="{ animationDelay: `${index * 30}ms` }"
         @click="onGymCardClick(element.type)"
         @dragstart="onRowDragStart(element.type, $event)"
@@ -62,27 +61,15 @@ const props = defineProps({
     type: Array,
     required: true,
   },
-  transitionName: {
-    type: String,
-    default: 'slide-left',
-  },
   emptyMessage: {
     type: String,
     default: 'No gyms',
-  },
-  draftActive: {
-    type: Boolean,
-    default: false,
   },
   pinnedType: {
     type: String,
     default: null,
   },
   suggestionMode: {
-    type: Boolean,
-    default: false,
-  },
-  readOnly: {
     type: Boolean,
     default: false,
   },
@@ -98,7 +85,6 @@ const touchDragType = ref(null)
 const justDragged = ref(false)
 
 function onRowDragStart(type, event) {
-  if (props.readOnly) return
   isDragging.value = true
   draggedType.value = type
   // Set drag data for the drag operation
@@ -118,13 +104,11 @@ function onDragEnd() {
 const PIN_SLOT_HEIGHT = 60
 
 function onTouchDragStart(type) {
-  if (props.readOnly) return
   isDragging.value = true
   touchDragType.value = type
 }
 
 function onTouchMove(event) {
-  if (props.readOnly) return
   if (!touchDragType.value) return
 
   const touch = event.touches[0]
@@ -132,7 +116,6 @@ function onTouchMove(event) {
 }
 
 function onTouchEnd(event) {
-  if (props.readOnly) return
   if (!touchDragType.value) return
 
   // Always prevent synthetic click when a drag was active
@@ -177,7 +160,6 @@ function onPinSlotLeave() {
 }
 
 function onDropPin() {
-  if (props.readOnly) return
   if (draggedType.value) {
     emit('pin', draggedType.value)
   }

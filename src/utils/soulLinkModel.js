@@ -5,18 +5,13 @@ export const SOUL_LINK_PLAYER_IDS = {
   PARTNER: 'player-2',
 }
 
-export const SOUL_LINK_PLAYER_ORDER = [
-  SOUL_LINK_PLAYER_IDS.LOCAL,
-  SOUL_LINK_PLAYER_IDS.PARTNER,
-]
-
 export const SOUL_LINK_SYNC_STATES = {
   LOCAL_ONLY: 'local-only',
   READY: 'ready',
   SYNCING: 'syncing',
 }
 
-export function createDefaultSoulLinkSessionMetadata() {
+function createDefaultSoulLinkSessionMetadata() {
   return {
     sessionId: null,
     inviteCode: null,
@@ -33,7 +28,7 @@ export function createDefaultSoulLinkPlayer(id, name, isLocal) {
   }
 }
 
-export function createDefaultSoulLinkPlayers() {
+function createDefaultSoulLinkPlayers() {
   return [
     createDefaultSoulLinkPlayer(SOUL_LINK_PLAYER_IDS.LOCAL, 'Player 1', true),
     createDefaultSoulLinkPlayer(
@@ -57,7 +52,12 @@ export function createDefaultSoulLinkMember(overrides = {}) {
   }
 }
 
-export function createDefaultSoulLinkPlayerRoster() {
+/** Newer timestamp wins; equal timestamps keep the local value. */
+export function isNewerOrEqual(localTs, remoteTs) {
+  return (localTs ?? 0) >= (remoteTs ?? 0)
+}
+
+export function emptyRoster() {
   return {
     team: [],
     box: [],
@@ -66,14 +66,14 @@ export function createDefaultSoulLinkPlayerRoster() {
   }
 }
 
-export function createDefaultSoulLinkRosters() {
+function createDefaultSoulLinkRosters() {
   return {
-    [SOUL_LINK_PLAYER_IDS.LOCAL]: createDefaultSoulLinkPlayerRoster(),
-    [SOUL_LINK_PLAYER_IDS.PARTNER]: createDefaultSoulLinkPlayerRoster(),
+    [SOUL_LINK_PLAYER_IDS.LOCAL]: emptyRoster(),
+    [SOUL_LINK_PLAYER_IDS.PARTNER]: emptyRoster(),
   }
 }
 
-export function createDefaultSoulLinkPlayerProgress() {
+export function emptyProgress() {
   return {
     defeatedGyms: [],
     pinnedGym: null,
@@ -81,10 +81,10 @@ export function createDefaultSoulLinkPlayerProgress() {
   }
 }
 
-export function createDefaultSoulLinkProgress() {
+function createDefaultSoulLinkProgress() {
   return {
-    [SOUL_LINK_PLAYER_IDS.LOCAL]: createDefaultSoulLinkPlayerProgress(),
-    [SOUL_LINK_PLAYER_IDS.PARTNER]: createDefaultSoulLinkPlayerProgress(),
+    [SOUL_LINK_PLAYER_IDS.LOCAL]: emptyProgress(),
+    [SOUL_LINK_PLAYER_IDS.PARTNER]: emptyProgress(),
   }
 }
 
@@ -194,7 +194,7 @@ function resolveMemberWinner(
 
   const localTs = localActive?.member.updatedAt ?? localDeleted ?? 0
   const remoteTs = remoteActive?.member.updatedAt ?? remoteDeleted ?? 0
-  const preferLocal = localTs >= remoteTs
+  const preferLocal = isNewerOrEqual(localTs, remoteTs)
 
   return {
     isDeleted: preferLocal
@@ -419,7 +419,7 @@ function buildLocationMap(members) {
 function collectAllMembers(rosters, playerIds) {
   const allMembers = {}
   for (const pid of playerIds) {
-    const roster = rosters[pid] ?? createDefaultSoulLinkPlayerRoster()
+    const roster = rosters[pid] ?? emptyRoster()
     allMembers[pid] = [...roster.team, ...roster.box, ...(roster.dead ?? [])]
   }
   return allMembers
@@ -467,7 +467,7 @@ function rebuildPairingsFromLocation(allMembers, playerIds, partnerOf) {
 function rebuildRosters(rosters, allMembers, playerIds) {
   const repaired = {}
   for (const pid of playerIds) {
-    const roster = rosters[pid] ?? createDefaultSoulLinkPlayerRoster()
+    const roster = rosters[pid] ?? emptyRoster()
     const teamIds = new Set(roster.team.map((m) => m.id))
     const deadIds = new Set((roster.dead ?? []).map((m) => m.id))
     repaired[pid] = {
@@ -513,21 +513,21 @@ export function mergeRemoteState(localSoulLinkState, remoteState) {
   const mergedRosters = {}
 
   for (const pid of playerIds) {
-    const localRoster =
-      localSoulLinkState.rosters[pid] ?? createDefaultSoulLinkPlayerRoster()
+    const localRoster = localSoulLinkState.rosters[pid] ?? emptyRoster()
     const remoteRoster = remoteState.rosters?.[pid] ?? localRoster
     mergedRosters[pid] = mergePlayerRoster(localRoster, remoteRoster)
   }
 
   const mergedProgress = {}
   for (const pid of playerIds) {
-    const localProgress =
-      localSoulLinkState.progress[pid] ?? createDefaultSoulLinkPlayerProgress()
-    const remoteProgress =
-      remoteState.progress?.[pid] ?? createDefaultSoulLinkPlayerProgress()
-    const localTs = localProgress.updatedAt ?? 0
-    const remoteTs = remoteProgress.updatedAt ?? 0
-    mergedProgress[pid] = localTs >= remoteTs ? localProgress : remoteProgress
+    const localProgress = localSoulLinkState.progress[pid] ?? emptyProgress()
+    const remoteProgress = remoteState.progress?.[pid] ?? emptyProgress()
+    mergedProgress[pid] = isNewerOrEqual(
+      localProgress.updatedAt,
+      remoteProgress.updatedAt,
+    )
+      ? localProgress
+      : remoteProgress
   }
 
   return {

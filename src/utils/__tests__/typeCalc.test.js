@@ -4,7 +4,6 @@ import {
   applyAbilityDefense,
   calculateBerryTiebreaker,
   calculateScore,
-  calculateScoreChanges,
   calculateTypeSuggestionScore,
   findBestSwap,
   findGlobalBestSwap,
@@ -383,46 +382,6 @@ describe('calculateScore', () => {
 // ---------------------------------------------------------------------------
 // Layer 3: Higher-order scoring functions
 // ---------------------------------------------------------------------------
-
-describe('calculateScoreChanges', () => {
-  it('returns non-zero diffs when adding a member', () => {
-    const team = [member({ types: ['normal'] })]
-    const draft = member({ types: ['water'], moves: ['water'] })
-    const changes = calculateScoreChanges(team, draft)
-
-    expect(changes.length).toBeGreaterThan(0)
-    for (const change of changes) {
-      expect(change.diff).not.toBe(0)
-      expect(change.diff).toBe(change.newScore - change.oldScore)
-    }
-  })
-
-  it('correctly computes diff for a specific type', () => {
-    const team = [member({ types: ['normal'] })]
-    const draft = member({ types: ['water'], moves: ['water'] })
-    const changes = calculateScoreChanges(team, draft)
-    const fireChange = changes.find((c) => c.type === 'fire')
-
-    // Old: fire->normal = 1 -> 0. New adds water: resist +1, SE +1 -> +2
-    expect(fireChange).toBeDefined()
-    expect(fireChange.oldScore).toBe(0)
-    expect(fireChange.newScore).toBe(2)
-    expect(fireChange.diff).toBe(2)
-  })
-
-  it('excludes types with zero diff', () => {
-    const team = []
-    const draft = member({ types: ['normal'] })
-    const changes = calculateScoreChanges(team, draft)
-    const types = changes.map((c) => c.type)
-
-    // Normal only gets points for fighting weakness (-1) and ghost immunity (+2)
-    expect(types).toContain('fighting')
-    expect(types).toContain('ghost')
-    // Neutral types produce no diff
-    expect(types).not.toContain('fire')
-  })
-})
 
 describe('calculateBerryTiebreaker', () => {
   it('counts berry when member is weak to gym type', () => {

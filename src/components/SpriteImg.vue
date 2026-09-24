@@ -11,7 +11,6 @@
       v-show="!error"
       :src="currentSrc"
       :alt="alt"
-      :class="imgClass"
       class="sprite-img"
       @load="onLoad"
       @error="onError"
@@ -38,10 +37,6 @@ const props = defineProps({
   height: {
     type: Number,
     required: true,
-  },
-  imgClass: {
-    type: String,
-    default: '',
   },
 })
 

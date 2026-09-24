@@ -7,25 +7,6 @@
   animation: scaleIn var(--transition-slow) ease forwards;
 }
 
-.btn {
-  padding: var(--space-3) var(--space-5);
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
-}
-
-.btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .wizard-mode {
   display: flex;
   flex-direction: column;
@@ -169,43 +150,6 @@
 .details-icon-btn:hover {
   color: var(--color-text-primary);
 }
-
-.suggestion-btn {
-  background: transparent;
-  border: none;
-  color: rgba(139, 92, 246, 1);
-  font-size: 1.25rem;
-  cursor: pointer;
-  padding: var(--space-1);
-  transition: color var(--transition-base);
-}
-
-.suggestion-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  cursor: pointer;
-  animation: fadeSlideIn var(--transition-base);
-}
-
-.suggestion-inline:active {
-  opacity: 0.7;
-}
-
-.suggestion-swap-icon {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
-.suggestion-indicator {
-  font-size: 0.7rem;
-  font-weight: 700;
-  margin-left: var(--space-1);
-}
-
-.improvement-up { color: var(--color-success); }
-.improvement-down { color: var(--color-danger); }
-.improvement-neutral { color: var(--color-text-muted); }
 
 .special-move-btn {
   background: transparent;
@@ -439,12 +383,6 @@
   transform: scale(1.05);
 }
 
-.wizard-actions {
-  display: flex;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-}
-
 .variant-btn {
   position: absolute;
   top: var(--space-2);
@@ -526,17 +464,6 @@
   color: var(--color-text-primary);
   pointer-events: none;
   z-index: 1;
-}
-
-@keyframes fadeSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {

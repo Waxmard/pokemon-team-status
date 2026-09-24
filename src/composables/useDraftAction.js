@@ -1,21 +1,18 @@
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { pickMemberFields } from '../utils/pokemon.js'
 
 const draftAction = ref(null)
 const swapMode = ref(false)
 
 export function useDraftAction() {
-  // State
-  const isActive = computed(() => !!draftAction.value)
-
   // Actions
-  function startAdd(pokemon = null) {
+  function startAdd() {
     if (draftAction.value?.type === 'add') {
       return cancel()
     }
     draftAction.value = {
       type: 'add',
-      pokemon,
+      pokemon: null,
       ...pickMemberFields({}),
     }
   }
@@ -55,13 +52,13 @@ export function useDraftAction() {
     }
   }
 
-  function startAddToBox(pokemon = null) {
+  function startAddToBox() {
     if (draftAction.value?.type === 'addToBox') {
       return cancel()
     }
     draftAction.value = {
       type: 'addToBox',
-      pokemon,
+      pokemon: null,
       ...pickMemberFields({}),
     }
   }
@@ -83,13 +80,13 @@ export function useDraftAction() {
     }
   }
 
-  function startAddToDead(pokemon = null) {
+  function startAddToDead() {
     if (draftAction.value?.type === 'addToDead') {
       return cancel()
     }
     draftAction.value = {
       type: 'addToDead',
-      pokemon,
+      pokemon: null,
       ...pickMemberFields({}),
     }
   }
@@ -147,6 +144,21 @@ export function useDraftAction() {
     }
   }
 
+  function convertToEdit(rosterKey, memberId) {
+    if (!draftAction.value) return
+
+    draftAction.value = {
+      ...draftAction.value,
+      type: 'edit',
+      isTeamPokemon: rosterKey === 'team',
+      isBoxPokemon: rosterKey === 'box',
+      isDeadPokemon: rosterKey === 'dead',
+      editId: rosterKey === 'team' ? memberId : null,
+      boxPokemonId: rosterKey === 'box' ? memberId : null,
+      deadPokemonId: rosterKey === 'dead' ? memberId : null,
+    }
+  }
+
   function convertToBoxEdit(boxPokemonId) {
     if (draftAction.value) {
       draftAction.value = {
@@ -176,7 +188,6 @@ export function useDraftAction() {
 
   return {
     draftAction,
-    isActive,
     swapMode,
     startAdd,
     startEdit,
@@ -198,6 +209,7 @@ export function useDraftAction() {
     updateBoxPokemonId,
     updateEditId,
     convertToBoxEdit,
+    convertToEdit,
     updateInHandPokemon,
     enterSwapMode,
     exitSwapMode,

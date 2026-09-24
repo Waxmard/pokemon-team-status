@@ -2,9 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   createDefaultSoulLinkLocalPreferences,
   createDefaultSoulLinkMember,
-  createDefaultSoulLinkPlayerProgress,
-  createDefaultSoulLinkPlayerRoster,
   createDefaultSoulLinkState,
+  emptyProgress,
   mergePlayerRoster,
   mergeRemoteState,
   repairPairings,
@@ -647,7 +646,7 @@ describe('mergeRemoteState — progress', () => {
     const remote = buildRemote(undefined)
     const result = mergeRemoteState(local, remote)
     expect(result.progress[P1].defeatedGyms).toEqual(['fairy'])
-    expect(result.progress[P2]).toEqual(createDefaultSoulLinkPlayerProgress())
+    expect(result.progress[P2]).toEqual(emptyProgress())
   })
 
   it('merges both players independently by timestamp', () => {

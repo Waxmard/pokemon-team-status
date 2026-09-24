@@ -1,6 +1,6 @@
 import { getAllTypesForRules } from '../data/types.js'
 import { generatePokemonId, pickMemberFields } from './pokemon.js'
-import { calculateBerryTiebreaker, calculateScore } from './typeCalc.js'
+import { scoreGyms } from './typeCalc.js'
 
 export function adaptUiMemberToSoulLinkMember(uiMember, playerId) {
   if (!uiMember?.name) return null
@@ -40,19 +40,6 @@ export function adaptSoulLinkMemberToUiMember(member) {
     types: member.types ?? [],
     ...pickMemberFields(member),
   }
-}
-
-function buildGymScore(type, team, generationRules) {
-  return {
-    type,
-    score: calculateScore(type, team, generationRules),
-    berryCount: calculateBerryTiebreaker(type, team, generationRules),
-  }
-}
-
-function sortGyms(a, b) {
-  if (a.score !== b.score) return a.score - b.score
-  return (a.berryCount ?? 0) - (b.berryCount ?? 0)
 }
 
 function resolvePairedPartner(uiMember, partnerRoster) {
@@ -102,9 +89,11 @@ export function buildSoulLinkPlayerBoard(
       pairedPartner: resolvePairedPartner(m, partnerRoster),
     }))
 
-  const allGyms = getAllTypesForRules(generationRules)
-    .map((type) => buildGymScore(type, team, generationRules))
-    .sort(sortGyms)
+  const allGyms = scoreGyms(
+    getAllTypesForRules(generationRules),
+    team,
+    generationRules,
+  )
 
   return {
     team,

@@ -1,32 +1,21 @@
 <template>
   <div class="gym-section-wrapper">
     <div class="gyms-header">
-      <span
+      <SuggestionPill
         v-if="showSwapPreview"
-        v-show="!headerSettling"
-        class="suggestion-inline"
-        @click="handleSwapClick"
-      >
-        <SpriteImg
-          :src="getSwapSpriteUrl(globalSwap.teamMember)"
-          :alt="globalSwap.teamMember.name"
-          :width="24"
-          :height="24"
-        />
-        <span class="suggestion-swap-icon">⇄</span>
-        <SpriteImg
-          :src="getSwapSpriteUrl(globalSwap.boxMember)"
-          :alt="globalSwap.boxMember.name"
-          :width="24"
-          :height="24"
-        />
-        <span v-if="suggestionIndicator" :class="['suggestion-indicator', suggestionIndicator.cls]">
-          {{ suggestionIndicator.symbol }}
-        </span>
-      </span>
+        :left="{
+          src: getSwapSpriteUrl(globalSwap.teamMember),
+          alt: globalSwap.teamMember.name,
+        }"
+        :right="{
+          src: getSwapSpriteUrl(globalSwap.boxMember),
+          alt: globalSwap.boxMember.name,
+        }"
+        :indicator="suggestionIndicator"
+        @select="handleSwapClick"
+      />
       <button
         v-if="canShowSuggestion"
-        v-show="!headerSettling"
         class="suggestion-btn"
         :class="{ active: showSuggestions }"
         @click="showSuggestions = !showSuggestions"
@@ -42,11 +31,8 @@
       <GymColumn
         :title="gymColumnTitle"
         :gyms="unifiedGymsList"
-        :draftActive="draftActive"
         :pinnedType="effectivePinnedGym"
         :suggestionMode="showSuggestions"
-        :readOnly="readOnly"
-        transitionName="slide-right"
         emptyMessage="No gyms"
         @gymClick="handleGymClick"
         @pin="handlePin"
@@ -57,14 +43,14 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { resolveSpriteUrl } from '../utils/pokemon.js'
+import { resolveMemberSpriteUrl } from '../utils/pokemon.js'
 import { getSuggestionIndicator } from '../utils/suggestion.js'
 import {
   calculateTypeSuggestionScore,
   findGlobalBestSwap,
 } from '../utils/typeCalc.js'
 import GymColumn from './GymColumn.vue'
-import SpriteImg from './SpriteImg.vue'
+import SuggestionPill from './SuggestionPill.vue'
 
 const props = defineProps({
   team: {
@@ -83,10 +69,6 @@ const props = defineProps({
     type: Array,
     required: true,
   },
-  defeatedGymTypes: {
-    type: Array,
-    default: () => [],
-  },
   draftActive: {
     type: Boolean,
     default: false,
@@ -103,30 +85,23 @@ const props = defineProps({
     type: Function,
     default: null,
   },
-  readOnly: {
-    type: Boolean,
-    default: false,
-  },
 })
 
 const emit = defineEmits(['defeatGym', 'undefeatGym', 'swapSuggestion'])
 
 // Suggestion state
 const showSuggestions = ref(false)
-const headerSettling = ref(false)
-
-watch(showSuggestions, () => {
-  headerSettling.value = true
-  setTimeout(() => {
-    headerSettling.value = false
-  }, 300)
-})
-
 const canShowSuggestion = computed(
-  () => !props.readOnly && props.team.length > 0 && !props.draftActive,
+  () => props.team.length > 0 && !props.draftActive,
 )
 
 const effectivePinnedGym = computed(() => props.pinnedType)
+
+const defeatedGymTypes = computed(() =>
+  props.defeatedGymsList.map((gym) => gym.type),
+)
+
+const defeatedTypes = computed(() => new Set(defeatedGymTypes.value))
 
 watch(canShowSuggestion, (canShow) => {
   if (!canShow) showSuggestions.value = false
@@ -138,7 +113,7 @@ const globalSwap = computed(() => {
   return findGlobalBestSwap(
     props.team,
     props.box,
-    props.defeatedGymTypes,
+    defeatedGymTypes.value,
     effectivePinnedGym.value,
     props.generationRules,
   )
@@ -162,11 +137,7 @@ const gymColumnTitle = computed(() => {
 })
 
 function getSwapSpriteUrl(pokemon) {
-  return resolveSpriteUrl(pokemon.name, {
-    variant: pokemon.spriteVariant,
-    megaSpriteId: pokemon.megaSpriteId,
-    small: true,
-  })
+  return resolveMemberSpriteUrl(pokemon, { small: true })
 }
 
 function handleSwapClick() {
@@ -179,11 +150,6 @@ function handleSwapClick() {
     isTeamMember: true,
   })
 }
-
-// Create a set of defeated gym types for quick lookup
-const defeatedTypes = computed(() => {
-  return new Set(props.defeatedGymsList.map((gym) => gym.type))
-})
 
 // Combine remaining and defeated gyms into a unified list, sorted by score (then berry tiebreaker)
 const unifiedGymsList = computed(() => {
@@ -205,7 +171,7 @@ const unifiedGymsList = computed(() => {
       improvementScore: calculateTypeSuggestionScore(
         gym.type,
         props.team,
-        props.defeatedGymTypes,
+        defeatedGymTypes.value,
         effectivePinnedGym.value,
         props.generationRules,
       ),
@@ -240,8 +206,6 @@ const unifiedGymsList = computed(() => {
 // Handle gym click - toggle between defeated and remaining
 // Also unpin if the clicked gym was pinned
 function handleGymClick(type) {
-  if (props.readOnly) return
-
   if (effectivePinnedGym.value === type) {
     props.persistPinnedGym?.(null)
   }
@@ -254,8 +218,6 @@ function handleGymClick(type) {
 
 // Handle pin - toggle pinned state
 function handlePin(type) {
-  if (props.readOnly) return
-
   if (effectivePinnedGym.value === type) {
     props.persistPinnedGym?.(null)
   } else {
@@ -300,56 +262,13 @@ function handlePin(type) {
   white-space: nowrap;
 }
 
-.suggestion-btn {
-  background: transparent;
-  border: none;
-  color: rgba(139, 92, 246, 1);
-  font-size: 1.25rem;
-  cursor: pointer;
-  padding: var(--space-1);
-  transition: color var(--transition-base), opacity var(--transition-fast);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.suggestion-btn.active {
-  text-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
-}
-
+/* Pill chrome: only on viewports that neither media query below targets. */
 .suggestion-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  cursor: pointer;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
-  animation: fadeSlideIn var(--transition-base);
-  transition: opacity var(--transition-fast);
-}
-
-.suggestion-inline:active {
-  opacity: 0.7;
-}
-
-.suggestion-swap-icon {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
-.suggestion-indicator {
-  font-size: 0.7rem;
-  font-weight: 700;
-  margin-left: var(--space-1);
-}
-
-.improvement-up {
-  color: var(--color-success);
-}
-
-.improvement-neutral {
-  color: var(--color-text-muted);
 }
 
 .label-fade-enter-active,
@@ -369,11 +288,6 @@ function handlePin(type) {
   }
 
   .suggestion-inline {
-    border: none;
-    background: none;
-    box-shadow: none;
-    padding: 0;
-    border-radius: 0;
     position: relative;
     right: var(--space-3);
     top: calc(var(--space-1) / 2);
@@ -391,11 +305,6 @@ function handlePin(type) {
   }
 
   .suggestion-inline {
-    border: none;
-    background: none;
-    box-shadow: none;
-    padding: 0;
-    border-radius: 0;
     position: relative;
     right: var(--space-3);
     top: calc(var(--space-1) / 2);
