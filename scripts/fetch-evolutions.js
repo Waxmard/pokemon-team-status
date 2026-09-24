@@ -160,9 +160,9 @@ try {
   )
 
   console.log('\nExamples:')
-  console.log('  Bulbasaur ->', evolutionMap['Bulbasaur'])
-  console.log('  Eevee ->', evolutionMap['Eevee'])
-  console.log('  Poliwhirl ->', evolutionMap['Poliwhirl'])
+  console.log('  Bulbasaur ->', evolutionMap.Bulbasaur)
+  console.log('  Eevee ->', evolutionMap.Eevee)
+  console.log('  Poliwhirl ->', evolutionMap.Poliwhirl)
 
   updatePokemonFile(evolutionMap)
 

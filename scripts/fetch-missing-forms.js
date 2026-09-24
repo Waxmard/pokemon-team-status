@@ -83,15 +83,15 @@ function formatDisplayName(apiName) {
   // Regional forms: suffix becomes prefix
   if (apiName.endsWith('-alola')) {
     const base = apiName.replace('-alola', '')
-    return 'Alolan ' + capitalize(base)
+    return `Alolan ${capitalize(base)}`
   }
   if (apiName.endsWith('-galar')) {
     const base = apiName.replace('-galar', '')
-    return 'Galarian ' + capitalize(base)
+    return `Galarian ${capitalize(base)}`
   }
   if (apiName.endsWith('-paldea')) {
     const base = apiName.replace('-paldea', '')
-    return 'Paldean ' + capitalize(base)
+    return `Paldean ${capitalize(base)}`
   }
 
   if (apiName === 'darmanitan-standard-galar') {
@@ -100,7 +100,7 @@ function formatDisplayName(apiName) {
 
   if (apiName.startsWith('rotom-')) {
     const form = apiName.replace('rotom-', '')
-    return 'Rotom-' + capitalize(form)
+    return `Rotom-${capitalize(form)}`
   }
 
   if (apiName.startsWith('oricorio-')) {
@@ -112,7 +112,7 @@ function formatDisplayName(apiName) {
 
   if (apiName.startsWith('wormadam-')) {
     const form = apiName.replace('wormadam-', '')
-    return 'Wormadam-' + capitalize(form)
+    return `Wormadam-${capitalize(form)}`
   }
 
   if (apiName === 'shaymin-sky') {
@@ -121,7 +121,7 @@ function formatDisplayName(apiName) {
 
   if (apiName.startsWith('castform-')) {
     const form = apiName.replace('castform-', '')
-    return 'Castform-' + capitalize(form)
+    return `Castform-${capitalize(form)}`
   }
 
   return apiName
