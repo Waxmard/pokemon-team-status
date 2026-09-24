@@ -48,7 +48,7 @@
       <template v-if="ready">
       <template v-if="isSoloMode">
         <TeamSection :team="team" :box="box" :dead="dead" :has-death-box="true" :death-box-mode="deathBoxMode"
-          @confirmDraft="confirmDraft" @autosaveDraft="autosaveDraft" @immediateSwap="handleImmediateSwap" :generation-rules="generationRules" :tera-enabled="teraEnabled"
+          @autosaveDraft="autosaveDraft" @immediateSwap="handleImmediateSwap" :generation-rules="generationRules" :tera-enabled="teraEnabled"
           @deleteTeamPokemon="deleteTeamPokemon" @deleteBoxPokemon="deleteBoxPokemon" @cancelSwap="handleCancelSwap"
           @deletePokemon="handleDeleteFromDraft" @swapSuggestion="handleSwapSuggestion"
           @killPokemon="handleSoloKillPokemon" @revivePokemon="handleSoloRevivePokemon"
@@ -70,7 +70,6 @@
         :partner-roster="soulLinkPartnerRoster"
         :player-id="viewedSoulLinkPlayerId"
         :death-box-mode="deathBoxMode"
-        @confirmDraft="handleSoulLinkConfirmDraft"
         @autosaveDraft="handleSoulLinkAutosaveDraft"
         @immediateSwap="handleSoulLinkImmediateSwap"
         @deleteTeamPokemon="handleSoulLinkDeleteTeamPokemon"
@@ -460,7 +459,6 @@ const {
   hasDraft,
   remainingGyms,
   defeatedGymsList,
-  confirmDraft,
   autosaveDraft,
   handleImmediateSwap,
   handleDeleteFromDraft,
@@ -521,13 +519,6 @@ const {
   handleSoulLinkCancelSwap,
   soulLinkSwapOriginalRoster,
 })
-
-function handleSoulLinkConfirmDraft() {
-  const result = confirmSoulLinkDraft()
-  if (result?.placedInDead) {
-    deathBoxMode.value = true
-  }
-}
 
 function handleSoulLinkAutosaveDraft() {
   const result = confirmSoulLinkDraft({ closeAfterPersist: false })

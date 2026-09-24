@@ -48,7 +48,7 @@ export function useSoloDraftHandlers() {
   const swapOriginalState = ref(null)
 
   function captureSwapOriginal() {
-    // Only capture if not already captured (e.g., by confirmDraft for add-replace)
+    // Only capture if not already captured (e.g., by enterAddReplaceMode)
     if (!swapOriginalState.value) {
       swapOriginalState.value = {
         team: JSON.parse(JSON.stringify(team.value)),
@@ -326,17 +326,6 @@ export function useSoloDraftHandlers() {
     await persistBox(newBox)
   }
 
-  function handleDraftDeletion() {
-    if (draftAction.value.type === 'edit' && !draftAction.value.isBoxPokemon) {
-      deleteTeamPokemon(draftAction.value.editId)
-    } else if (
-      draftAction.value.type === 'edit' &&
-      draftAction.value.isBoxPokemon
-    ) {
-      deleteBoxPokemon(draftAction.value.boxPokemonId)
-    }
-  }
-
   function enterAddReplaceMode() {
     swapOriginalState.value = {
       team: JSON.parse(JSON.stringify(team.value)),
@@ -424,73 +413,6 @@ export function useSoloDraftHandlers() {
     )
   }
 
-  async function confirmDraft() {
-    if (!draftAction.value) return
-
-    if (!draftAction.value.pokemon) {
-      handleDraftDeletion()
-      cancel()
-      return
-    }
-
-    const committed = await commitDraftByType(
-      buildPokemonMember(draftAction.value, { source: 'team' }),
-    )
-    if (!committed) return
-    cancel()
-  }
-
-  async function commitDraftByType(newMember) {
-    const action = draftAction.value
-    if (action.type === 'add') {
-      if (team.value.length >= 6) {
-        enterAddReplaceMode()
-        return false
-      }
-      await persistTeam([...team.value, newMember])
-      return true
-    }
-    if (action.type === 'addToBox') {
-      await persistBox([newMember, ...box.value])
-      return true
-    }
-    if (action.type === 'addToDead') {
-      await persistDead([newMember, ...dead.value])
-      return true
-    }
-    if (action.type === 'edit') {
-      await commitDraftEdit(action)
-    }
-    return true
-  }
-
-  async function commitDraftEdit(action) {
-    if (action.isBoxPokemon) {
-      await confirmBoxPokemonEdit()
-      return
-    }
-    if (action.isDeadPokemon) {
-      await persistDead(
-        dead.value.map((member) =>
-          member.id === action.deadPokemonId
-            ? buildPokemonMember(action, {
-                id: action.deadPokemonId,
-                source: 'dead',
-              })
-            : member,
-        ),
-      )
-      return
-    }
-    await persistTeam(
-      team.value.map((p) =>
-        p.id === action.editId
-          ? buildPokemonMember(action, { id: action.editId })
-          : p,
-      ),
-    )
-  }
-
   function handleDeleteFromDraft() {
     if (!draftAction.value) return
 
@@ -521,7 +443,6 @@ export function useSoloDraftHandlers() {
     hasDraft,
     remainingGyms,
     defeatedGymsList,
-    confirmDraft,
     autosaveDraft,
     handleImmediateSwap,
     handleDeleteFromDraft,

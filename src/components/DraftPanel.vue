@@ -367,7 +367,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['confirm', 'cancel', 'swapSuggestion', 'autosave'])
+const emit = defineEmits(['cancel', 'swapSuggestion', 'autosave'])
 
 const {
   draftAction,

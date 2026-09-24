@@ -9,7 +9,6 @@
       :partner-roster="partnerRoster"
       :player-id="playerId"
       :death-box-mode="deathBoxMode"
-      @confirmDraft="$emit('confirmDraft')"
       @autosaveDraft="$emit('autosaveDraft')"
       @immediateSwap="$emit('immediateSwap', $event)"
       @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
@@ -67,7 +66,6 @@ defineProps({
 })
 
 defineEmits([
-  'confirmDraft',
   'autosaveDraft',
   'immediateSwap',
   'deleteTeamPokemon',
