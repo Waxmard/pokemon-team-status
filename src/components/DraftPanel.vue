@@ -145,6 +145,20 @@
                   ⬆
                 </button>
               </template>
+              <template v-if="effectiveTeraEnabled" #bottom-center>
+                <button
+                  class="tera-type-btn"
+                  :style="getTypeBackground(draftAction.teraType || previewTypes[0], true)"
+                  @click="openField('tera')"
+                  aria-label="Tera Type"
+                >
+                  <img
+                    :src="getTypeIcon(draftAction.teraType || previewTypes[0])"
+                    :alt="draftAction.teraType || previewTypes[0]"
+                    class="type-icon"
+                  />
+                </button>
+              </template>
               <template #bottom-right>
                 <input
                   v-if="!isSoulLinkMode"
@@ -259,6 +273,22 @@
             </button>
           </div>
         </div>
+
+        <div v-else-if="activeField === 'tera'" class="editor-view">
+          <div class="moves-type-grid">
+            <button
+              v-for="type in activeTypes"
+              :key="type"
+              @click="toggleTeraType(type)"
+              class="move-type-option"
+              :class="{ selected: isTeraTypeSelected(type) }"
+              :style="getTypeBackground(type, isTeraTypeSelected(type))"
+              :title="capitalize(type)"
+            >
+              <img :src="getTypeIcon(type)" :alt="type" class="type-icon" />
+            </button>
+          </div>
+        </div>
       </template>
     </div>
 
@@ -331,9 +361,13 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  teraEnabled: {
+    type: Boolean,
+    default: null,
+  },
 })
 
-const emit = defineEmits(['confirm', 'cancel', 'swapSuggestion', 'autosave'])
+const emit = defineEmits(['cancel', 'swapSuggestion', 'autosave'])
 
 const {
   draftAction,
@@ -345,6 +379,7 @@ const {
   updateCatchLocation,
   updateNickname,
   updateMegaForm,
+  updateTeraType,
   updateSpriteVariant,
 } = useDraftAction()
 
@@ -354,6 +389,7 @@ const {
   defeatedGyms: storageDefeatedGyms,
   pinnedGym: storagePinnedGym,
   generationRules: storageGenerationRules,
+  teraEnabled: storageTeraEnabled,
 } = useRunStore()
 
 // Use props when provided, fall back to solo store
@@ -366,6 +402,9 @@ const effectivePinnedGym = computed(
 )
 const effectiveGenerationRules = computed(
   () => props.generationRules ?? storageGenerationRules.value,
+)
+const effectiveTeraEnabled = computed(
+  () => props.teraEnabled ?? storageTeraEnabled.value,
 )
 
 // Suggestion state
@@ -391,7 +430,6 @@ const swapSuggestion = computed(() => {
   })
 
   if (isTeamMember) {
-    // Editing team member: find best box member to swap in
     // Build a draft team reflecting the user's current edits
     const draftTeam = props.team.map((p) =>
       p.id === currentMember.id ? currentMember : p,
@@ -406,7 +444,6 @@ const swapSuggestion = computed(() => {
       effectiveGenerationRules.value,
     )
   } else {
-    // Editing box member: find best team member to replace
     return findBestSwap(
       props.team,
       currentMember,
@@ -456,7 +493,6 @@ function closeField() {
   showSpecialMoveDropdown.value = false
 }
 
-// Template refs for auto-focus
 const pokemonInputRef = ref(null)
 
 function focusPokemonInput() {
@@ -503,7 +539,6 @@ const previewTypes = computed(() => {
   return effectiveDraftPokemon.value?.types || []
 })
 
-// Initialize form state when draftAction changes
 watch(
   draftAction,
   (action) => {
@@ -523,9 +558,12 @@ watch(effectiveGenerationRules, (ruleset) => {
   abilityQuery.value = sanitizedDraft.ability || ''
 })
 
+watch(effectiveTeraEnabled, (enabled) => {
+  if (!enabled && activeField.value === 'tera') closeField()
+})
+
 const isTouchDevice = window.matchMedia('(pointer: coarse)').matches
 
-// Auto-focus Pokemon name field on open only if empty
 onMounted(() => {
   nextTick(() => {
     // Scroll page to top (mobile only — avoids jarring jumps on desktop)
@@ -533,14 +571,12 @@ onMounted(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    // Existing focus logic
     if (!draftAction.value?.pokemon) {
       focusPokemonInput()
     }
   })
 })
 
-// Focus Pokemon input when starting a new add action
 watch(
   () => draftAction.value?.pokemon,
   (newPokemon, oldPokemon) => {
@@ -567,11 +603,11 @@ const fieldTitle = computed(() => {
     catchLocation: 'Catch Location',
     details: `${name}'s Details`,
     moves: `${name}'s Move Types`,
+    tera: `${name}'s Tera Type`,
   }
   return titles[activeField.value] ?? name ?? 'Choose Pokemon'
 })
 
-// Probe for female sprite availability per-Pokemon
 const femaleAvailable = ref(false)
 
 watch(
@@ -652,7 +688,6 @@ const canEvolve = computed(() => {
 const evolutionOptions = computed(() => {
   const evo = effectiveDraftPokemon.value?.evolvesTo
   const evoList = evo ? [evo].flat() : []
-  // Add mega options as special entries
   const megas = megaOptions.value.map((mega) => ({
     isMega: true,
     form: mega.form,
@@ -685,7 +720,6 @@ function isCurrentMega(option) {
 }
 
 function evolveTo(option) {
-  // Handle mega evolution option
   if (option.isMega) {
     // Toggle mega: if already selected, deselect (no animation)
     if (draftAction.value?.megaForm === option.form) {
@@ -715,7 +749,7 @@ function evolveTo(option) {
     return
   }
 
-  // Handle regular evolution (option is just a string name)
+  // option is a plain string name here (mega options are objects, handled above)
   const pokemon = getPokemonDataForRules(option, effectiveGenerationRules.value)
   if (pokemon) {
     showEvolveOptions.value = false
@@ -743,7 +777,6 @@ function getTypeBackground(type, selected = false) {
   }
 }
 
-// Wizard-related computed properties
 const relevantBerries = computed(() => {
   if (!effectiveDraftPokemon.value) return []
   const weakTypes = activeTypes.value.filter((attackType) => {
@@ -785,7 +818,6 @@ const relevantBerries = computed(() => {
   return berries
 })
 
-// Move selection helpers for wizard
 const selectedMoveCount = computed(() => {
   return draftAction.value?.moves?.length || 0
 })
@@ -807,21 +839,38 @@ function toggleMoveType(type) {
   const existingIndex = moves.indexOf(type)
 
   if (existingIndex === -1) {
-    // Add the move (no limit)
+    // No cap on move count
     moves.push(type)
   } else {
-    // Remove the move
     moves.splice(existingIndex, 1)
   }
   updateMoves(moves)
 }
 
-// Special move helpers
+function isTeraTypeSelected(type) {
+  return draftAction.value?.teraType === type
+}
+
+function toggleTeraType(type) {
+  if (!effectiveTeraEnabled.value) return
+  updateTeraType(draftAction.value?.teraType === type ? null : type)
+}
+
+watch(
+  () => draftAction.value?.pokemon,
+  (pokemon) => {
+    if (!pokemon || !effectiveTeraEnabled.value) return
+    if (!draftAction.value.teraType) {
+      updateTeraType(pokemon.types[0])
+    }
+  },
+  { immediate: true },
+)
+
 const specialMoveOptions = computed(() =>
   filterOptions(SPECIAL_MOVE_NAMES, specialMoveQuery.value),
 )
 
-// Ability autocomplete helpers
 const abilityAutocompleteOptions = computed(() =>
   filterOptions(ABILITY_NAMES, abilityQuery.value),
 )
@@ -860,7 +909,6 @@ function clearSpecialMove() {
   updateSpecialMove(null)
 }
 
-// Catch location state
 const catchLocationQuery = ref('')
 
 function locationMatchesQuery(location, query) {
@@ -1012,6 +1060,7 @@ const autosaveSignature = computed(() => {
     megaForm: action.megaForm,
     megaSpriteId: action.megaSpriteId,
     megaTypes: action.megaTypes ?? [],
+    teraType: action.teraType,
   })
 })
 
@@ -1049,574 +1098,4 @@ function onSelectPokemon(value) {
 defineExpose({ openField })
 </script>
 
-<style scoped>
-.draft-panel {
-  margin-top: var(--space-4);
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-5);
-  animation: scaleIn var(--transition-slow) ease forwards;
-}
-
-.btn {
-  padding: var(--space-3) var(--space-5);
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
-}
-
-.btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Wizard mode styles */
-.wizard-mode {
-  display: flex;
-  flex-direction: column;
-}
-
-.wizard-container {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 300px;
-  max-height: 520px;
-}
-
-.wizard-empty-state,
-.overview-view,
-.editor-view {
-  animation: fadeSlideIn var(--transition-base);
-  flex: 1;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding-bottom: var(--space-4);
-}
-
-.overview-view,
-.catch-location-view {
-  overflow: visible;
-}
-
-.overview-view {
-  padding-bottom: 0;
-}
-
-.wizard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-}
-
-.header-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.wizard-title {
-  font-size: 1.1rem;
-  margin-bottom: 0;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.back-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text-primary);
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: var(--space-1);
-}
-
-.special-move-header {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  min-width: 0;
-  flex: 1;
-}
-
-.wizard-header-spacer {
-  width: 2rem;
-}
-
-.wizard-title-input {
-  width: auto;
-  max-width: 100%;
-  min-width: 0;
-  padding: 0;
-  border: none;
-  font-size: 1.1rem;
-  font-weight: 700;
-  cursor: text;
-  background-image: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.wizard-title-field {
-  position: relative;
-  display: inline-block;
-}
-
-.wizard-title-placeholder {
-  position: absolute;
-  left: 0;
-  top: 0;
-  pointer-events: none;
-  font-size: 1.1rem;
-  font-weight: 700;
-  white-space: nowrap;
-  background-image: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.wizard-title-field:focus-within .wizard-title-placeholder {
-  display: none;
-}
-
-.wizard-title-input:focus {
-  outline: none;
-}
-
-.suggestion-group {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.details-icon-btn {
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 1.05rem;
-  line-height: 1;
-  padding: 0;
-  cursor: pointer;
-  transition: color var(--transition-base), transform var(--transition-base);
-}
-
-.details-icon-btn:active {
-  transform: scale(0.95);
-}
-
-.details-icon-btn:hover {
-  color: var(--color-text-primary);
-}
-
-.suggestion-btn {
-  background: transparent;
-  border: none;
-  color: rgba(139, 92, 246, 1);
-  font-size: 1.25rem;
-  cursor: pointer;
-  padding: var(--space-1);
-  transition: color var(--transition-base);
-}
-
-.suggestion-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  cursor: pointer;
-  animation: fadeSlideIn var(--transition-base);
-}
-
-.suggestion-inline:active {
-  opacity: 0.7;
-}
-
-.suggestion-swap-icon {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
-.suggestion-indicator {
-  font-size: 0.7rem;
-  font-weight: 700;
-  margin-left: var(--space-1);
-}
-
-.improvement-up { color: var(--color-success); }
-.improvement-down { color: var(--color-danger); }
-.improvement-neutral { color: var(--color-text-muted); }
-
-.special-move-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  font-size: 1.25rem;
-  cursor: pointer;
-  padding: var(--space-1);
-  transition: color var(--transition-base);
-}
-
-.special-move-btn:hover,
-.special-move-btn.active {
-  color: rgba(139, 92, 246, 1);
-}
-
-.special-move-badge-inline {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  background: rgba(139, 92, 246, 0.2);
-  border-radius: var(--radius-md);
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-
-.clear-special-move-inline {
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  padding: 0;
-  font-size: 0.7rem;
-  line-height: 1;
-}
-
-.clear-special-move-inline:hover {
-  color: var(--color-text);
-}
-
-.special-move-input-inline {
-  flex: 1;
-  max-width: 140px;
-}
-
-.overview-view :deep(.pokemon-preview) {
-  filter: none;
-  margin: var(--space-3) 0 calc(var(--space-5) + 1.5rem);
-}
-
-.overview-view :deep(.sprite-wrapper) {
-  filter: var(--drop-shadow-icon);
-  margin-top: 1rem;
-}
-
-.overview-view :deep(.preview-type-list) {
-  bottom: -2.5rem;
-}
-
-.overview-search-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.overview-search {
-  flex: 1;
-}
-
-.preview-location-trigger,
-.preview-location-input {
-  position: absolute;
-  right: var(--space-3);
-  bottom: -2.5rem;
-  border: none;
-  background: transparent;
-  padding: 0;
-  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
-  font-size: 0.92rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  line-height: 1.28;
-  opacity: 0.92;
-  color: var(--color-text-primary);
-  z-index: 1;
-}
-
-.preview-location-trigger {
-  cursor: pointer;
-}
-
-.preview-location-input {
-  cursor: text;
-  text-align: right;
-}
-
-.preview-location-input:focus {
-  outline: none;
-  opacity: 1;
-}
-
-.preview-location-input::placeholder {
-  color: var(--color-text-muted);
-  opacity: 0.7;
-  font-weight: 600;
-}
-
-
-.details-editor {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.details-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.details-section-title {
-  margin: 0;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-/* Moves type grid (6 rows x 3 columns) */
-.moves-type-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-2);
-}
-
-.move-type-option {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  aspect-ratio: 1;
-  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
-}
-
-.move-type-option:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.move-type-option.selected {
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: scale(1.05);
-}
-
-.move-type-option .type-icon {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-  filter: var(--drop-shadow-icon);
-}
-
-/* Berry grid (3 columns like move types) */
-.berry-type-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-2);
-}
-
-.berry-type-option {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  aspect-ratio: 1;
-  filter: var(--drop-shadow-icon);
-  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
-}
-
-.berry-type-option:active {
-  transform: scale(0.96);
-}
-
-.berry-type-option.selected {
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: scale(1.05);
-}
-
-.wizard-actions {
-  display: flex;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-}
-
-.variant-btn {
-  position: absolute;
-  top: var(--space-2);
-  left: var(--space-3);
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  font-size: 1.25rem;
-  font-weight: 900;
-  cursor: pointer;
-  padding: var(--space-1);
-  transition: color var(--transition-base);
-}
-
-.variant-btn:active {
-  transform: scale(0.95);
-}
-
-.variant-btn.active {
-  color: rgba(139, 92, 246, 1);
-}
-
-.evolve-btn {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-3);
-  background: transparent;
-  border: none;
-  color: var(--color-success);
-  font-size: 1.25rem;
-  font-weight: 900;
-  cursor: pointer;
-  padding: var(--space-1);
-}
-
-.evolve-btn:active {
-  transform: scale(0.95);
-}
-
-.evolve-options {
-  position: absolute;
-  top: calc(var(--space-2) + 2.5rem);
-  right: var(--space-2);
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-1);
-  z-index: 10;
-}
-
-.evolve-option-pill {
-  width: 40px;
-  height: 40px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: all var(--transition-base);
-  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
-}
-
-.evolve-option-pill:active {
-  transform: scale(0.95);
-}
-
-.evolve-option-pill.mega-selected {
-  filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.6));
-}
-
-.preview-partner-nickname {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-3);
-  font-family: Baskerville, 'Baskerville Old Face', 'Hoefler Text', Garamond, 'Times New Roman', serif;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  line-height: 1.28;
-  opacity: 0.92;
-  color: var(--color-text-primary);
-  pointer-events: none;
-  z-index: 1;
-}
-
-@keyframes fadeSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@media (orientation: landscape) and (max-height: 500px) {
-  .wizard-container {
-    min-height: 200px;
-    max-height: 320px;
-    padding-bottom: var(--space-2);
-  }
-
-  .wizard-header {
-    margin-bottom: var(--space-2);
-  }
-
-  .moves-type-grid {
-    grid-template-columns: repeat(6, 1fr);
-    gap: var(--space-1);
-  }
-
-  .move-type-option {
-    padding: var(--space-1);
-  }
-
-  .move-type-option .type-icon {
-    width: 32px;
-    height: 32px;
-  }
-
-  .berry-type-grid {
-    grid-template-columns: repeat(6, 1fr);
-    gap: var(--space-1);
-  }
-
-  .berry-type-option {
-    padding: var(--space-1);
-  }
-}
-
-@media (orientation: portrait) {
-  .wizard-container {
-    min-height: 300px;
-    max-height: 520px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .moves-type-grid {
-    grid-template-columns: repeat(6, 1fr);
-    gap: var(--space-1);
-  }
-
-  .move-type-option {
-    padding: var(--space-1);
-  }
-
-  .move-type-option .type-icon {
-    width: 32px;
-    height: 32px;
-  }
-
-  .preview-partner-nickname {
-    font-size: 0.85rem;
-  }
-
-  .preview-location-trigger,
-  .preview-location-input {
-    font-size: 1rem;
-  }
-}
-</style>
+<style scoped src="../styles/draftPanel.css"></style>

@@ -136,7 +136,8 @@ Manages the draft/editing state for adding or modifying Pokemon:
 - `useSoloSync.js` / `useSessionSync.js` - Supabase sync for solo and Soul
   Link modes
 - `useSoulLinkHandlers.js` - Event handlers for Soul Link operations
-- `useWizardNavigation.js` - Draft panel multi-step navigation
+- `useRunOrchestration.js` - Run/session orchestration, dialogs and startup
+- `useSoloDraftHandlers.js` - Solo draft, swap and gym scoring handlers
 - `createRunIndexManager.js` - Shared factory for run index management
 
 ### Services

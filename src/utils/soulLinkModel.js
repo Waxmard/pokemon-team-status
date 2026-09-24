@@ -145,13 +145,14 @@ export function generateInviteCode(length = 6) {
   ).join('')
 }
 
-export function buildRemoteState(soulLinkState, generationRules) {
+export function buildRemoteState(soulLinkState, generationRules, teraEnabled) {
   return {
     metadata: soulLinkState.metadata,
     players: soulLinkState.players.map(({ id, name }) => ({ id, name })),
     rosters: soulLinkState.rosters,
     progress: soulLinkState.progress,
     generationRules,
+    teraEnabled: !!teraEnabled,
   }
 }
 

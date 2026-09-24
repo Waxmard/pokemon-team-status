@@ -3,12 +3,12 @@
     <SoulLinkPlayerView
       :board="viewedPlayerBoard"
       :generation-rules="generationRules"
+      :tera-enabled="teraEnabled"
       :draft-active="draftActive"
       :persist-pinned-gym="persistPinnedGym"
       :partner-roster="partnerRoster"
       :player-id="playerId"
       :death-box-mode="deathBoxMode"
-      @confirmDraft="$emit('confirmDraft')"
       @autosaveDraft="$emit('autosaveDraft')"
       @immediateSwap="$emit('immediateSwap', $event)"
       @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
@@ -34,6 +34,10 @@ defineProps({
   generationRules: {
     type: String,
     required: true,
+  },
+  teraEnabled: {
+    type: Boolean,
+    default: null,
   },
   viewedPlayerBoard: {
     type: Object,
@@ -62,7 +66,6 @@ defineProps({
 })
 
 defineEmits([
-  'confirmDraft',
   'autosaveDraft',
   'immediateSwap',
   'deleteTeamPokemon',

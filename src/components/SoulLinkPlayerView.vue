@@ -4,6 +4,7 @@
       :team="board.team"
       :box="board.box"
       :generation-rules="generationRules"
+      :tera-enabled="teraEnabled"
       :defeated-gyms="board.defeatedGymsList.map((gym) => gym.type)"
       :pinned-gym="board.pinnedGym"
       :partner-roster="partnerRoster"
@@ -11,7 +12,6 @@
       :player-id="playerId"
       :dead="board.dead"
       :death-box-mode="deathBoxMode"
-      @confirmDraft="$emit('confirmDraft')"
       @autosaveDraft="$emit('autosaveDraft')"
       @immediateSwap="$emit('immediateSwap', $event)"
       @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
@@ -56,6 +56,10 @@ defineProps({
     type: String,
     required: true,
   },
+  teraEnabled: {
+    type: Boolean,
+    default: null,
+  },
   draftActive: {
     type: Boolean,
     default: false,
@@ -79,7 +83,6 @@ defineProps({
 })
 
 defineEmits([
-  'confirmDraft',
   'autosaveDraft',
   'immediateSwap',
   'deleteTeamPokemon',

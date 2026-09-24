@@ -116,6 +116,8 @@ export function useDraftAction() {
     }
   }
 
+  const updateTeraType = (val) => updateField('teraType', val)
+
   function enterSwapMode() {
     swapMode.value = true
   }
@@ -190,6 +192,7 @@ export function useDraftAction() {
     updateCatchLocation,
     updateNickname,
     updateMegaForm,
+    updateTeraType,
     updateSpriteVariant,
     sanitizeDraft,
     updateBoxPokemonId,

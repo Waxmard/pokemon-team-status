@@ -81,15 +81,27 @@ async function loadSetting(name, defaultValue = null) {
 export function createLocalSoloRunRepository() {
   return {
     async loadSoloRunSnapshot(defaultGenerationRules) {
-      const [team, defeatedGyms, box, dead, pinnedGym, generationRules] =
-        await Promise.all([
-          loadSetting('soloTeam', []),
-          loadSetting('defeatedGyms', []),
-          loadSetting('soloBox', []),
-          loadSetting('soloDead', []),
-          loadSetting('pinnedGym', null),
-          loadSetting('generationRules', defaultGenerationRules),
-        ])
+      const [
+        team,
+        defeatedGyms,
+        box,
+        dead,
+        pinnedGym,
+        generationRules,
+        generationRulesUpdatedAt,
+        teraEnabled,
+        teraEnabledUpdatedAt,
+      ] = await Promise.all([
+        loadSetting('soloTeam', []),
+        loadSetting('defeatedGyms', []),
+        loadSetting('soloBox', []),
+        loadSetting('soloDead', []),
+        loadSetting('pinnedGym', null),
+        loadSetting('generationRules', defaultGenerationRules),
+        loadSetting('generationRulesUpdatedAt', null),
+        loadSetting('teraEnabled', false),
+        loadSetting('teraEnabledUpdatedAt', null),
+      ])
 
       return {
         team,
@@ -98,6 +110,9 @@ export function createLocalSoloRunRepository() {
         defeatedGyms,
         pinnedGym,
         generationRules,
+        generationRulesUpdatedAt,
+        teraEnabled,
+        teraEnabledUpdatedAt,
       }
     },
 
@@ -119,6 +134,18 @@ export function createLocalSoloRunRepository() {
 
     persistSoloGenerationRules(generationRules) {
       return saveSetting('generationRules', generationRules)
+    },
+
+    persistSoloGenerationRulesUpdatedAt(updatedAt) {
+      return saveSetting('generationRulesUpdatedAt', updatedAt)
+    },
+
+    persistSoloTeraEnabled(teraEnabled) {
+      return saveSetting('teraEnabled', teraEnabled)
+    },
+
+    persistSoloTeraEnabledUpdatedAt(updatedAt) {
+      return saveSetting('teraEnabledUpdatedAt', updatedAt)
     },
 
     persistSoloDead(dead) {

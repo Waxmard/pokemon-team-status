@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { repository } = vi.hoisted(() => ({
   repository: {
@@ -9,6 +9,9 @@ const { repository } = vi.hoisted(() => ({
     persistSoloDefeatedGyms: vi.fn(),
     persistSoloPinnedGym: vi.fn(),
     persistSoloGenerationRules: vi.fn(),
+    persistSoloGenerationRulesUpdatedAt: vi.fn(),
+    persistSoloTeraEnabled: vi.fn(),
+    persistSoloTeraEnabledUpdatedAt: vi.fn(),
   },
 }))
 
@@ -40,7 +43,9 @@ import {
 import {
   createDefaultRunState,
   createDefaultSoulLinkRunState,
+  mapSoloRunStateToPersistedSnapshot,
 } from '../../utils/runSnapshot.js'
+import { mergeSoloRemoteState } from '../../utils/soloMergeModel.js'
 import { useRunStore } from '../useRunStore.js'
 
 function createDeferred() {
@@ -68,10 +73,17 @@ describe('useRunStore', () => {
     repository.persistSoloDefeatedGyms.mockResolvedValue(undefined)
     repository.persistSoloPinnedGym.mockResolvedValue(undefined)
     repository.persistSoloGenerationRules.mockResolvedValue(undefined)
+    repository.persistSoloGenerationRulesUpdatedAt.mockResolvedValue(undefined)
+    repository.persistSoloTeraEnabled.mockResolvedValue(undefined)
+    repository.persistSoloTeraEnabledUpdatedAt.mockResolvedValue(undefined)
     soloRunManager.persistActiveRunSnapshot.mockResolvedValue(undefined)
     soloRunManager.activeRunId.value = 'test-run-1'
 
     useRunStore().runState.value = createDefaultRunState()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('rejects Soul Link state in solo persistence mutators', async () => {
@@ -167,6 +179,8 @@ describe('useRunStore', () => {
         progressUpdatedAt: null,
         generationRules: DEFAULT_GENERATION_RULESET,
         generationRulesUpdatedAt: null,
+        teraEnabled: false,
+        teraEnabledUpdatedAt: null,
       },
       'test-run-1',
     )
@@ -218,8 +232,79 @@ describe('useRunStore', () => {
         progressUpdatedAt: null,
         generationRules: DEFAULT_GENERATION_RULESET,
         generationRulesUpdatedAt: null,
+        teraEnabled: false,
+        teraEnabledUpdatedAt: null,
       },
       'test-run-1',
     )
+  })
+
+  it('keeps locally cleared Tera assignments when merging a stale enabled snapshot', async () => {
+    const store = useRunStore()
+    const clock = 1_700_000_000_000
+    vi.spyOn(Date, 'now').mockReturnValue(clock)
+
+    store.runState.value = {
+      ...store.runState.value,
+      rules: { ...store.runState.value.rules, teraEnabled: true },
+      team: [
+        {
+          id: 'team-1',
+          name: 'Bulbasaur',
+          teraType: 'fire',
+          updatedAt: clock,
+        },
+        { id: 'team-2', name: 'Charmander', teraType: null, updatedAt: 5 },
+      ],
+      box: [
+        { id: 'box-1', name: 'Squirtle', teraType: 'water', updatedAt: 10 },
+      ],
+      dead: [
+        { id: 'dead-1', name: 'Pikachu', teraType: 'electric', updatedAt: 20 },
+      ],
+    }
+
+    const staleEnabled = mapSoloRunStateToPersistedSnapshot(
+      store.runState.value,
+    )
+
+    await store.persistTeraEnabled(false)
+    await store.persistTeraEnabled(true)
+
+    const currentSnapshot = mapSoloRunStateToPersistedSnapshot(
+      store.runState.value,
+    )
+    const merged = mergeSoloRemoteState(staleEnabled, currentSnapshot)
+
+    expect(merged.teraEnabled).toBe(true)
+    expect(merged.team.map((member) => member.teraType)).toEqual([null, null])
+    expect(merged.box[0].teraType).toBeNull()
+    expect(merged.dead[0].teraType).toBeNull()
+    expect(merged.team[0].updatedAt).toBeGreaterThan(clock)
+    expect(merged.box[0].updatedAt).toBeGreaterThan(10)
+    expect(merged.dead[0].updatedAt).toBeGreaterThan(20)
+    expect(merged.team[1]).toEqual({
+      id: 'team-2',
+      name: 'Charmander',
+      teraType: null,
+      updatedAt: 5,
+    })
+
+    expect(store.teraEnabled.value).toBe(true)
+    expect(store.team.value.map((member) => member.teraType)).toEqual([
+      null,
+      null,
+    ])
+    expect(
+      soloRunManager.persistActiveRunSnapshot.mock.calls
+        .at(-1)[0]
+        .team.map((member) => member.teraType),
+    ).toEqual([null, null])
+
+    const settled = store.team.value
+    await store.persistTeraEnabled(false)
+    await store.persistTeraEnabled(true)
+
+    expect(store.team.value).toEqual(settled)
   })
 })

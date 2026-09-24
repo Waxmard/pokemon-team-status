@@ -160,6 +160,16 @@ function scoreMember(gymType, member, ruleset) {
     )
   }
 
+  // Tera type: bonus defensive type = resistances only (like Mega)
+  if (member.teraType) {
+    score += bonusTypeResistanceScore(
+      gymType,
+      [member.teraType],
+      memberTypes,
+      ruleset,
+    )
+  }
+
   // Check offensive coverage
   if (hasEffectiveMove(member.moves, gymType, member.specialMove, ruleset)) {
     score += 1
@@ -357,6 +367,7 @@ export function calculateTypeSuggestionScore(
     berry: null,
     specialMove: null,
     megaTypes: [],
+    teraType: null,
   }
 
   const currentProfile = teamScoreProfile(

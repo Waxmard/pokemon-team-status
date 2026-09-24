@@ -13,6 +13,9 @@ const { repository } = vi.hoisted(() => ({
     persistSoloDefeatedGyms: vi.fn(),
     persistSoloPinnedGym: vi.fn(),
     persistSoloGenerationRules: vi.fn(),
+    persistSoloGenerationRulesUpdatedAt: vi.fn(),
+    persistSoloTeraEnabled: vi.fn(),
+    persistSoloTeraEnabledUpdatedAt: vi.fn(),
     persistSoloRun: vi.fn(),
     persistSoloRunIndex: vi.fn(),
   },
@@ -44,6 +47,9 @@ describe('useSoloRunManager', () => {
     repository.persistSoloDefeatedGyms.mockResolvedValue(undefined)
     repository.persistSoloPinnedGym.mockResolvedValue(undefined)
     repository.persistSoloGenerationRules.mockResolvedValue(undefined)
+    repository.persistSoloGenerationRulesUpdatedAt.mockResolvedValue(undefined)
+    repository.persistSoloTeraEnabled.mockResolvedValue(undefined)
+    repository.persistSoloTeraEnabledUpdatedAt.mockResolvedValue(undefined)
     repository.persistSoloRun.mockResolvedValue(undefined)
     repository.persistSoloRunIndex.mockResolvedValue(undefined)
   })
@@ -225,6 +231,59 @@ describe('useSoloRunManager', () => {
         }),
       ],
     })
+  })
+
+  it('preserves teraEnabled and per-member teraType when persisting a run snapshot', async () => {
+    const existingIndex = {
+      activeRunId: 'solo-run-9',
+      runs: [
+        {
+          id: 'solo-run-9',
+          name: 'Emerald Solo',
+          createdAt: '2026-03-31T18:00:00.000Z',
+          updatedAt: '2026-04-01T12:00:00.000Z',
+          generationRules: 'current',
+          teamCount: 0,
+        },
+      ],
+    }
+    repository.loadSoloRunIndex.mockResolvedValue(existingIndex)
+    repository.loadSoloRun.mockResolvedValue({
+      team: [],
+      box: [],
+      dead: [],
+      defeatedGyms: [],
+      pinnedGym: null,
+      generationRules: 'current',
+      teraEnabled: true,
+    })
+
+    const { useSoloRunManager } = await import('../useSoloRunManager.js')
+    const manager = useSoloRunManager()
+
+    await manager.loadRunIndex()
+    await manager.persistActiveRunSnapshot({
+      team: [{ id: 'team-1', name: 'Mudkip', teraType: 'dragon' }],
+      box: [],
+      dead: [],
+      defeatedGyms: [],
+      pinnedGym: null,
+      generationRules: 'current',
+      teraEnabled: true,
+    })
+
+    expect(repository.persistSoloRun).toHaveBeenCalledWith(
+      'solo-run-9',
+      expect.objectContaining({
+        teraEnabled: true,
+        team: [
+          expect.objectContaining({
+            id: 'team-1',
+            teraType: 'dragon',
+          }),
+        ],
+      }),
+    )
   })
 
   describe('run index repair on load', () => {

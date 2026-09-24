@@ -77,6 +77,13 @@ export function mergeSoloRemoteState(localSnapshot, remoteSnapshot) {
   const generationRulesUpdatedAt =
     localRulesTs >= remoteRulesTs ? localRulesTs : remoteRulesTs
 
+  const localTeraTs = local.teraEnabledUpdatedAt ?? 0
+  const remoteTeraTs = remote.teraEnabledUpdatedAt ?? 0
+  const teraEnabled =
+    localTeraTs >= remoteTeraTs ? local.teraEnabled : remote.teraEnabled
+  const teraEnabledUpdatedAt =
+    localTeraTs >= remoteTeraTs ? localTeraTs : remoteTeraTs
+
   return {
     name: remote.name ?? local.name ?? null,
     team: mergedRoster.team,
@@ -88,6 +95,8 @@ export function mergeSoloRemoteState(localSnapshot, remoteSnapshot) {
     progressUpdatedAt: mergedProgress.updatedAt,
     generationRules: generationRules ?? local.generationRules,
     generationRulesUpdatedAt: generationRulesUpdatedAt || null,
+    teraEnabled: teraEnabled ?? local.teraEnabled ?? false,
+    teraEnabledUpdatedAt: teraEnabledUpdatedAt || null,
   }
 }
 
@@ -103,5 +112,7 @@ export function buildSoloRemotePayload(snapshot) {
     progressUpdatedAt: snapshot.progressUpdatedAt ?? null,
     generationRules: snapshot.generationRules,
     generationRulesUpdatedAt: snapshot.generationRulesUpdatedAt ?? null,
+    teraEnabled: !!snapshot.teraEnabled,
+    teraEnabledUpdatedAt: snapshot.teraEnabledUpdatedAt ?? null,
   }
 }

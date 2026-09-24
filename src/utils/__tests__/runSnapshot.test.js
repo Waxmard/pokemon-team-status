@@ -29,6 +29,9 @@ describe('runSnapshot helpers', () => {
       },
       rules: {
         generation: DEFAULT_GENERATION_RULESET,
+        teraEnabled: false,
+        generationRulesUpdatedAt: null,
+        teraEnabledUpdatedAt: null,
       },
     })
   })
@@ -81,6 +84,8 @@ describe('runSnapshot helpers', () => {
       progressUpdatedAt: null,
       generationRules: GENERATION_RULESETS.PRE_GEN_6,
       generationRulesUpdatedAt: null,
+      teraEnabled: false,
+      teraEnabledUpdatedAt: null,
     })
   })
 
@@ -107,6 +112,9 @@ describe('runSnapshot helpers', () => {
       },
       rules: {
         generation: DEFAULT_GENERATION_RULESET,
+        teraEnabled: false,
+        generationRulesUpdatedAt: null,
+        teraEnabledUpdatedAt: null,
       },
     })
 
@@ -120,6 +128,8 @@ describe('runSnapshot helpers', () => {
       progressUpdatedAt: null,
       generationRules: DEFAULT_GENERATION_RULESET,
       generationRulesUpdatedAt: null,
+      teraEnabled: false,
+      teraEnabledUpdatedAt: null,
     })
   })
 
@@ -167,6 +177,7 @@ describe('runSnapshot helpers', () => {
       mode: RUN_MODES.SOUL_LINK,
       rules: {
         generation: GENERATION_RULESETS.PRE_GEN_6,
+        teraEnabled: false,
       },
       soulLink: {
         metadata: {
