@@ -5,3 +5,6 @@ pre-commit:
       glob: "*.{js,vue}"
       run: npm run check:staged -- {staged_files}
       stage_fixed: true
+    line-limit:
+      glob: "*.{js,vue,mjs}"
+      run: bash scripts/check-line-limit.sh {staged_files}

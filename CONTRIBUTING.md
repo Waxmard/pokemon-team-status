@@ -38,12 +38,10 @@ Always open one — even for small changes.
 
 ## Review & Approval
 
-Every PR needs two passes — **automated review first, then a human.**
+Every PR needs a human pass before it merges.
 
-- **Bot first.** Let Claude Code Review comment and be addressed before adding a human
-  reviewer.
-- **Then a human.** A [CODEOWNER](.github/CODEOWNERS) is auto-requested; one human
-  approval is required to merge.
+- A [CODEOWNER](.github/CODEOWNERS) is auto-requested; one human approval is required
+  to merge.
 
 ## Deploys & Releases
 
