@@ -558,6 +558,10 @@ watch(effectiveGenerationRules, (ruleset) => {
   abilityQuery.value = sanitizedDraft.ability || ''
 })
 
+watch(effectiveTeraEnabled, (enabled) => {
+  if (!enabled && activeField.value === 'tera') closeField()
+})
+
 const isTouchDevice = window.matchMedia('(pointer: coarse)').matches
 
 onMounted(() => {
@@ -848,6 +852,7 @@ function isTeraTypeSelected(type) {
 }
 
 function toggleTeraType(type) {
+  if (!effectiveTeraEnabled.value) return
   updateTeraType(draftAction.value?.teraType === type ? null : type)
 }
 

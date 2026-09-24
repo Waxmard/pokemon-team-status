@@ -1,11 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_GENERATION_RULESET,
   GENERATION_RULESETS,
 } from '../../data/types.js'
 import { RUN_MODES } from '../../utils/runSnapshot.js'
 import {
+  buildRemoteState,
   createDefaultSoulLinkMember,
+  mergeRemoteState,
   SOUL_LINK_PLAYER_IDS,
 } from '../../utils/soulLinkModel.js'
 import { useSoulLinkStore } from '../useSoulLinkStore.js'
@@ -13,6 +15,10 @@ import { useSoulLinkStore } from '../useSoulLinkStore.js'
 describe('useSoulLinkStore', () => {
   beforeEach(() => {
     useSoulLinkStore().resetLocalRun()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('keeps a singleton Soul Link run state and default selectors', () => {
@@ -418,6 +424,97 @@ describe('useSoulLinkStore', () => {
 
     expect(() => store.setCachedPlayerSlot('unknown-player')).toThrow(
       /valid Soul Link player id/i,
+    )
+  })
+
+  it('keeps locally cleared Tera assignments when merging a stale enabled payload', () => {
+    const store = useSoulLinkStore()
+    const clock = 1_700_000_000_000
+    vi.spyOn(Date, 'now').mockReturnValue(clock)
+
+    store.createLocalRun({
+      teraEnabled: true,
+      rosters: {
+        [SOUL_LINK_PLAYER_IDS.LOCAL]: {
+          team: [
+            createDefaultSoulLinkMember({
+              id: 'local-team-1',
+              speciesName: 'Bulbasaur',
+              teraType: 'fire',
+              updatedAt: clock,
+            }),
+          ],
+          box: [
+            createDefaultSoulLinkMember({
+              id: 'local-box-1',
+              speciesName: 'Squirtle',
+              teraType: 'water',
+              updatedAt: 10,
+            }),
+          ],
+          dead: [
+            createDefaultSoulLinkMember({
+              id: 'local-dead-1',
+              speciesName: 'Gastly',
+              teraType: 'electric',
+              updatedAt: 20,
+            }),
+          ],
+        },
+        [SOUL_LINK_PLAYER_IDS.PARTNER]: {
+          team: [
+            createDefaultSoulLinkMember({
+              id: 'partner-team-1',
+              speciesName: 'Charmander',
+              nickname: 'Blaze',
+              teraType: 'grass',
+              updatedAt: 30,
+              ownerPlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
+            }),
+          ],
+          box: [],
+          dead: [],
+        },
+      },
+    })
+
+    const staleLocal = store.runState.value.soulLink
+    store.setTeraEnabled(false)
+    store.setTeraEnabled(true)
+
+    const currentRemote = buildRemoteState(
+      store.runState.value.soulLink,
+      store.runState.value.rules.generation,
+      true,
+    )
+    const merged = mergeRemoteState(staleLocal, currentRemote)
+
+    expect(
+      merged.rosters[SOUL_LINK_PLAYER_IDS.LOCAL].team[0].teraType,
+    ).toBeNull()
+    expect(
+      merged.rosters[SOUL_LINK_PLAYER_IDS.LOCAL].box[0].teraType,
+    ).toBeNull()
+    expect(
+      merged.rosters[SOUL_LINK_PLAYER_IDS.LOCAL].dead[0].teraType,
+    ).toBeNull()
+    expect(
+      merged.rosters[SOUL_LINK_PLAYER_IDS.PARTNER].team[0].teraType,
+    ).toBeNull()
+    expect(
+      merged.rosters[SOUL_LINK_PLAYER_IDS.LOCAL].team[0].updatedAt,
+    ).toBeGreaterThan(clock)
+    expect(
+      merged.rosters[SOUL_LINK_PLAYER_IDS.LOCAL].box[0].updatedAt,
+    ).toBeGreaterThan(10)
+    expect(merged.rosters[SOUL_LINK_PLAYER_IDS.PARTNER].team[0]).toEqual(
+      expect.objectContaining({
+        id: 'partner-team-1',
+        speciesName: 'Charmander',
+        nickname: 'Blaze',
+        ownerPlayerId: SOUL_LINK_PLAYER_IDS.PARTNER,
+        teraType: null,
+      }),
     )
   })
 })

@@ -5,7 +5,10 @@ import {
   sanitizePinnedGymForRules,
   sanitizePokemonMemberForRules,
 } from './generationRules.js'
-import { normalizeGenerationRules } from './runSnapshot.js'
+import {
+  normalizeGenerationRules,
+  sanitizeTeraTypeForCollection,
+} from './runSnapshot.js'
 import {
   createDefaultSoulLinkLocalPreferences,
   createDefaultSoulLinkPlayerProgress,
@@ -185,7 +188,11 @@ export function sanitizeSoulLinkRostersForRules(rosters, ruleset) {
   )
 }
 
-export function sanitizeSoulLinkRostersForTera(rosters, teraEnabled) {
+export function sanitizeSoulLinkRostersForTera(
+  rosters,
+  teraEnabled,
+  clearedAt = null,
+) {
   if (teraEnabled) return rosters
 
   return Object.fromEntries(
@@ -193,14 +200,12 @@ export function sanitizeSoulLinkRostersForTera(rosters, teraEnabled) {
       playerId,
       {
         ...roster,
-        team: roster.team.map((member) =>
-          member.teraType ? { ...member, teraType: null } : member,
-        ),
-        box: roster.box.map((member) =>
-          member.teraType ? { ...member, teraType: null } : member,
-        ),
-        dead: (roster.dead ?? []).map((member) =>
-          member.teraType ? { ...member, teraType: null } : member,
+        team: sanitizeTeraTypeForCollection(roster.team, false, clearedAt),
+        box: sanitizeTeraTypeForCollection(roster.box, false, clearedAt),
+        dead: sanitizeTeraTypeForCollection(
+          roster.dead ?? [],
+          false,
+          clearedAt,
         ),
       },
     ]),

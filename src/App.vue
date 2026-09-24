@@ -284,6 +284,7 @@ import {
   isEmptySoloRun,
   mapSoloRunStateToPersistedSnapshot,
   RUN_MODES,
+  sanitizeTeraTypeForCollection,
 } from './utils/runSnapshot.js'
 import { resolveMostRecentRunMode } from './utils/runStartup.js'
 import {
@@ -576,6 +577,8 @@ const activeTeraEnabled = computed(() =>
 
 function toggleTeraTypes() {
   const nextEnabled = !activeTeraEnabled.value
+
+  if (!nextEnabled) clearPendingTeraTypes(Date.now())
 
   if (isSoloMode.value) {
     persistTeraEnabled(nextEnabled)
@@ -969,6 +972,52 @@ watch(generationRules, (ruleset) => {
       ),
     }
   }
+})
+
+function clearPendingTeraTypes(clearedAt = null) {
+  sanitizeDraft((draft) => ({
+    ...draft,
+    teraType: sanitizeTeraTypeForCollection([draft], false, clearedAt)[0]
+      .teraType,
+  }))
+
+  if (swapOriginalState.value) {
+    swapOriginalState.value = {
+      ...swapOriginalState.value,
+      team: sanitizeTeraTypeForCollection(
+        swapOriginalState.value.team,
+        false,
+        clearedAt,
+      ),
+      box: sanitizeTeraTypeForCollection(
+        swapOriginalState.value.box,
+        false,
+        clearedAt,
+      ),
+    }
+  }
+
+  if (soulLinkSwapOriginalRoster.value) {
+    const original = soulLinkSwapOriginalRoster.value
+    soulLinkSwapOriginalRoster.value = {
+      ...original,
+      team: sanitizeTeraTypeForCollection(original.team, false, clearedAt),
+      box: sanitizeTeraTypeForCollection(original.box, false, clearedAt),
+      ...(original.dead
+        ? {
+            dead: sanitizeTeraTypeForCollection(
+              original.dead,
+              false,
+              clearedAt,
+            ),
+          }
+        : {}),
+    }
+  }
+}
+
+watch(activeTeraEnabled, (enabled) => {
+  if (!enabled) clearPendingTeraTypes()
 })
 
 async function handleCancelSwap() {

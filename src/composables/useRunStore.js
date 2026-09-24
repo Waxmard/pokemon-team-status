@@ -179,11 +179,18 @@ async function persistGenerationRules(newRules) {
 async function persistTeraEnabled(nextEnabled) {
   const soloRunState = getSoloRunState('Persisting Tera Types setting')
   const nextTeraEnabled = !!nextEnabled
-  const sanitizedSnapshot = sanitizePersistedSoloRunSnapshot({
-    ...mapSoloRunStateToPersistedSnapshot(soloRunState),
-    teraEnabled: nextTeraEnabled,
-    teraEnabledUpdatedAt: Date.now(),
-  })
+  const clearedAt = Math.max(
+    Date.now(),
+    (soloRunState.rules.teraEnabledUpdatedAt ?? 0) + 1,
+  )
+  const sanitizedSnapshot = sanitizePersistedSoloRunSnapshot(
+    {
+      ...mapSoloRunStateToPersistedSnapshot(soloRunState),
+      teraEnabled: nextTeraEnabled,
+      teraEnabledUpdatedAt: clearedAt,
+    },
+    clearedAt,
+  )
 
   setRunState(sanitizedSnapshot)
 

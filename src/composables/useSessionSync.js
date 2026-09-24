@@ -18,7 +18,7 @@ function getSupabaseRepository() {
  * @param {(merged: object) => void} config.setLocalState
  * @param {() => object} config.buildRemotePayload
  * @param {(localState: object, remoteState: object) => object} config.mergeRemote
- * @param {(session: object) => void} [config.onRemoteUpdate] - extra work after applying a realtime update
+ * @param {(session: object) => void} [config.onRemoteUpdate] - extra work after applying any remote update
  */
 export function createSessionSync(config) {
   let _unsubscribe = null
@@ -89,6 +89,7 @@ export function createSessionSync(config) {
       const merged = config.mergeRemote(currentState, session.state)
       config.setLocalState(merged)
       config.setVersion(session.version)
+      config.onRemoteUpdate?.(session)
 
       const refreshedPayload = config.buildRemotePayload()
       const refreshedVersion = config.getVersion()
@@ -118,6 +119,7 @@ export function createSessionSync(config) {
       const merged = config.mergeRemote(currentState, session.state)
       config.setLocalState(merged)
       config.setVersion(session.version)
+      config.onRemoteUpdate?.(session)
     })
   }
 

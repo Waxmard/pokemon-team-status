@@ -100,14 +100,28 @@ export function assertSoulLinkRunState(runState, context = 'This operation') {
   return runState
 }
 
-function sanitizeTeraTypeForCollection(collection, teraEnabled) {
+export function sanitizeTeraTypeForCollection(
+  collection,
+  teraEnabled,
+  clearedAt = null,
+) {
   if (teraEnabled) return collection
-  return collection.map((member) =>
-    member.teraType ? { ...member, teraType: null } : member,
-  )
+  return collection.map((member) => {
+    if (!member.teraType) return member
+    return {
+      ...member,
+      teraType: null,
+      ...(clearedAt == null
+        ? {}
+        : { updatedAt: Math.max(clearedAt, (member.updatedAt ?? 0) + 1) }),
+    }
+  })
 }
 
-export function sanitizePersistedSoloRunSnapshot(snapshot) {
+export function sanitizePersistedSoloRunSnapshot(
+  snapshot,
+  teraClearedAt = null,
+) {
   const generationRules = normalizeGenerationRules(snapshot.generationRules)
   const teraEnabled = !!snapshot.teraEnabled
 
@@ -116,14 +130,17 @@ export function sanitizePersistedSoloRunSnapshot(snapshot) {
     team: sanitizeTeraTypeForCollection(
       sanitizePokemonCollectionForRules(snapshot.team, generationRules),
       teraEnabled,
+      teraClearedAt,
     ),
     box: sanitizeTeraTypeForCollection(
       sanitizePokemonCollectionForRules(snapshot.box, generationRules),
       teraEnabled,
+      teraClearedAt,
     ),
     dead: sanitizeTeraTypeForCollection(
       sanitizePokemonCollectionForRules(snapshot.dead ?? [], generationRules),
       teraEnabled,
+      teraClearedAt,
     ),
     _tombstones: snapshot._tombstones ?? [],
     defeatedGyms: sanitizeDefeatedGymsForRules(

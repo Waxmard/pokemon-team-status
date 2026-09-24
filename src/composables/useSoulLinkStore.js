@@ -104,7 +104,7 @@ const sync = createSessionSync({
       _setGenerationRules?.(session.state.generationRules)
     }
     if (session.state?.teraEnabled != null) {
-      _setTeraEnabled?.(session.state.teraEnabled)
+      _setTeraEnabled?.(session.state.teraEnabled, null)
     }
   },
 })
@@ -214,7 +214,7 @@ function setGenerationRules(nextGenerationRules) {
 
 _setGenerationRules = setGenerationRules
 
-function setTeraEnabled(nextEnabled) {
+function setTeraEnabled(nextEnabled, clearedAt = Date.now()) {
   const soulLinkRunState = getSoulLinkRunState(
     'Setting Soul Link Tera Types setting',
   )
@@ -231,6 +231,7 @@ function setTeraEnabled(nextEnabled) {
       rosters: sanitizeSoulLinkRostersForTera(
         soulLinkRunState.soulLink.rosters,
         nextTeraEnabled,
+        clearedAt,
       ),
     },
   }
