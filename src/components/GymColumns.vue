@@ -319,11 +319,11 @@ function handlePin(type) {
     height: 32px !important;
   }
 
-  .suggestion-swap-icon {
+  .suggestion-inline :deep(.suggestion-swap-icon) {
     font-size: 1rem;
   }
 
-  .suggestion-indicator {
+  .suggestion-inline :deep(.suggestion-indicator) {
     font-size: 0.8rem;
   }
 }

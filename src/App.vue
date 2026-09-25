@@ -467,6 +467,7 @@ const {
   handleViewDeathBox,
   handleViewOtherSoulLinkPlayer,
   handleRenameSoloRun,
+  handleRenameViewedSoulLinkPlayer,
   copyInviteCode,
   copySoloInviteCode,
   startNewRun,
