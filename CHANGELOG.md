@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.6.0...v1.7.0) (2026-09-26)
+
+
+### Features
+
+* **soul-link:** allow renaming viewed player and streamline UI architecture ([#119](https://github.com/Waxmard/pokemon-team-status/issues/119)) ([bbb68d2](https://github.com/Waxmard/pokemon-team-status/commit/bbb68d2cd7acb7b69f531ae1da3a7beda90bf9f2))
+
 ## [1.6.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.5.2...v1.6.0) (2026-09-24)
 
 
