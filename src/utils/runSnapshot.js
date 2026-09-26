@@ -7,19 +7,41 @@ import {
   sanitizePinnedGymForRules,
   sanitizePokemonCollectionForRules,
 } from './generationRules.js'
-import { createDefaultSoulLinkState } from './soulLinkModel.js'
+import { createDefaultSoulLinkState, emptyProgress } from './soulLinkModel.js'
 
 export const RUN_MODES = {
   SOLO: 'solo',
   SOUL_LINK: 'soul-link',
 }
 
-function createDefaultSoloProgress() {
-  return {
-    defeatedGyms: [],
-    pinnedGym: null,
-    updatedAt: null,
-  }
+/**
+ * Canonical field set of a persisted or remote solo snapshot, with the
+ * fallback applied when a snapshot omits the field. This is the single
+ * source of truth for the flat solo-snapshot shape.
+ */
+const SOLO_SNAPSHOT_DEFAULTS = {
+  team: [],
+  box: [],
+  dead: [],
+  _tombstones: [],
+  defeatedGyms: [],
+  pinnedGym: null,
+  progressUpdatedAt: null,
+  generationRules: undefined,
+  generationRulesUpdatedAt: null,
+  teraEnabled: false,
+  teraEnabledUpdatedAt: null,
+}
+
+export const SOLO_SNAPSHOT_FIELDS = Object.keys(SOLO_SNAPSHOT_DEFAULTS)
+
+export function pickSoloSnapshotFields(source) {
+  return Object.fromEntries(
+    Object.entries(SOLO_SNAPSHOT_DEFAULTS).map(([field, fallback]) => [
+      field,
+      source[field] ?? fallback,
+    ]),
+  )
 }
 
 export function normalizeGenerationRules(ruleset) {
@@ -40,7 +62,7 @@ export function createDefaultSoloRunState(
     box: [],
     dead: [],
     _tombstones: [],
-    progress: createDefaultSoloProgress(),
+    progress: emptyProgress(),
     rules: {
       generation: normalizeGenerationRules(generationRules),
       teraEnabled: !!teraEnabled,
@@ -66,15 +88,7 @@ export function createDefaultSoulLinkRunState(
   }
 }
 
-export function createDefaultRunState() {
-  return createDefaultSoloRunState()
-}
-
-export function createUnsupportedRunModeError(
-  context,
-  mode,
-  expectedMode = 'solo',
-) {
+function createUnsupportedRunModeError(context, mode, expectedMode = 'solo') {
   return new Error(
     `${context} only supports ${expectedMode} runs right now. Received mode: ${mode}.`,
   )

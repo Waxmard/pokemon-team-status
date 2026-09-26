@@ -3,19 +3,18 @@ import { ALL_TYPES, getTypeIcon } from '../data/types.js'
 import { getBerrySprite } from './pokemon.js'
 
 /**
- * Pre-fetches all berry sprites to populate the service worker cache.
+ * Pre-fetches berry and type-icon sprites to populate the service worker cache.
+ *
+ * Berry sprites come from a third-party host and are requested as `no-cors`;
+ * type icons are same-origin and do not need that.
  */
-export async function prefetchBerrySprites() {
-  const urls = [...BERRY_NAMES, ...ITEM_NAMES]
-    .map(getBerrySprite)
-    .filter(Boolean)
-  await Promise.allSettled(urls.map((url) => fetch(url, { mode: 'no-cors' })))
-}
-
-/**
- * Pre-fetches all type icons to populate the service worker cache.
- */
-export async function prefetchTypeIcons() {
-  const urls = ALL_TYPES.map(getTypeIcon)
-  await Promise.allSettled(urls.map((url) => fetch(url)))
+export async function prefetchSprites() {
+  const requests = [
+    ...[...BERRY_NAMES, ...ITEM_NAMES]
+      .map(getBerrySprite)
+      .filter(Boolean)
+      .map((url) => fetch(url, { mode: 'no-cors' })),
+    ...ALL_TYPES.map(getTypeIcon).map((url) => fetch(url)),
+  ]
+  await Promise.allSettled(requests)
 }

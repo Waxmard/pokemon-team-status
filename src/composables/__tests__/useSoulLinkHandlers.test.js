@@ -71,6 +71,7 @@ function createDraftMocks(draftValue) {
     enterSwapMode: vi.fn(),
     exitSwapMode: vi.fn(),
     updateInHandPokemon: vi.fn(),
+    convertToEdit: vi.fn(),
   }
 }
 
@@ -107,7 +108,6 @@ describe('useSoulLinkHandlers', () => {
       'box',
       expect.any(Object),
     )
-    expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
     expect(mocks.reconcileSoulLinkPairing).toHaveBeenCalledWith(
       'player-1',
       expect.any(String),
@@ -152,7 +152,6 @@ describe('useSoulLinkHandlers', () => {
       'dead',
       expect.any(Object),
     )
-    expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
   })
 
   it('reconciles pairing immediately for add-to-dead drafts', () => {
@@ -184,7 +183,6 @@ describe('useSoulLinkHandlers', () => {
         getPlayerRoster: mocks.store.getFullPlayerRoster,
       }),
     )
-    expect(mocks.draft.cancel).toHaveBeenCalledTimes(1)
   })
 
   it('redirects team adds to dead when the matched partner is dead', () => {
@@ -300,35 +298,6 @@ describe('useSoulLinkHandlers', () => {
 
     expect(result).toEqual({ placedInDead: true })
     expect(mocks.draft.enterSwapMode).not.toHaveBeenCalled()
-  })
-
-  it('uses the full roster accessor for linked-delete lookups', () => {
-    mocks.store = createStore()
-    mocks.draft = createDraftMocks(createDraftAction())
-    mocks.findLinkedDeleteTarget.mockReturnValue({
-      memberId: 'team-1',
-      rosterKey: 'team',
-      partnerPlayerId: 'player-2',
-      partnerMemberId: 'dead-2',
-      partnerRosterKey: 'dead',
-    })
-
-    const handlers = useSoulLinkHandlers(
-      ref('player-1'),
-      ref('gen-6'),
-      ref([{ id: 'player-1' }, { id: 'player-2' }]),
-    )
-
-    handlers.handleSoulLinkDeleteTeamPokemon('team-1')
-
-    expect(mocks.findLinkedDeleteTarget).toHaveBeenCalledWith(
-      'player-1',
-      'team-1',
-      'team',
-      expect.objectContaining({
-        getPlayerRoster: mocks.store.getFullPlayerRoster,
-      }),
-    )
   })
 
   it('opens linked-delete confirmation for dead linked members', () => {

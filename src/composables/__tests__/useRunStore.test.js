@@ -23,13 +23,11 @@ const { soloRunManager } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../services/localRunRepository.js', () => ({
-  createLocalSoloRunRepository: () => repository,
+  localRunRepository: repository,
 }))
 
 vi.mock('../../utils/spriteCache.js', () => ({
-  prefetchAllSprites: vi.fn(),
-  prefetchBerrySprites: vi.fn(),
-  prefetchTypeIcons: vi.fn(),
+  prefetchSprites: vi.fn(),
 }))
 
 vi.mock('../useSoloRunManager.js', () => ({
@@ -41,7 +39,7 @@ import {
   GENERATION_RULESETS,
 } from '../../data/types.js'
 import {
-  createDefaultRunState,
+  createDefaultSoloRunState,
   createDefaultSoulLinkRunState,
   mapSoloRunStateToPersistedSnapshot,
 } from '../../utils/runSnapshot.js'
@@ -79,7 +77,7 @@ describe('useRunStore', () => {
     soloRunManager.persistActiveRunSnapshot.mockResolvedValue(undefined)
     soloRunManager.activeRunId.value = 'test-run-1'
 
-    useRunStore().runState.value = createDefaultRunState()
+    useRunStore().runState.value = createDefaultSoloRunState()
   })
 
   afterEach(() => {
@@ -114,9 +112,13 @@ describe('useRunStore', () => {
         defeatedGyms: ['rock'],
         pinnedGym: 'electric',
       },
+      rules: {
+        ...store.runState.value.rules,
+        generation: GENERATION_RULESETS.PRE_GEN_6,
+      },
     }
 
-    await store.startNewSoloRun(GENERATION_RULESETS.PRE_GEN_6)
+    await store.startNewSoloRun()
 
     expect(store.team.value).toEqual([])
     expect(store.box.value).toEqual([])

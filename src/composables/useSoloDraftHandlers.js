@@ -4,7 +4,7 @@ import { getAllTypesForRules } from '../data/types.js'
 import { sanitizePokemonCollectionForRules } from '../utils/generationRules.js'
 import { buildPokemonMember, pickMemberFields } from '../utils/pokemon.js'
 import { sanitizeTeraTypeForCollection } from '../utils/runSnapshot.js'
-import { calculateBerryTiebreaker, calculateScore } from '../utils/typeCalc.js'
+import { scoreGyms } from '../utils/typeCalc.js'
 import { useDraftAction } from './useDraftAction.js'
 import { useRunStore } from './useRunStore.js'
 
@@ -18,8 +18,6 @@ export function useSoloDraftHandlers() {
     persistTeam,
     persistBox,
     persistDead,
-    deleteTeamPokemon,
-    deleteBoxPokemon,
     killTeamPokemon,
     killBoxPokemon,
     revivePokemon,
@@ -34,6 +32,7 @@ export function useSoloDraftHandlers() {
     updateInHandPokemon,
     updateBoxPokemonId,
     updateEditId,
+    convertToEdit,
     convertToBoxEdit,
     sanitizeDraft,
     cancel,
@@ -131,38 +130,19 @@ export function useSoloDraftHandlers() {
     )
   })
 
-  // Cache all gym scores in a single computed to avoid duplicate calculations
+  // Score every gym once; the result is already sorted worst-first.
   const allGymScores = computed(() => {
     const effectiveTeam = hasDraft.value ? getDraftTeam() : team.value
-
-    return activeTypes.value.map((type) => ({
-      type,
-      score: calculateScore(type, effectiveTeam, generationRules.value),
-      berryCount: calculateBerryTiebreaker(
-        type,
-        effectiveTeam,
-        generationRules.value,
-      ),
-    }))
+    return scoreGyms(activeTypes.value, effectiveTeam, generationRules.value)
   })
 
-  const remainingGyms = computed(() => {
-    return allGymScores.value
-      .filter((gym) => !defeatedGyms.value.includes(gym.type))
-      .sort((a, b) => {
-        if (a.score !== b.score) return a.score - b.score
-        return a.berryCount - b.berryCount
-      })
-  })
+  const remainingGyms = computed(() =>
+    allGymScores.value.filter((gym) => !defeatedGyms.value.includes(gym.type)),
+  )
 
-  const defeatedGymsList = computed(() => {
-    return allGymScores.value
-      .filter((gym) => defeatedGyms.value.includes(gym.type))
-      .sort((a, b) => {
-        if (a.score !== b.score) return a.score - b.score
-        return a.berryCount - b.berryCount
-      })
-  })
+  const defeatedGymsList = computed(() =>
+    allGymScores.value.filter((gym) => defeatedGyms.value.includes(gym.type)),
+  )
 
   function swapInHandToTarget(targetPokemon) {
     updateInHandPokemon({
@@ -341,21 +321,6 @@ export function useSoloDraftHandlers() {
     enterSwapMode()
   }
 
-  function convertDraftToSoloEdit(rosterKey, memberId) {
-    if (!draftAction.value) return
-
-    draftAction.value = {
-      ...draftAction.value,
-      type: 'edit',
-      isTeamPokemon: rosterKey === 'team',
-      isBoxPokemon: rosterKey === 'box',
-      isDeadPokemon: rosterKey === 'dead',
-      editId: rosterKey === 'team' ? memberId : null,
-      boxPokemonId: rosterKey === 'box' ? memberId : null,
-      deadPokemonId: rosterKey === 'dead' ? memberId : null,
-    }
-  }
-
   async function autosaveDraft() {
     if (!draftAction.value?.pokemon) return
 
@@ -365,7 +330,7 @@ export function useSoloDraftHandlers() {
       const newMember = buildPokemonMember(action, { source: 'team' })
       if (team.value.length < 6) {
         await persistTeam([...team.value, newMember])
-        convertDraftToSoloEdit('team', newMember.id)
+        convertToEdit('team', newMember.id)
       } else {
         enterAddReplaceMode()
       }
@@ -375,14 +340,14 @@ export function useSoloDraftHandlers() {
     if (action.type === 'addToBox') {
       const newMember = buildPokemonMember(action, { source: 'box' })
       await persistBox([newMember, ...box.value])
-      convertDraftToSoloEdit('box', newMember.id)
+      convertToEdit('box', newMember.id)
       return
     }
 
     if (action.type === 'addToDead') {
       const newMember = buildPokemonMember(action, { source: 'dead' })
       await persistDead([newMember, ...dead.value])
-      convertDraftToSoloEdit('dead', newMember.id)
+      convertToEdit('dead', newMember.id)
       return
     }
 
@@ -413,17 +378,6 @@ export function useSoloDraftHandlers() {
     )
   }
 
-  function handleDeleteFromDraft() {
-    if (!draftAction.value) return
-
-    if (draftAction.value.isBoxPokemon) {
-      deleteBoxPokemon(draftAction.value.boxPokemonId)
-    } else if (draftAction.value.editId) {
-      deleteTeamPokemon(draftAction.value.editId)
-    }
-    cancel()
-  }
-
   function handleSoloKillPokemon({ id, rosterKey }) {
     if (rosterKey === 'team') killTeamPokemon(id)
     else killBoxPokemon(id)
@@ -445,7 +399,6 @@ export function useSoloDraftHandlers() {
     defeatedGymsList,
     autosaveDraft,
     handleImmediateSwap,
-    handleDeleteFromDraft,
     handleSwapSuggestion,
     handleCancelSwap,
     handleSoloKillPokemon,

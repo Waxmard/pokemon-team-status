@@ -14,10 +14,7 @@
       :death-box-mode="deathBoxMode"
       @autosaveDraft="$emit('autosaveDraft')"
       @immediateSwap="$emit('immediateSwap', $event)"
-      @deleteTeamPokemon="$emit('deleteTeamPokemon', $event)"
-      @deleteBoxPokemon="$emit('deleteBoxPokemon', $event)"
       @cancelSwap="$emit('cancelSwap')"
-      @deletePokemon="$emit('deletePokemon')"
       @swapSuggestion="$emit('swapSuggestion', $event)"
       @killPokemon="$emit('killPokemon', $event)"
       @revivePokemon="$emit('revivePokemon', $event)"
@@ -31,7 +28,6 @@
       :box="board.box"
       :remaining-gyms="board.remainingGyms"
       :defeated-gyms-list="board.defeatedGymsList"
-      :defeated-gym-types="board.defeatedGymsList.map((gym) => gym.type)"
       :pinned-type="board.pinnedGym"
       :generation-rules="generationRules"
       :draft-active="draftActive"
@@ -85,10 +81,7 @@ defineProps({
 defineEmits([
   'autosaveDraft',
   'immediateSwap',
-  'deleteTeamPokemon',
-  'deleteBoxPokemon',
   'cancelSwap',
-  'deletePokemon',
   'swapSuggestion',
   'defeatGym',
   'undefeatGym',

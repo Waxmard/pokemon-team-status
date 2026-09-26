@@ -40,6 +40,7 @@ export function useSoulLinkHandlers(
     enterSwapMode,
     exitSwapMode,
     updateInHandPokemon,
+    convertToEdit,
   } = useDraftAction()
 
   const linkedDeleteTarget = ref(null)
@@ -160,26 +161,6 @@ export function useSoulLinkHandlers(
     cancel()
   }
 
-  function handleSoulLinkDeleteTeamPokemon(id) {
-    tryLinkedDelete(viewedSoulLinkPlayerId.value, id, 'team')
-  }
-
-  function handleSoulLinkDeleteBoxPokemon(id) {
-    tryLinkedDelete(viewedSoulLinkPlayerId.value, id, 'box')
-  }
-
-  function handleSoulLinkDeleteFromDraft() {
-    if (!draftAction.value) return
-    const pid = viewedSoulLinkPlayerId.value
-
-    if (draftAction.value.isBoxPokemon) {
-      if (tryLinkedDelete(pid, draftAction.value.boxPokemonId, 'box')) return
-    } else if (draftAction.value.editId) {
-      if (tryLinkedDelete(pid, draftAction.value.editId, 'team')) return
-    }
-    cancel()
-  }
-
   // --- Soul Link confirm draft handlers ---
 
   function confirmSoulLinkMemberUpdate(pid, rosterKey, memberId) {
@@ -191,21 +172,6 @@ export function useSoulLinkHandlers(
     const { id, ownerPlayerId, ...updates } = slMember
     updateRosterMember(pid, rosterKey, memberId, updates)
     reconcileSoulLinkPairing(pid, memberId, rosterKey)
-  }
-
-  function convertDraftToSoulLinkEdit(rosterKey, memberId) {
-    if (!draftAction.value) return
-
-    draftAction.value = {
-      ...draftAction.value,
-      type: 'edit',
-      isTeamPokemon: rosterKey === 'team',
-      isBoxPokemon: rosterKey === 'box',
-      isDeadPokemon: rosterKey === 'dead',
-      editId: rosterKey === 'team' ? memberId : null,
-      boxPokemonId: rosterKey === 'box' ? memberId : null,
-      deadPokemonId: rosterKey === 'dead' ? memberId : null,
-    }
   }
 
   function enterSoulLinkAddReplaceMode(pid) {
@@ -245,7 +211,7 @@ export function useSoulLinkHandlers(
       )
       addRosterMember(pid, 'dead', deadMember)
       reconcileSoulLinkPairing(pid, deadMember.id, 'dead')
-      convertDraftToSoulLinkEdit('dead', deadMember.id)
+      convertToEdit('dead', deadMember.id)
       return { placedInDead: true }
     }
 
@@ -257,7 +223,7 @@ export function useSoulLinkHandlers(
 
     addRosterMember(pid, 'team', newMember)
     reconcileSoulLinkPairing(pid, newMember.id, 'team')
-    convertDraftToSoulLinkEdit('team', newMember.id)
+    convertToEdit('team', newMember.id)
     return { placedInDead: false }
   }
 
@@ -276,13 +242,13 @@ export function useSoulLinkHandlers(
       )
       addRosterMember(pid, 'dead', deadMember)
       reconcileSoulLinkPairing(pid, deadMember.id, 'dead')
-      convertDraftToSoulLinkEdit('dead', deadMember.id)
+      convertToEdit('dead', deadMember.id)
       return { placedInDead: true }
     }
 
     addRosterMember(pid, rosterKey, newMember)
     reconcileSoulLinkPairing(pid, newMember.id, rosterKey)
-    convertDraftToSoulLinkEdit(rosterKey, newMember.id)
+    convertToEdit(rosterKey, newMember.id)
     return { placedInDead: rosterKey === 'dead' }
   }
 
@@ -311,16 +277,11 @@ export function useSoulLinkHandlers(
     }
   }
 
-  function handleSoulLinkConfirmDraft({ closeAfterPersist = true } = {}) {
+  function handleSoulLinkConfirmDraft() {
     if (!draftAction.value) return
     const pid = viewedSoulLinkPlayerId.value
 
-    if (!draftAction.value.pokemon) {
-      if (closeAfterPersist) {
-        handleSoulLinkDeleteFromDraft()
-      }
-      return
-    }
+    if (!draftAction.value.pokemon) return
 
     const newMember = buildSoulLinkMemberFromDraft(
       draftAction.value,
@@ -331,9 +292,6 @@ export function useSoulLinkHandlers(
     const result = confirmSoulLinkDraftByType(pid, newMember)
     if (!result) return
 
-    if (closeAfterPersist) {
-      cancel()
-    }
     return result
   }
 
@@ -541,9 +499,6 @@ export function useSoulLinkHandlers(
     handleSoulLinkImmediateSwap,
     handleSoulLinkCancelSwap,
     handleSoulLinkSwapSuggestion,
-    handleSoulLinkDeleteTeamPokemon,
-    handleSoulLinkDeleteBoxPokemon,
-    handleSoulLinkDeleteFromDraft,
     handleSoulLinkDefeatGym,
     handleSoulLinkUndefeatGym,
     handleSoulLinkPersistPinnedGym,

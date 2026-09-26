@@ -4,7 +4,6 @@ import {
   generatePokemonId,
   getBerrySprite,
   getMegaSpriteUrl,
-  getSmallSpriteUrl,
   getSpriteUrl,
   pickMemberFields,
   resolveSpriteUrl,
@@ -50,34 +49,42 @@ describe('getSpriteUrl', () => {
   })
 })
 
-describe('getSmallSpriteUrl', () => {
+describe('resolveSpriteUrl small sprites', () => {
   it('returns small sprite URL for default variant', () => {
-    const url = getSmallSpriteUrl('Bulbasaur')
-    expect(url).toBe('/sprites/1.png')
+    expect(resolveSpriteUrl('Bulbasaur', { small: true })).toBe(
+      '/sprites/1.png',
+    )
   })
 
   it('handles shiny variant', () => {
-    const url = getSmallSpriteUrl('Bulbasaur', 'shiny')
+    const url = resolveSpriteUrl('Bulbasaur', { small: true, variant: 'shiny' })
     expect(url).toBe(`${BASE_URL}/shiny/1.png`)
   })
 
   it('handles female variant', () => {
-    const url = getSmallSpriteUrl('Bulbasaur', 'female')
+    const url = resolveSpriteUrl('Bulbasaur', {
+      small: true,
+      variant: 'female',
+    })
     expect(url).toBe(`${BASE_URL}/female/1.png`)
   })
 
   it('handles shiny-female variant', () => {
-    const url = getSmallSpriteUrl('Bulbasaur', 'shiny-female')
+    const url = resolveSpriteUrl('Bulbasaur', {
+      small: true,
+      variant: 'shiny-female',
+    })
     expect(url).toBe(`${BASE_URL}/shiny/female/1.png`)
   })
 
   it('returns null for unknown pokemon', () => {
-    expect(getSmallSpriteUrl('FakeMon')).toBeNull()
+    expect(resolveSpriteUrl('FakeMon', { small: true })).toBeNull()
   })
 
   it('uses spriteId when present', () => {
-    const url = getSmallSpriteUrl('Rotom-Heat')
-    expect(url).toBe('/sprites/10008.png')
+    expect(resolveSpriteUrl('Rotom-Heat', { small: true })).toBe(
+      '/sprites/10008.png',
+    )
   })
 })
 

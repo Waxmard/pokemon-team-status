@@ -1,26 +1,29 @@
 import { POKEMON_DATA } from '../data/pokemon.js'
 
-export function getSpriteUrl(pokemonName, variant = 'default') {
+const SPRITE_BASE =
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites'
+
+function resolveSpriteId(pokemonName) {
   const index = POKEMON_DATA.findIndex((p) => p.name === pokemonName)
   if (index === -1) return null
-
-  const pokemon = POKEMON_DATA[index]
-  const id = pokemon.spriteId ?? index + 1
-  // Female variants have no HD artwork — return small sprite directly
-  if (variant === 'female')
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/female/${id}.png`
-  if (variant === 'shiny-female')
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/female/${id}.png`
-  const shinySegment = variant === 'shiny' ? 'shiny/' : ''
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${shinySegment}${id}.png`
+  return POKEMON_DATA[index].spriteId ?? index + 1
 }
 
-export function getSmallSpriteUrl(pokemonName, variant = 'default') {
-  const index = POKEMON_DATA.findIndex((p) => p.name === pokemonName)
-  if (index === -1) return null
+export function getSpriteUrl(pokemonName, variant = 'default') {
+  const id = resolveSpriteId(pokemonName)
+  if (id === null) return null
 
-  const pokemon = POKEMON_DATA[index]
-  const id = pokemon.spriteId ?? index + 1
+  // Female variants have no HD artwork — return small sprite directly
+  if (variant === 'female') return `${SPRITE_BASE}/pokemon/female/${id}.png`
+  if (variant === 'shiny-female')
+    return `${SPRITE_BASE}/pokemon/shiny/female/${id}.png`
+  const shinySegment = variant === 'shiny' ? 'shiny/' : ''
+  return `${SPRITE_BASE}/pokemon/other/official-artwork/${shinySegment}${id}.png`
+}
+
+function getSmallSpriteUrl(pokemonName, variant = 'default') {
+  const id = resolveSpriteId(pokemonName)
+  if (id === null) return null
 
   if (variant === 'default') return `/sprites/${id}.png`
 
@@ -28,17 +31,17 @@ export function getSmallSpriteUrl(pokemonName, variant = 'default') {
     { shiny: 'shiny/', female: 'female/', 'shiny-female': 'shiny/female/' }[
       variant
     ] || ''
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${variantSegment}${id}.png`
+  return `${SPRITE_BASE}/pokemon/${variantSegment}${id}.png`
 }
 
 export function getBerrySprite(berryName) {
   if (!berryName) return null
   // Special case: Nevermelt Ice uses different slug format
   if (berryName === 'Nevermelt Ice') {
-    return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/never-melt-ice.png'
+    return `${SPRITE_BASE}/items/never-melt-ice.png`
   }
   const slug = berryName.toLowerCase().replace(' ', '-')
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${slug}.png`
+  return `${SPRITE_BASE}/items/${slug}.png`
 }
 
 export function resolveSpriteUrl(name, { variant, megaSpriteId, small } = {}) {
@@ -47,9 +50,22 @@ export function resolveSpriteUrl(name, { variant, megaSpriteId, small } = {}) {
   return small ? getSmallSpriteUrl(name, v) : getSpriteUrl(name, v)
 }
 
+/**
+ * Sprite for a roster member / partner object.
+ * @param {{ name: string, spriteVariant?: string, megaSpriteId?: number }} member
+ */
+export function resolveMemberSpriteUrl(member, { small = false } = {}) {
+  if (!member) return null
+  return resolveSpriteUrl(member.name, {
+    variant: member.spriteVariant,
+    megaSpriteId: member.megaSpriteId,
+    small,
+  })
+}
+
 export function getMegaSpriteUrl(spriteId, variant = 'default') {
   const shinySegment = variant === 'shiny' ? 'shiny/' : ''
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${shinySegment}${spriteId}.png`
+  return `${SPRITE_BASE}/pokemon/other/official-artwork/${shinySegment}${spriteId}.png`
 }
 
 /** @param {'team' | 'box' | 'temp'} source */

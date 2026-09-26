@@ -162,9 +162,6 @@ export function createSessionSync(config) {
   }
 
   return {
-    get isAvailable() {
-      return !!supabase
-    },
     scheduleAutoSync,
     pushState,
     pullState,
@@ -172,6 +169,5 @@ export function createSessionSync(config) {
     subscribeToSession,
     unsubscribeFromSession,
     withSyncSuppressed,
-    withSyncSuppressedAsync,
   }
 }

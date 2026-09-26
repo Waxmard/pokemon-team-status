@@ -20,32 +20,23 @@
           <div v-if="draftAction.pokemon" class="header-actions">
             <template v-if="canShowSuggestion">
               <span class="suggestion-group">
-                <span
+                <SuggestionPill
                   v-if="showSuggestion && swapSuggestion"
-                  class="suggestion-inline"
-                  @click="$emit('swapSuggestion', {
+                  :left="{
+                    src: getSuggestionSpriteUrl(draftAction.pokemon.name, draftAction.spriteVariant, draftAction.megaSpriteId),
+                    alt: draftAction.pokemon.name,
+                  }"
+                  :right="{
+                    src: getSuggestionSpriteUrl(swapSuggestion.candidate.name, swapSuggestion.candidate.spriteVariant, swapSuggestion.candidate.megaSpriteId),
+                    alt: swapSuggestion.candidate.name,
+                  }"
+                  :indicator="suggestionIndicator"
+                  @select="$emit('swapSuggestion', {
                     currentId: draftAction.isTeamPokemon ? draftAction.editId : draftAction.boxPokemonId,
                     candidateId: swapSuggestion.candidate.id,
                     isTeamMember: !!draftAction.isTeamPokemon,
                   })"
-                >
-                  <SpriteImg
-                    :src="getSuggestionSpriteUrl(draftAction.pokemon.name, draftAction.spriteVariant, draftAction.megaSpriteId)"
-                    :alt="draftAction.pokemon.name"
-                    :width="24"
-                    :height="24"
-                  />
-                  <span class="suggestion-swap-icon">⇄</span>
-                  <SpriteImg
-                    :src="getSuggestionSpriteUrl(swapSuggestion.candidate.name, swapSuggestion.candidate.spriteVariant, swapSuggestion.candidate.megaSpriteId)"
-                    :alt="swapSuggestion.candidate.name"
-                    :width="24"
-                    :height="24"
-                  />
-                  <span v-if="suggestionIndicator" :class="['suggestion-indicator', suggestionIndicator.cls]">
-                    {{ suggestionIndicator.symbol }}
-                  </span>
-                </span>
+                />
                 <button
                   v-else
                   class="suggestion-btn"
@@ -94,7 +85,6 @@
 
       <div v-if="!draftAction.pokemon" class="wizard-empty-state">
         <n-auto-complete
-          v-if="!hideSearch"
           ref="pokemonInputRef"
           v-model:value="searchQuery"
           :options="autocompleteOptions"
@@ -109,7 +99,6 @@
         <div v-if="activeField === null" class="overview-view">
           <div class="overview-search-row">
             <n-auto-complete
-              v-if="!hideSearch"
               ref="pokemonInputRef"
               v-model:value="searchQuery"
               :options="autocompleteOptions"
@@ -148,7 +137,7 @@
               <template v-if="effectiveTeraEnabled" #bottom-center>
                 <button
                   class="tera-type-btn"
-                  :style="getTypeBackground(draftAction.teraType || previewTypes[0], true)"
+                  :style="getTypeBackground(draftAction.teraType || previewTypes[0], 0.7, 0.5)"
                   @click="openField('tera')"
                   aria-label="Tera Type"
                 >
@@ -249,7 +238,7 @@
                 @click="toggleBerry(berry.value)"
                 class="berry-type-option"
                 :class="{ selected: draftAction.berry === berry.value }"
-                :style="getTypeBackground(berry.type, draftAction.berry === berry.value)"
+                :style="getTypeBackground(berry.type, draftAction.berry === berry.value ? 0.7 : 0.1, draftAction.berry === berry.value ? 0.5 : 0.05)"
                 :title="berry.label"
               >
                 <SpriteImg :src="getBerrySprite(berry.value)" :alt="berry.label" :width="44" :height="44" />
@@ -266,7 +255,7 @@
               @click="toggleMoveType(type)"
               class="move-type-option"
               :class="{ selected: isMoveSelected(type) }"
-              :style="getTypeBackground(type, isMoveSelected(type))"
+              :style="getTypeBackground(type, isMoveSelected(type) ? 0.7 : 0.1, isMoveSelected(type) ? 0.5 : 0.05)"
               :title="capitalize(type)"
             >
               <img :src="getTypeIcon(type)" :alt="type" class="type-icon" />
@@ -282,7 +271,7 @@
               @click="toggleTeraType(type)"
               class="move-type-option"
               :class="{ selected: isTeraTypeSelected(type) }"
-              :style="getTypeBackground(type, isTeraTypeSelected(type))"
+              :style="getTypeBackground(type, isTeraTypeSelected(type) ? 0.7 : 0.1, isTeraTypeSelected(type) ? 0.5 : 0.05)"
               :title="capitalize(type)"
             >
               <img :src="getTypeIcon(type)" :alt="type" class="type-icon" />
@@ -305,8 +294,8 @@ import { BERRY_BY_TYPE } from '../data/berries.js'
 import { getMegaOptions } from '../data/megaEvolutions.js'
 import { getPokemonDataForRules, POKEMON_DATA } from '../data/pokemon.js'
 import { SPECIAL_MOVE_NAMES } from '../data/specialMoves.js'
-import { getAllTypesForRules, getTypeIcon, TYPE_COLORS } from '../data/types.js'
-import { hexToRgba } from '../utils/colors.js'
+import { getAllTypesForRules, getTypeIcon } from '../data/types.js'
+import { getTypeBackground } from '../utils/colors.js'
 import {
   getMemberTypesForRules,
   sanitizeDraftActionForRules,
@@ -316,6 +305,7 @@ import {
   getBerrySprite,
   getMegaSpriteUrl,
   getSpriteUrl,
+  resolveMemberSpriteUrl,
   resolveSpriteUrl,
 } from '../utils/pokemon.js'
 import { capitalize } from '../utils/string.js'
@@ -327,12 +317,9 @@ import {
 } from '../utils/typeCalc.js'
 import PokemonPreview from './PokemonPreview.vue'
 import SpriteImg from './SpriteImg.vue'
+import SuggestionPill from './SuggestionPill.vue'
 
 const props = defineProps({
-  hideSearch: {
-    type: Boolean,
-    default: false,
-  },
   team: {
     type: Array,
     default: () => [],
@@ -384,7 +371,6 @@ const {
 } = useDraftAction()
 
 const {
-  team: storageTeam,
   box: storageBox,
   defeatedGyms: storageDefeatedGyms,
   pinnedGym: storagePinnedGym,
@@ -467,10 +453,7 @@ function toggleSuggestion() {
 }
 
 function getPartnerPreviewSpriteUrl(partner) {
-  return resolveSpriteUrl(partner.name, {
-    variant: partner.spriteVariant,
-    megaSpriteId: partner.megaSpriteId,
-  })
+  return resolveMemberSpriteUrl(partner)
 }
 
 function getSuggestionSpriteUrl(pokemonName, spriteVariant, megaSpriteId) {
@@ -496,7 +479,7 @@ function closeField() {
 const pokemonInputRef = ref(null)
 
 function focusPokemonInput() {
-  if (props.hideSearch || !pokemonInputRef.value) return
+  if (!pokemonInputRef.value) return
 
   // Skip auto-focus on touch devices (iOS blocks async programmatic focus)
   if ('ontouchstart' in globalThis || navigator.maxTouchPoints > 0) return
@@ -768,15 +751,6 @@ function evolveTo(option) {
   }
 }
 
-function getTypeBackground(type, selected = false) {
-  const color = TYPE_COLORS[type].bg
-  const opacity = selected ? 0.7 : 0.1
-  const opacityEnd = selected ? 0.5 : 0.05
-  return {
-    background: `linear-gradient(135deg, ${hexToRgba(color, opacity)} 0%, ${hexToRgba(color, opacityEnd)} 100%)`,
-  }
-}
-
 const relevantBerries = computed(() => {
   if (!effectiveDraftPokemon.value) return []
   const weakTypes = activeTypes.value.filter((attackType) => {
@@ -817,18 +791,6 @@ const relevantBerries = computed(() => {
   }
   return berries
 })
-
-const selectedMoveCount = computed(() => {
-  return draftAction.value?.moves?.length || 0
-})
-
-const limitedMoveTypes = computed(() =>
-  (draftAction.value?.moves || []).slice(0, 4),
-)
-
-const overflowMoveCount = computed(() =>
-  Math.max((draftAction.value?.moves?.length || 0) - 4, 0),
-)
 
 function isMoveSelected(type) {
   return draftAction.value?.moves?.includes(type)

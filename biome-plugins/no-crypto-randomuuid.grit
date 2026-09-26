@@ -1,0 +1,5 @@
+language js
+
+`crypto.randomUUID` as $call where {
+  register_diagnostic(span = $call, message = "Use generateUUID() from src/utils/uuid.js — crypto.randomUUID() is unavailable in non-secure contexts (HTTP on mobile).")
+}

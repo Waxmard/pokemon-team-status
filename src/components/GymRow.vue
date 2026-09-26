@@ -1,13 +1,13 @@
 <template>
   <div
     class="gym-card touchable"
-    :class="{ defeated: defeated && !suggestionMode, pinned: pinned, 'read-only': readOnly }"
-    @click="!suggestionMode && !readOnly && $emit('click', type)"
+    :class="{ defeated: defeated && !suggestionMode, pinned: pinned }"
+    @click="!suggestionMode && $emit('click', type)"
   >
     <div class="gym-card-inner" :style="rowBackgroundStyle">
       <!-- Drag handle for pin -->
       <span
-        v-if="!readOnly && !suggestionMode"
+        v-if="!suggestionMode"
         class="drag-handle"
         draggable="true"
         @dragstart.stop="onHandleDragStart"
@@ -37,9 +37,9 @@
       <span
         v-if="suggestionMode && improvementScore != null"
         class="score-corner"
-        :class="improvementClass"
+        :class="suggestionIndicator.cls"
       >
-        {{ improvementSymbol }}
+        {{ suggestionIndicator.symbol }}
       </span>
       <span
         v-else-if="!suggestionMode"
@@ -59,6 +59,7 @@ import { BERRY_BY_TYPE } from '../data/berries.js'
 import { getTypeIcon, TYPE_COLORS } from '../data/types.js'
 import { getTypeBackground, hexToRgba } from '../utils/colors.js'
 import { getBerrySprite } from '../utils/pokemon.js'
+import { getSuggestionIndicator } from '../utils/suggestion.js'
 import SpriteImg from './SpriteImg.vue'
 
 const props = defineProps({
@@ -90,10 +91,6 @@ const props = defineProps({
     type: Number,
     default: undefined,
   },
-  readOnly: {
-    type: Boolean,
-    default: false,
-  },
 })
 
 const emit = defineEmits(['click', 'dragstart', 'touchdragstart'])
@@ -112,17 +109,9 @@ function onHandleTouchStart() {
   emit('touchdragstart')
 }
 
-const improvementSymbol = computed(() => {
-  if (props.improvementScore > 0) return '\u25B2'
-  if (props.improvementScore < 0) return '\u25BC'
-  return '\u2014'
-})
-
-const improvementClass = computed(() => {
-  if (props.improvementScore > 0) return 'improvement-up'
-  if (props.improvementScore < 0) return 'improvement-down'
-  return 'improvement-neutral'
-})
+const suggestionIndicator = computed(() =>
+  getSuggestionIndicator(props.improvementScore ?? 0),
+)
 
 const scoreSymbol = computed(() => {
   if (props.score > 0) return '\u{1F44D}'
@@ -150,10 +139,6 @@ const rowBackgroundStyle = computed(() => {
   -webkit-touch-callout: none;
   -webkit-user-drag: element;
   user-select: none;
-}
-
-.gym-card.read-only {
-  cursor: default;
 }
 
 .gym-card-inner {

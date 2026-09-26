@@ -1,6 +1,5 @@
 import { computed, ref } from 'vue'
-import { DEFAULT_GENERATION_RULESET } from '../data/types.js'
-import { createLocalSoloRunRepository } from '../services/localRunRepository.js'
+import { localRunRepository as repository } from '../services/localRunRepository.js'
 import { createSupabaseRepository } from '../services/supabaseRepository.js'
 import { cloneValue } from '../utils/clone.js'
 import {
@@ -10,8 +9,8 @@ import {
 } from '../utils/runSnapshot.js'
 import {
   buildRemoteState,
-  createDefaultSoulLinkPlayerProgress,
-  createDefaultSoulLinkPlayerRoster,
+  emptyProgress,
+  emptyRoster,
   generateInviteCode,
   mergeRemoteState,
   repairPairings,
@@ -34,7 +33,6 @@ import {
 import { generateUUID } from '../utils/uuid.js'
 import { createSessionSync } from './useSessionSync.js'
 
-const repository = createLocalSoloRunRepository()
 const internalRunState = ref(createDefaultSoulLinkRunState())
 const loadError = ref(false)
 
@@ -315,7 +313,7 @@ function addRosterMember(playerId, rosterKey, member) {
   const playerRoster =
     getSoulLinkState('Adding a Soul Link roster member').rosters[
       nextPlayerId
-    ] ?? createDefaultSoulLinkPlayerRoster()
+    ] ?? emptyRoster()
 
   const newMember = {
     ...cloneValue(member),
@@ -346,7 +344,7 @@ function updateRosterMember(playerId, rosterKey, memberId, updates) {
   const playerRoster =
     getSoulLinkState('Updating a Soul Link roster member').rosters[
       nextPlayerId
-    ] ?? createDefaultSoulLinkPlayerRoster()
+    ] ?? emptyRoster()
 
   updatePlayerRecord('rosters', nextPlayerId, {
     ...playerRoster,
@@ -375,7 +373,7 @@ function removeRosterMember(playerId, rosterKey, memberId) {
   const playerRoster =
     getSoulLinkState('Removing a Soul Link roster member').rosters[
       nextPlayerId
-    ] ?? createDefaultSoulLinkPlayerRoster()
+    ] ?? emptyRoster()
 
   updatePlayerRecord('rosters', nextPlayerId, {
     ...playerRoster,
@@ -397,7 +395,7 @@ function updatePlayerGymProgress(playerId, updates) {
   const playerProgress =
     getSoulLinkState('Updating Soul Link gym progress').progress[
       nextPlayerId
-    ] ?? createDefaultSoulLinkPlayerProgress()
+    ] ?? emptyProgress()
 
   updatePlayerRecord('progress', nextPlayerId, {
     ...playerProgress,
@@ -409,8 +407,7 @@ function updatePlayerGymProgress(playerId, updates) {
 function setPlayerRoster(playerId, roster) {
   const pid = assertKnownPlayerId(playerId, 'Setting a Soul Link roster')
   const currentRoster =
-    getSoulLinkState('Setting a Soul Link roster').rosters[pid] ??
-    createDefaultSoulLinkPlayerRoster()
+    getSoulLinkState('Setting a Soul Link roster').rosters[pid] ?? emptyRoster()
   updatePlayerRecord('rosters', pid, {
     team: normalizeRosterMembers(roster.team, pid),
     box: normalizeRosterMembers(roster.box, pid),
@@ -423,7 +420,7 @@ function resetPlayerRoster(playerId) {
   updatePlayerRecord(
     'rosters',
     assertKnownPlayerId(playerId, 'Resetting a Soul Link roster'),
-    createDefaultSoulLinkPlayerRoster(),
+    emptyRoster(),
   )
 }
 
@@ -431,7 +428,7 @@ function resetPlayerGymProgress(playerId) {
   updatePlayerRecord(
     'progress',
     assertKnownPlayerId(playerId, 'Resetting Soul Link gym progress'),
-    createDefaultSoulLinkPlayerProgress(),
+    emptyProgress(),
   )
 }
 
@@ -443,7 +440,7 @@ function getPlayerRoster(playerId) {
 
   const { _tombstones, dead, ...roster } =
     getSoulLinkState('Accessing a Soul Link roster').rosters[nextPlayerId] ??
-    createDefaultSoulLinkPlayerRoster()
+    emptyRoster()
   return cloneValue(roster)
 }
 
@@ -456,16 +453,8 @@ function getFullPlayerRoster(playerId) {
   const { _tombstones, ...roster } =
     getSoulLinkState('Accessing a full Soul Link roster').rosters[
       nextPlayerId
-    ] ?? createDefaultSoulLinkPlayerRoster()
+    ] ?? emptyRoster()
   return cloneValue(roster)
-}
-
-function getPlayerTeam(playerId) {
-  return getPlayerRoster(playerId).team
-}
-
-function getPlayerBox(playerId) {
-  return getPlayerRoster(playerId).box
 }
 
 function getPlayerGymProgress(playerId) {
@@ -477,7 +466,7 @@ function getPlayerGymProgress(playerId) {
   return cloneValue(
     getSoulLinkState('Accessing Soul Link gym progress').progress[
       nextPlayerId
-    ] ?? createDefaultSoulLinkPlayerProgress(),
+    ] ?? emptyProgress(),
   )
 }
 
@@ -488,7 +477,7 @@ function getPlayerDead(playerId) {
   )
   const roster =
     getSoulLinkState('Accessing Soul Link dead roster').rosters[nextPlayerId] ??
-    createDefaultSoulLinkPlayerRoster()
+    emptyRoster()
   return cloneValue(roster.dead ?? [])
 }
 
@@ -504,7 +493,7 @@ function killRosterMember(playerId, rosterKey, memberId) {
   const playerRoster =
     getSoulLinkState('Killing a Soul Link roster member').rosters[
       nextPlayerId
-    ] ?? createDefaultSoulLinkPlayerRoster()
+    ] ?? emptyRoster()
 
   const member = playerRoster[nextRosterKey].find((m) => m.id === memberId)
   if (!member) return
@@ -529,7 +518,7 @@ function reviveRosterMember(playerId, memberId) {
   const playerRoster =
     getSoulLinkState('Reviving a Soul Link roster member').rosters[
       nextPlayerId
-    ] ?? createDefaultSoulLinkPlayerRoster()
+    ] ?? emptyRoster()
 
   const member = (playerRoster.dead ?? []).find((m) => m.id === memberId)
   if (!member) return
@@ -597,17 +586,10 @@ export function useSoulLinkStore() {
     return runState.value
   }
 
-  function resetLocalRun(generation = DEFAULT_GENERATION_RULESET) {
-    return createLocalRun({ generationRules: generation })
-  }
-
-  function startNewLocalSoulLinkRun(
-    generation = generationRules.value,
-    nextTeraEnabled = teraEnabled.value,
-  ) {
+  function startNewLocalSoulLinkRun() {
     return createLocalRun({
-      generationRules: generation,
-      teraEnabled: nextTeraEnabled,
+      generationRules: generationRules.value,
+      teraEnabled: teraEnabled.value,
     })
   }
 
@@ -778,7 +760,6 @@ export function useSoulLinkStore() {
     loadSoulLinkData,
     loadError,
     createLocalRun,
-    resetLocalRun,
     startNewLocalSoulLinkRun,
     updateSessionMetadata,
     setGenerationRules,
@@ -792,8 +773,6 @@ export function useSoulLinkStore() {
     updatePlayerGymProgress,
     getPlayerRoster,
     getFullPlayerRoster,
-    getPlayerTeam,
-    getPlayerBox,
     getPlayerDead,
     getPlayerGymProgress,
     killRosterMember,

@@ -14,7 +14,7 @@ const { soloRepository, supabaseRepository, subscription } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../services/localRunRepository.js', () => ({
-  createLocalSoloRunRepository: () => soloRepository,
+  localRunRepository: soloRepository,
 }))
 
 vi.mock('../../services/supabaseRepository.js', () => ({
@@ -135,7 +135,7 @@ describe('useSoulLinkStore session sync', () => {
     await store.syncSession()
 
     expect(store.teraEnabled.value).toBe(true)
-    expect(store.getPlayerTeam(LOCAL)[0].teraType).toBe('fire')
+    expect(store.getPlayerRoster(LOCAL).team[0].teraType).toBe('fire')
     expect(supabaseRepository.pushSessionState).toHaveBeenCalledTimes(1)
 
     const [sessionId, pushedState, expectedVersion] =
@@ -253,7 +253,7 @@ describe('useSoulLinkStore session sync', () => {
     subscription.callback(session)
 
     expect(store.teraEnabled.value).toBe(false)
-    expect(store.getPlayerTeam(LOCAL)[0]).toEqual(
+    expect(store.getPlayerRoster(LOCAL).team[0]).toEqual(
       expect.objectContaining({
         id: 'member-1',
         teraType: null,

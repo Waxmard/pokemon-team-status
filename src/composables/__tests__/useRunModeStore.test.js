@@ -21,7 +21,7 @@ describe('useRunModeStore', () => {
       },
     })
 
-    useRunModeStore().persistCurrentRunMode(RUN_MODES.SOLO)
+    useRunModeStore().setCurrentRunMode(RUN_MODES.SOLO)
   })
 
   it('defaults to solo when no persisted mode exists', () => {

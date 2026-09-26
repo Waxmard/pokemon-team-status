@@ -1,19 +1,17 @@
 <template>
   <div class="pokemon-preview" :class="{ evolving }">
     <slot name="top-left" />
-    <slot name="bottom-left">
-      <div v-if="types?.length" class="preview-type-list">
-        <span
-          v-for="(type, index) in types"
-          :key="type"
-          class="preview-type-label"
-        >
-          <span :style="getTypeTextColor(type)">
-            {{ capitalize(type) }}<span v-if="index < types.length - 1">,</span>
-          </span>
+    <div v-if="types?.length" class="preview-type-list">
+      <span
+        v-for="(type, index) in types"
+        :key="type"
+        class="preview-type-label"
+      >
+        <span :style="{ color: TYPE_COLORS[type].label }">
+          {{ capitalize(type) }}<span v-if="index < types.length - 1">,</span>
         </span>
-      </div>
-    </slot>
+      </span>
+    </div>
     <SpriteImg
       v-if="spriteUrl"
       :src="spriteUrl"
@@ -77,33 +75,6 @@ const props = defineProps({
 const displayCatchLocation = computed(
   () => props.catchLocationLabel ?? props.catchLocation,
 )
-
-const PREVIEW_TYPE_COLORS = {
-  normal: '#7d7d4f',
-  fire: '#d94708',
-  water: '#2d6fe6',
-  electric: '#c79600',
-  grass: '#3f9f2a',
-  ice: '#2d9fb0',
-  fighting: '#9f1f19',
-  poison: '#812c98',
-  ground: '#b88a1c',
-  flying: '#6c63db',
-  psychic: '#e03274',
-  bug: '#7d9100',
-  rock: '#90761c',
-  ghost: '#53408c',
-  dragon: '#4c16d1',
-  dark: '#4c3b30',
-  steel: '#7b86a8',
-  fairy: '#d75f85',
-}
-
-function getTypeTextColor(type) {
-  return {
-    color: PREVIEW_TYPE_COLORS[type] || TYPE_COLORS[type].bg,
-  }
-}
 </script>
 
 <style scoped>

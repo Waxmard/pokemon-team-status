@@ -66,6 +66,17 @@ async function saveSetting(name, value) {
   })
 }
 
+async function deleteSetting(name) {
+  const db = await openDB()
+  const tx = db.transaction('settings', 'readwrite')
+  tx.objectStore('settings').delete(name)
+
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
 async function loadSetting(name, defaultValue = null) {
   const db = await openDB()
   const tx = db.transaction('settings', 'readonly')
@@ -78,152 +89,128 @@ async function loadSetting(name, defaultValue = null) {
   })
 }
 
-export function createLocalSoloRunRepository() {
-  return {
-    async loadSoloRunSnapshot(defaultGenerationRules) {
-      const [
-        team,
-        defeatedGyms,
-        box,
-        dead,
-        pinnedGym,
-        generationRules,
-        generationRulesUpdatedAt,
-        teraEnabled,
-        teraEnabledUpdatedAt,
-      ] = await Promise.all([
-        loadSetting('soloTeam', []),
-        loadSetting('defeatedGyms', []),
-        loadSetting('soloBox', []),
-        loadSetting('soloDead', []),
-        loadSetting('pinnedGym', null),
-        loadSetting('generationRules', defaultGenerationRules),
-        loadSetting('generationRulesUpdatedAt', null),
-        loadSetting('teraEnabled', false),
-        loadSetting('teraEnabledUpdatedAt', null),
-      ])
+export const localRunRepository = {
+  async loadSoloRunSnapshot(defaultGenerationRules) {
+    const [
+      team,
+      defeatedGyms,
+      box,
+      dead,
+      pinnedGym,
+      generationRules,
+      generationRulesUpdatedAt,
+      teraEnabled,
+      teraEnabledUpdatedAt,
+    ] = await Promise.all([
+      loadSetting('soloTeam', []),
+      loadSetting('defeatedGyms', []),
+      loadSetting('soloBox', []),
+      loadSetting('soloDead', []),
+      loadSetting('pinnedGym', null),
+      loadSetting('generationRules', defaultGenerationRules),
+      loadSetting('generationRulesUpdatedAt', null),
+      loadSetting('teraEnabled', false),
+      loadSetting('teraEnabledUpdatedAt', null),
+    ])
 
-      return {
-        team,
-        box,
-        dead,
-        defeatedGyms,
-        pinnedGym,
-        generationRules,
-        generationRulesUpdatedAt,
-        teraEnabled,
-        teraEnabledUpdatedAt,
-      }
-    },
+    return {
+      team,
+      box,
+      dead,
+      defeatedGyms,
+      pinnedGym,
+      generationRules,
+      generationRulesUpdatedAt,
+      teraEnabled,
+      teraEnabledUpdatedAt,
+    }
+  },
 
-    persistSoloTeam(team) {
-      return saveSetting('soloTeam', team)
-    },
+  persistSoloTeam(team) {
+    return saveSetting('soloTeam', team)
+  },
 
-    persistSoloBox(box) {
-      return saveSetting('soloBox', box)
-    },
+  persistSoloBox(box) {
+    return saveSetting('soloBox', box)
+  },
 
-    persistSoloDefeatedGyms(defeatedGyms) {
-      return saveSetting('defeatedGyms', defeatedGyms)
-    },
+  persistSoloDefeatedGyms(defeatedGyms) {
+    return saveSetting('defeatedGyms', defeatedGyms)
+  },
 
-    persistSoloPinnedGym(pinnedGym) {
-      return saveSetting('pinnedGym', pinnedGym)
-    },
+  persistSoloPinnedGym(pinnedGym) {
+    return saveSetting('pinnedGym', pinnedGym)
+  },
 
-    persistSoloGenerationRules(generationRules) {
-      return saveSetting('generationRules', generationRules)
-    },
+  persistSoloGenerationRules(generationRules) {
+    return saveSetting('generationRules', generationRules)
+  },
 
-    persistSoloGenerationRulesUpdatedAt(updatedAt) {
-      return saveSetting('generationRulesUpdatedAt', updatedAt)
-    },
+  persistSoloGenerationRulesUpdatedAt(updatedAt) {
+    return saveSetting('generationRulesUpdatedAt', updatedAt)
+  },
 
-    persistSoloTeraEnabled(teraEnabled) {
-      return saveSetting('teraEnabled', teraEnabled)
-    },
+  persistSoloTeraEnabled(teraEnabled) {
+    return saveSetting('teraEnabled', teraEnabled)
+  },
 
-    persistSoloTeraEnabledUpdatedAt(updatedAt) {
-      return saveSetting('teraEnabledUpdatedAt', updatedAt)
-    },
+  persistSoloTeraEnabledUpdatedAt(updatedAt) {
+    return saveSetting('teraEnabledUpdatedAt', updatedAt)
+  },
 
-    persistSoloDead(dead) {
-      return saveSetting('soloDead', dead)
-    },
+  persistSoloDead(dead) {
+    return saveSetting('soloDead', dead)
+  },
 
-    loadSoloBackupSessionId() {
-      return loadSetting('soloBackupSessionId', null)
-    },
+  loadSoloRunIndex() {
+    return loadSetting('soloRunIndex', null)
+  },
 
-    persistSoloBackupSessionId(id) {
-      return saveSetting('soloBackupSessionId', id)
-    },
+  persistSoloRunIndex(index) {
+    return saveSetting('soloRunIndex', index)
+  },
 
-    loadSoloRunIndex() {
-      return loadSetting('soloRunIndex', null)
-    },
+  loadSoloRun(runId) {
+    return loadSetting(`soloRun:${runId}`, null)
+  },
 
-    persistSoloRunIndex(index) {
-      return saveSetting('soloRunIndex', index)
-    },
+  persistSoloRun(runId, snapshot) {
+    return saveSetting(`soloRun:${runId}`, snapshot)
+  },
 
-    loadSoloRun(runId) {
-      return loadSetting(`soloRun:${runId}`, null)
-    },
+  deleteSoloRun(runId) {
+    return deleteSetting(`soloRun:${runId}`)
+  },
 
-    persistSoloRun(runId, snapshot) {
-      return saveSetting(`soloRun:${runId}`, snapshot)
-    },
+  persistSoulLinkSnapshot(snapshot) {
+    return saveSetting('soulLinkSnapshot', snapshot)
+  },
 
-    async deleteSoloRun(runId) {
-      const db = await openDB()
-      const tx = db.transaction('settings', 'readwrite')
-      const store = tx.objectStore('settings')
-      store.delete(`soloRun:${runId}`)
-      return new Promise((resolve, reject) => {
-        tx.oncomplete = () => resolve()
-        tx.onerror = () => reject(tx.error)
-      })
-    },
+  loadSoulLinkSnapshot() {
+    return loadSetting('soulLinkSnapshot', null)
+  },
 
-    persistSoulLinkSnapshot(snapshot) {
-      return saveSetting('soulLinkSnapshot', snapshot)
-    },
+  clearSoulLinkSnapshot() {
+    return saveSetting('soulLinkSnapshot', null)
+  },
 
-    loadSoulLinkSnapshot() {
-      return loadSetting('soulLinkSnapshot', null)
-    },
+  loadSoulLinkRunIndex() {
+    return loadSetting('soulLinkRunIndex', null)
+  },
 
-    clearSoulLinkSnapshot() {
-      return saveSetting('soulLinkSnapshot', null)
-    },
+  persistSoulLinkRunIndex(index) {
+    return saveSetting('soulLinkRunIndex', index)
+  },
 
-    loadSoulLinkRunIndex() {
-      return loadSetting('soulLinkRunIndex', null)
-    },
+  loadSoulLinkRun(runId) {
+    return loadSetting(`soulLinkRun:${runId}`, null)
+  },
 
-    persistSoulLinkRunIndex(index) {
-      return saveSetting('soulLinkRunIndex', index)
-    },
+  persistSoulLinkRun(runId, snapshot) {
+    return saveSetting(`soulLinkRun:${runId}`, snapshot)
+  },
 
-    loadSoulLinkRun(runId) {
-      return loadSetting(`soulLinkRun:${runId}`, null)
-    },
-
-    persistSoulLinkRun(runId, snapshot) {
-      return saveSetting(`soulLinkRun:${runId}`, snapshot)
-    },
-
-    async deleteSoulLinkRun(runId) {
-      const db = await openDB()
-      const tx = db.transaction('settings', 'readwrite')
-      const store = tx.objectStore('settings')
-      store.delete(`soulLinkRun:${runId}`)
-      return new Promise((resolve, reject) => {
-        tx.oncomplete = () => resolve()
-        tx.onerror = () => reject(tx.error)
-      })
-    },
-  }
+  deleteSoulLinkRun(runId) {
+    return deleteSetting(`soulLinkRun:${runId}`)
+  },
 }

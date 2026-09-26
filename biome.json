@@ -48,5 +48,11 @@
       "quoteStyle": "single",
       "semicolons": "asNeeded"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**", "!src/utils/uuid.js", "!src/**/__tests__/**"],
+      "plugins": ["./biome-plugins/no-crypto-randomuuid.grit"]
+    }
+  ]
 }
