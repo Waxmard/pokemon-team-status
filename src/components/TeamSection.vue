@@ -467,6 +467,7 @@ function handleReviveFromDraft() {
   if (!id) return
   cancel()
   emit('revivePokemon', id)
+  emit('exitDeathBox')
   // Switch to box view after the deathBoxMode watcher fires
   nextTick(() => {
     viewMode.value = 'box'
