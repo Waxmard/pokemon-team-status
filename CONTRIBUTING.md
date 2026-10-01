@@ -4,10 +4,14 @@ Thanks for contributing. This guide covers how a change flows from a branch to a
 
 ## Branching
 
-`main` is the default and target branch — branch off the latest `main`, never push to it
-directly. Every change lands through a pull request.
+`dev` is the integration and default branch after
+activation (see [release-flow activation](docs/deployment.md#activate-the-release-flow)).
+Ordinary pull requests target `dev`; production promotions target `main`. Never
+push development changes directly to either branch.
 
-    git switch main && git pull
+Start a feature branch from the latest `dev`:
+
+    git switch dev && git pull --ff-only
     git switch -c feat/short-description
 
 ## Commit Messages
@@ -29,9 +33,15 @@ Run `git-ai setup` once to configure a provider.
 
 Always open one — even for small changes.
 
-- **Squash on merge.** The branch's WIP commits collapse into a single commit on `main`,
-  so the **squashed title and body must be the real, conventional message** — that line is
-  what release tooling reads. Let git-ai draft it: `git-ai pr --base main`.
+- **Squash feature PRs into `dev`.** Use a Conventional Commit title and body
+  for the squashed commit; release tooling reads that message. Let git-ai
+  draft it: `git-ai pr --base dev`.
+- **Promote `dev` to `main` manually.** Open a promotion PR with a title such
+  as `chore: promote dev to main`. Use **Create a merge commit**, never squash
+  or rebase, to preserve individual conventional commits and shared ancestry.
+  Require green checks and smoke-test the `dev` preview for the exact candidate
+  SHA before merging. Further `dev` changes invalidate that smoke check.
+  Do not enable auto-merge for promotion PRs.
 - **Reference the issue.** If the change closes or relates to an issue, add `#<issuenum>`
   to the description so the PR links back to it.
 - **Keep it focused.** One logical change per PR keeps review and the changelog clean.
@@ -45,8 +55,20 @@ Every PR needs a human pass before it merges.
 
 ## Deploys & Releases
 
-On every push to `main`, [release-please](https://github.com/googleapis/release-please)
-reads the conventional commits since the last tag, bumps the version, updates
-`CHANGELOG.md`, and tags the release. Merging the release PR triggers the Cloudflare
-Pages deploy. This is why commit hygiene matters: every commit on `main` is read by the
-release tooling.
+Every push to `main` immediately triggers production deployment through
+Cloudflare Pages Git integration. Manual promotion is the production approval;
+the version PR is not the production gate. Pushes to `dev` deploy the
+configured [development preview](docs/deployment.md#preview-and-promotion), not production.
+
+[Release Please](https://github.com/googleapis/release-please) runs and targets
+`main` only. It reads conventional commits since the last release and maintains
+a version PR with the version and `CHANGELOG.md` updates. Version PRs retain
+rebase auto-merge after required checks pass. After the version PR merges,
+Release Please creates the tag and release; the merge can deploy production
+again. A chores-only batch might not create a version PR.
+
+After a version PR or a `main`-only emergency fix, open a `main` → `dev` sync
+PR before the next promotion. Use **Create a merge commit**, never squash or
+rebase. Resolve version, release manifest, and changelog conflicts with `main`'s
+released metadata while preserving `dev` application changes. Never hand-bump
+versions to imitate a release.

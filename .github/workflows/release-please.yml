@@ -17,6 +17,7 @@ jobs:
         id: release
         with:
           token: ${{ secrets.POKEMON_RELEASE_PLEASE_TOKEN }}
+          target-branch: main
 
       - name: Auto-merge release PR
         if: steps.release.outputs.prs_created == 'true'
