@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.7.1...v1.8.0) (2026-10-05)
+
+
+### Features
+
+* support new Mega Evolutions with automatic ability syncing ([#126](https://github.com/Waxmard/pokemon-team-status/issues/126)) ([b96c4fb](https://github.com/Waxmard/pokemon-team-status/commit/b96c4fb6fe47ea9ca44cf2f74c34ae8160f64044))
+
 ## [1.7.1](https://github.com/Waxmard/pokemon-team-status/compare/v1.7.0...v1.7.1) (2026-10-05)
 
 
