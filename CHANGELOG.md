@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/Waxmard/pokemon-team-status/compare/v1.7.0...v1.7.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* exit death box view when reviving a pokemon ([a32164f](https://github.com/Waxmard/pokemon-team-status/commit/a32164f194695e7d6c66080e0079ae8d4f9d545c))
+
 ## [1.7.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.6.0...v1.7.0) (2026-09-26)
 
 
