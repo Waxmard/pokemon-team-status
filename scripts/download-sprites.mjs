@@ -6,6 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const SPRITES_DIR = join(__dirname, '..', 'public', 'sprites')
 const BASE_URL =
   'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon'
+const { getMegaSpriteUrl } = await import('../src/utils/pokemon.js')
 
 // Dynamically import data modules (they use bare export, no DOM deps)
 const { POKEMON_DATA } = await import('../src/data/pokemon.js')
@@ -13,6 +14,7 @@ const { MEGA_EVOLUTIONS } = await import('../src/data/megaEvolutions.js')
 
 // Collect all unique sprite IDs
 const spriteIds = new Set()
+const megaSpriteIds = new Set()
 
 for (let i = 0; i < POKEMON_DATA.length; i++) {
   spriteIds.add(POKEMON_DATA[i].spriteId ?? i + 1)
@@ -21,6 +23,7 @@ for (let i = 0; i < POKEMON_DATA.length; i++) {
 for (const megas of Object.values(MEGA_EVOLUTIONS)) {
   for (const mega of megas) {
     spriteIds.add(mega.spriteId)
+    megaSpriteIds.add(mega.spriteId)
   }
 }
 
@@ -60,7 +63,10 @@ for (let i = 0; i < ids.length; i += batchSize) {
       }
 
       try {
-        const res = await fetchWithRetry(`${BASE_URL}/${id}.png`)
+        let res = await fetchWithRetry(`${BASE_URL}/${id}.png`)
+        if (res.status === 404 && megaSpriteIds.has(id)) {
+          res = await fetchWithRetry(getMegaSpriteUrl(id))
+        }
         if (!res.ok) {
           console.warn(`  SKIP ${id}.png — HTTP ${res.status}`)
           failed++

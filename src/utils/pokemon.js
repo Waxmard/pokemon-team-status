@@ -2,6 +2,7 @@ import { POKEMON_DATA } from '../data/pokemon.js'
 
 const SPRITE_BASE =
   'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites'
+const MEGA_HOME_SHINY_IDS = new Set([10309, 10318, 10322, 10323])
 
 function resolveSpriteId(pokemonName) {
   const index = POKEMON_DATA.findIndex((p) => p.name === pokemonName)
@@ -64,8 +65,11 @@ export function resolveMemberSpriteUrl(member, { small = false } = {}) {
 }
 
 export function getMegaSpriteUrl(spriteId, variant = 'default') {
-  const shinySegment = variant === 'shiny' ? 'shiny/' : ''
-  return `${SPRITE_BASE}/pokemon/other/official-artwork/${shinySegment}${spriteId}.png`
+  const shiny = variant === 'shiny' || variant === 'shiny-female'
+  const path =
+    shiny && MEGA_HOME_SHINY_IDS.has(spriteId) ? 'home' : 'official-artwork'
+  const shinySegment = shiny ? 'shiny/' : ''
+  return `${SPRITE_BASE}/pokemon/other/${path}/${shinySegment}${spriteId}.png`
 }
 
 /** @param {'team' | 'box' | 'temp'} source */

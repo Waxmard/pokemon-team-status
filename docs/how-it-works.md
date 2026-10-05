@@ -100,6 +100,26 @@ resistances—you wouldn't use a move that makes you weak to the opponent.
 When a Pokemon Mega Evolves and gains a new type, that type is treated like
 Protean: only resistances count, since you choose when to Mega Evolve.
 
+The catalog includes 48 classic Mega forms and 48 new form IDs from
+Legends: Z-A, Mega Dimension, and Champions, including cosmetic variants.
+Select Floette-Eternal, Magearna-Original, or a Tatsugiri appearance to use
+its matching Mega form. Among Zygarde forms, only Zygarde-Complete can
+Mega Evolve.
+
+Selecting a Mega form automatically selects its supported type-affecting
+ability. Switching to a form without that ability clears it only if you
+have not selected a different ability manually. Unsupported abilities do
+not gain new battle mechanics. Pre-Gen 6 rules disable Mega forms and clear
+matching automatic abilities.
+
+Changing species through search or evolution clears the Mega form and its
+matching automatic ability. A different manually selected ability remains.
+Reselecting the same species preserves its Mega form.
+
+Normal Mega thumbnails are bundled for offline use. Viewed shiny artwork
+is cached, including the HOME images used when shiny official artwork is
+unavailable.
+
 ### Berry Tiebreaker
 
 Berries don't affect the main score, but when two gym types have the same

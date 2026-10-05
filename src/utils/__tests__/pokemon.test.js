@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getMegaEvolution, getMegaOptions } from '../../data/megaEvolutions.js'
+import { GENERATION_RULESETS } from '../../data/types.js'
 import {
   buildPokemonMember,
   generatePokemonId,
@@ -119,6 +121,69 @@ describe('getMegaSpriteUrl', () => {
   it('handles shiny variant', () => {
     const url = getMegaSpriteUrl(10033, 'shiny')
     expect(url).toBe(`${BASE_URL}/other/official-artwork/shiny/10033.png`)
+  })
+  it('routes shiny Mega exception IDs through the shared HOME route', () => {
+    expect(getMegaSpriteUrl(10309, 'shiny')).toContain(
+      '/other/home/shiny/10309.png',
+    )
+    expect(getMegaSpriteUrl(10318, 'shiny-female')).toContain(
+      '/other/home/shiny/10318.png',
+    )
+    expect(getMegaSpriteUrl(10322, 'shiny')).toContain(
+      '/other/home/shiny/10322.png',
+    )
+    expect(getMegaSpriteUrl(10323, 'shiny-female')).toContain(
+      '/other/home/shiny/10323.png',
+    )
+    expect(getMegaSpriteUrl(10307, 'shiny')).toBe(
+      `${BASE_URL}/other/official-artwork/shiny/10307.png`,
+    )
+    expect(getMegaSpriteUrl(10309)).toBe(
+      `${BASE_URL}/other/official-artwork/10309.png`,
+    )
+  })
+})
+describe('new Mega catalog entries', () => {
+  it('keeps split forms distinct and restricts new eligibility to exact base variants', () => {
+    expect(
+      getMegaOptions('Raichu').map(({ form, spriteId }) => [form, spriteId]),
+    ).toEqual([
+      ['mega-x', 10304],
+      ['mega-y', 10305],
+    ])
+    expect(getMegaEvolution('Garchomp', 'mega').spriteId).toBe(10058)
+    expect(getMegaEvolution('Garchomp', 'mega-z')).toMatchObject({
+      types: ['dragon'],
+      spriteId: 10309,
+    })
+    expect(
+      getMegaOptions('Floette-Eternal').map((mega) => mega.spriteId),
+    ).toEqual([10296])
+    expect(getMegaOptions('Floette')).toEqual([])
+    expect(
+      getMegaOptions('Zygarde-Complete').map((mega) => mega.spriteId),
+    ).toEqual([10301])
+    expect(getMegaOptions('Zygarde')).toEqual([])
+    expect(getMegaOptions('Zygarde-10%')).toEqual([])
+    expect(getMegaOptions('Alolan Raichu')).toEqual([])
+    expect(getMegaOptions('Tatsugiri').map((mega) => mega.spriteId)).toEqual([
+      10322,
+    ])
+    expect(
+      getMegaOptions('Tatsugiri-Droopy').map((mega) => mega.spriteId),
+    ).toEqual([10323])
+    expect(
+      getMegaOptions('Tatsugiri-Stretchy').map((mega) => mega.spriteId),
+    ).toEqual([10324])
+  })
+
+  it('does not expose new Mega options before generation 6', () => {
+    expect(getMegaOptions('Garchomp', GENERATION_RULESETS.PRE_GEN_6)).toEqual(
+      [],
+    )
+    expect(
+      getMegaOptions('Tatsugiri-Droopy', GENERATION_RULESETS.PRE_GEN_6),
+    ).toEqual([])
   })
 })
 

@@ -38,7 +38,7 @@ anon key. Without these, the app runs in local-only mode (no online sync).
 - See weakness/resistance scores against all 18 types
 - Track defeated gyms
 - Swap suggestions to optimize team coverage
-- Mega evolution support
+- Mega evolution support, including Legends: Z-A, Mega Dimension, and Champions
 - Death box: track fainted Pokemon, revive or delete them
 - Solo run management: save multiple runs, name them, switch between them
 - Generation rules: toggle Pre-Gen 6 / Post-Gen 6 rulesets
