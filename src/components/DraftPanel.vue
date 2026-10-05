@@ -733,8 +733,6 @@ function evolveTo(option) {
     setTimeout(() => {
       updatePokemon(pokemon)
       searchQuery.value = pokemon.name
-      // Clear mega form when evolving to a different Pokemon
-      updateMegaForm(null, null, null)
     }, 400)
 
     setTimeout(() => {

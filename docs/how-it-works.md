@@ -112,6 +112,10 @@ have not selected a different ability manually. Unsupported abilities do
 not gain new battle mechanics. Pre-Gen 6 rules disable Mega forms and clear
 matching automatic abilities.
 
+Changing species through search or evolution clears the Mega form and its
+matching automatic ability. A different manually selected ability remains.
+Reselecting the same species preserves its Mega form.
+
 Normal Mega thumbnails are bundled for offline use. Viewed shiny artwork
 is cached, including the HOME images used when shiny official artwork is
 unavailable.

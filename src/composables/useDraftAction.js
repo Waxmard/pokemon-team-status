@@ -98,7 +98,12 @@ export function useDraftAction() {
     }
   }
 
-  const updatePokemon = (val) => updateField('pokemon', val)
+  function updatePokemon(val) {
+    if (draftAction.value && draftAction.value.pokemon?.name !== val?.name) {
+      updateMegaForm(null, null, null)
+    }
+    updateField('pokemon', val)
+  }
   const updateAbility = (val) => updateField('ability', val)
   const updateBerry = (val) => updateField('berry', val)
   const updateMoves = (val) => updateField('moves', val)

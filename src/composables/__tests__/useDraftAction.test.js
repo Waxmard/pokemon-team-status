@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { getMegaEvolution } from '../../data/megaEvolutions.js'
+import { getPokemonDataForRules } from '../../data/pokemon.js'
 import { useDraftAction } from '../useDraftAction.js'
 
 describe('useDraftAction', () => {
@@ -169,10 +171,92 @@ describe('useDraftAction', () => {
       draft.startAdd()
     })
 
-    it('updatePokemon sets the pokemon field', () => {
-      const pokemon = { name: 'Eevee', types: ['normal'] }
-      draft.updatePokemon(pokemon)
-      expect(draft.draftAction.value.pokemon).toEqual(pokemon)
+    describe('updatePokemon', () => {
+      const gabite = getPokemonDataForRules('Gabite')
+      const garchomp = getPokemonDataForRules('Garchomp')
+      const mega = getMegaEvolution('Garchomp', 'mega-z')
+
+      function selectGarchompZ() {
+        draft.updatePokemon(gabite)
+        draft.updatePokemon(garchomp)
+        draft.updateMegaForm(mega.form, mega.types, mega.spriteId)
+        expect(draft.draftAction.value.ability).toBe('Levitate')
+      }
+
+      it('clears Mega state and its automatic ability when changing species', () => {
+        selectGarchompZ()
+
+        draft.updatePokemon(gabite)
+
+        expect(draft.draftAction.value).toMatchObject({
+          pokemon: { name: 'Gabite' },
+          megaForm: null,
+          megaTypes: null,
+          megaSpriteId: null,
+          ability: null,
+        })
+      })
+
+      it('preserves a manual ability and other draft fields when changing species', () => {
+        selectGarchompZ()
+        draft.updateAbility('Water Absorb')
+        draft.updateSpriteVariant('shiny')
+        draft.updateNickname('Chomp')
+        draft.updateBerry('Occa Berry')
+        draft.updateMoves(['dragon', 'ground'])
+        draft.updateSpecialMove('Freeze-Dry')
+        draft.updateCatchLocation('Route 1')
+        draft.updateTeraType('water')
+        const action = draft.draftAction.value
+        const previous = { ...action }
+
+        draft.updatePokemon(gabite)
+
+        expect(draft.draftAction.value).toBe(action)
+        expect(action).toEqual({
+          ...previous,
+          pokemon: gabite,
+          megaForm: null,
+          megaTypes: null,
+          megaSpriteId: null,
+        })
+      })
+
+      it('preserves Mega state when reselecting the same species by name', () => {
+        selectGarchompZ()
+
+        draft.updatePokemon({ ...garchomp })
+
+        expect(draft.draftAction.value).toMatchObject({
+          pokemon: garchomp,
+          megaForm: mega.form,
+          megaTypes: mega.types,
+          megaSpriteId: mega.spriteId,
+          ability: 'Levitate',
+        })
+      })
+
+      it('clears Mega state and its automatic ability when clearing the species', () => {
+        selectGarchompZ()
+
+        draft.updatePokemon(null)
+
+        expect(draft.draftAction.value).toMatchObject({
+          pokemon: null,
+          megaForm: null,
+          megaTypes: null,
+          megaSpriteId: null,
+          ability: null,
+        })
+      })
+
+      it('leaves an inactive draft inactive', () => {
+        draft.cancel()
+
+        draft.updatePokemon(gabite)
+
+        expect(draft.draftAction.value).toBeNull()
+      })
     })
 
     it('updateAbility sets the ability field', () => {
