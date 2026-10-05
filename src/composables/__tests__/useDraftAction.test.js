@@ -218,17 +218,67 @@ describe('useDraftAction', () => {
   })
 
   describe('updateMegaForm', () => {
-    it('sets megaForm, megaTypes, and megaSpriteId together', () => {
+    function selectGarchomp() {
       draft.startAdd()
-      draft.updateMegaForm('Mega Charizard X', ['fire', 'dragon'], 10033)
+      draft.updatePokemon({ name: 'Garchomp', types: ['dragon', 'ground'] })
+    }
 
-      expect(draft.draftAction.value.megaForm).toBe('Mega Charizard X')
-      expect(draft.draftAction.value.megaTypes).toEqual(['fire', 'dragon'])
-      expect(draft.draftAction.value.megaSpriteId).toBe(10033)
+    it('sets and clears supported abilities across Garchomp Mega forms', () => {
+      selectGarchomp()
+
+      draft.updateMegaForm('mega-z', ['dragon'], 10309)
+      expect(draft.draftAction.value).toMatchObject({
+        megaForm: 'mega-z',
+        megaTypes: ['dragon'],
+        megaSpriteId: 10309,
+        ability: 'Levitate',
+      })
+
+      draft.updateMegaForm('mega', ['dragon', 'ground'], 10058)
+      expect(draft.draftAction.value).toMatchObject({
+        megaForm: 'mega',
+        megaTypes: ['dragon', 'ground'],
+        megaSpriteId: 10058,
+        ability: null,
+      })
+
+      draft.updateMegaForm('mega-z', ['dragon'], 10309)
+      draft.updateMegaForm(null, null, null)
+      expect(draft.draftAction.value).toMatchObject({
+        megaForm: null,
+        megaTypes: null,
+        megaSpriteId: null,
+        ability: null,
+      })
+    })
+
+    it('preserves a manually selected ability when leaving an ability Mega', () => {
+      selectGarchomp()
+      draft.updateMegaForm('mega-z', ['dragon'], 10309)
+      draft.updateAbility('Water Absorb')
+
+      draft.updateMegaForm('mega', ['dragon', 'ground'], 10058)
+      expect(draft.draftAction.value.ability).toBe('Water Absorb')
+
+      draft.updateMegaForm('mega-z', ['dragon'], 10309)
+      draft.updateAbility('Water Absorb')
+      draft.updateMegaForm(null, null, null)
+      expect(draft.draftAction.value.ability).toBe('Water Absorb')
+    })
+
+    it.each([
+      ['Delphox', 'mega', 'Levitate'],
+      ['Chimecho', 'mega', 'Levitate'],
+      ['Greninja', 'mega', 'Protean'],
+    ])('selects %s Mega ability', (name, form, ability) => {
+      draft.startAdd()
+      draft.updatePokemon({ name, types: [] })
+      draft.updateMegaForm(form, [], 1)
+      expect(draft.draftAction.value.ability).toBe(ability)
     })
 
     it('does nothing when draft is inactive', () => {
-      draft.updateMegaForm('Mega', ['fire'], 10033)
+      draft.updateMegaForm('mega', ['fire'], 10033)
       expect(draft.draftAction.value).toBeNull()
     })
   })

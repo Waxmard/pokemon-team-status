@@ -31,6 +31,29 @@ describe('generationRules helpers', () => {
       pokemon: { name: 'Xerneas', types: ['normal'] },
     })
   })
+  it('clears only a matching supported Mega ability under pre-Gen 6 rules', () => {
+    const garchompMegaZ = {
+      name: 'Garchomp',
+      types: ['dragon', 'ground'],
+      ability: 'Levitate',
+      megaForm: 'mega-z',
+      megaTypes: ['dragon'],
+      megaSpriteId: 10309,
+    }
+    const [sanitized, manual] = sanitizePokemonCollectionForRules(
+      [garchompMegaZ, { ...garchompMegaZ, ability: 'Water Absorb' }],
+      GENERATION_RULESETS.PRE_GEN_6,
+    )
+
+    expect(sanitized).toMatchObject({
+      ability: null,
+      megaForm: null,
+      megaTypes: null,
+      megaSpriteId: null,
+    })
+
+    expect(manual.ability).toBe('Water Absorb')
+  })
 
   it('sanitizes swap snapshots before restoring them', () => {
     const collection = [

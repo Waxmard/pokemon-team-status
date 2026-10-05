@@ -1558,6 +1558,10 @@ export const POKEMON_DATA = [
   { name: 'Hisuian Goodra', types: ['steel', 'dragon'], spriteId: 10242 },
   { name: 'Hisuian Avalugg', types: ['ice', 'rock'], spriteId: 10243 },
   { name: 'Hisuian Decidueye', types: ['grass', 'fighting'], spriteId: 10244 },
+  { name: 'Floette-Eternal', types: ['fairy'], spriteId: 10061 },
+  { name: 'Magearna-Original', types: ['steel', 'fairy'], spriteId: 10147 },
+  { name: 'Tatsugiri-Droopy', types: ['dragon', 'water'], spriteId: 10258 },
+  { name: 'Tatsugiri-Stretchy', types: ['dragon', 'water'], spriteId: 10259 },
 ]
 
 const PRE_GEN_6_TYPE_OVERRIDES = {

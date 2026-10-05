@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { getMegaEvolution } from '../data/megaEvolutions.js'
 import { pickMemberFields } from '../utils/pokemon.js'
 
 const draftAction = ref(null)
@@ -107,6 +108,22 @@ export function useDraftAction() {
 
   function updateMegaForm(form, types, spriteId) {
     if (draftAction.value) {
+      const pokemonName = draftAction.value.pokemon?.name
+      const previousMega = getMegaEvolution(
+        pokemonName,
+        draftAction.value.megaForm,
+      )
+      const nextMega = getMegaEvolution(pokemonName, form)
+
+      if (nextMega?.ability) {
+        draftAction.value.ability = nextMega.ability
+      } else if (
+        previousMega?.ability &&
+        draftAction.value.ability === previousMega.ability
+      ) {
+        draftAction.value.ability = null
+      }
+
       draftAction.value.megaForm = form
       draftAction.value.megaTypes = types
       draftAction.value.megaSpriteId = spriteId

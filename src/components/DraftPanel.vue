@@ -676,7 +676,6 @@ const evolutionOptions = computed(() => {
     form: mega.form,
     types: mega.types,
     spriteId: mega.spriteId,
-    ability: mega.ability,
     name: `${draftAction.value.pokemon.name}-${mega.form}`,
   }))
   return [...evoList, ...megas]
@@ -707,10 +706,6 @@ function evolveTo(option) {
     // Toggle mega: if already selected, deselect (no animation)
     if (draftAction.value?.megaForm === option.form) {
       updateMegaForm(null, null, null)
-      // Clear ability if it was set by the mega
-      if (option.ability && draftAction.value?.ability === option.ability) {
-        updateAbility(null)
-      }
       showEvolveOptions.value = false
       return
     }
@@ -721,9 +716,6 @@ function evolveTo(option) {
 
     setTimeout(() => {
       updateMegaForm(option.form, option.types, option.spriteId)
-      if (option.ability) {
-        updateAbility(option.ability)
-      }
     }, 400)
 
     setTimeout(() => {
