@@ -12,6 +12,10 @@
     "lint": "biome check src/",
     "lint:fix": "biome check --write src/",
     "format": "biome format --write src/",
+    "format:check": "biome format src/",
+    "check": "biome check src/",
+    "check:fix": "biome check --write src/",
+    "ci": "npm run check && npm run test:coverage",
     "check:staged": "biome check --write --no-errors-on-unmatched",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -27,11 +31,11 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.14",
     "@vitejs/plugin-vue": "^6.0.6",
-    "@vitest/coverage-v8": "^4.1.0",
+    "@vitest/coverage-v8": "^5.0.2",
     "lefthook": "^1.0.0",
     "vite": "^7.3.2",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^4.1.5"
+    "vitest": "^5.0.2"
   },
   "allowScripts": {
     "fsevents@2.3.3": true,

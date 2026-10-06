@@ -106,11 +106,14 @@ Select Floette-Eternal, Magearna-Original, or a Tatsugiri appearance to use
 its matching Mega form. Among Zygarde forms, only Zygarde-Complete can
 Mega Evolve.
 
+Mega forms are final forms: the evolve button and chooser disappear after
+activation, including when you reopen the editor. Alternative Mega forms
+are choices before activation, not successive evolution stages. Final forms
+without Mega options also have no evolve button.
+
 Selecting a Mega form automatically selects its supported type-affecting
-ability. Switching to a form without that ability clears it only if you
-have not selected a different ability manually. Unsupported abilities do
-not gain new battle mechanics. Pre-Gen 6 rules disable Mega forms and clear
-matching automatic abilities.
+ability. Unsupported abilities do not gain new battle mechanics. Pre-Gen 6
+rules disable Mega forms and clear matching automatic abilities.
 
 Changing species through search or evolution clears the Mega form and its
 matching automatic ability. A different manually selected ability remains.

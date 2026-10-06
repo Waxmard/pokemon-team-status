@@ -174,7 +174,6 @@
                   v-for="option in evolutionOptions"
                   :key="option.isMega ? option.name : option"
                   class="evolve-option-pill"
-                  :class="{ 'mega-selected': isCurrentMega(option) }"
                   @click="evolveTo(option)"
                 >
                   <SpriteImg :src="getEvoSpriteUrl(option)" :alt="option.isMega ? option.name : option" :width="40" :height="40" />
@@ -663,6 +662,7 @@ const megaOptions = computed(() => {
 })
 
 const canEvolve = computed(() => {
+  if (draftAction.value?.megaForm) return false
   return (
     !!effectiveDraftPokemon.value?.evolvesTo || megaOptions.value.length > 0
   )
@@ -697,20 +697,8 @@ function getEvoSpriteUrl(option) {
   return getSpriteUrl(option)
 }
 
-function isCurrentMega(option) {
-  return option.isMega && draftAction.value?.megaForm === option.form
-}
-
 function evolveTo(option) {
   if (option.isMega) {
-    // Toggle mega: if already selected, deselect (no animation)
-    if (draftAction.value?.megaForm === option.form) {
-      updateMegaForm(null, null, null)
-      showEvolveOptions.value = false
-      return
-    }
-
-    // Activating mega — animate
     showEvolveOptions.value = false
     isEvolving.value = true
 

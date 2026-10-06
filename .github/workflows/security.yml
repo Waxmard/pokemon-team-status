@@ -9,6 +9,7 @@ on:
     - cron: '0 12 * * 1'
 
 permissions:
+  actions: read
   contents: read
   security-events: write
 
@@ -38,6 +39,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_INCLUDE_DEV_DEPS: 'true'
         with:
           scan-type: fs
           scan-ref: .
