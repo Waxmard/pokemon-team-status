@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/Waxmard/pokemon-team-status/compare/v1.8.0...v1.8.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* hide evolution controls once a Pokemon Mega Evolves ([#128](https://github.com/Waxmard/pokemon-team-status/issues/128)) ([523b373](https://github.com/Waxmard/pokemon-team-status/commit/523b373fc82de4f426a073c5e588a9c83d6a9a6a))
+
 ## [1.8.0](https://github.com/Waxmard/pokemon-team-status/compare/v1.7.1...v1.8.0) (2026-10-05)
 
 
