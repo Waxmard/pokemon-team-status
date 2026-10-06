@@ -2,8 +2,8 @@
 
 ## Prerequisites
 
-- Node.js 18+
-- npm
+- Node.js 24+
+- npm 11.10+
 
 ## Getting Started
 
@@ -13,6 +13,9 @@ npm run dev
 ```
 
 The dev server runs at `http://localhost:5173`.
+
+The npm configuration rejects incompatible package engines and delays new package
+releases for seven days.
 
 ### Mobile Testing
 
@@ -85,6 +88,10 @@ docs/               # Documentation
 | `npm run lint` | Check for linting issues (Biome) |
 | `npm run lint:fix` | Auto-fix linting issues |
 | `npm run format` | Format all source files |
+| `npm run format:check` | Check source formatting |
+| `npm run check` | Check lint, formatting, and imports |
+| `npm run check:fix` | Fix lint, formatting, and imports |
+| `npm run ci` | Run the same checks and coverage tests as CI |
 | `npm run test` | Run unit tests (Vitest) |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run test:coverage` | Run tests with coverage |
