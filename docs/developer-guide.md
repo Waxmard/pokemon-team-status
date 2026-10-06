@@ -96,6 +96,9 @@ docs/               # Documentation
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run test:coverage` | Run tests with coverage |
 
+Upgrade `vitest` and `@vitest/coverage-v8` together to the same version; coverage
+requires matching peers.
+
 ## Architecture Overview
 
 ### State Management
